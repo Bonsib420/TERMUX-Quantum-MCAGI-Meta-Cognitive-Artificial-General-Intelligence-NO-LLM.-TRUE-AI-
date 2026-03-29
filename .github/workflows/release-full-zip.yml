@@ -4,6 +4,10 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   release:
@@ -15,13 +19,24 @@ jobs:
         run: |
           zip -r quantum_mcagi_full.zip . \
             --exclude "*.git*" \
-            --exclude "*__pycache__*"
+            --exclude "*__pycache__*" \
+            --exclude "*.pyc"
+
+      - name: Get tag or generate one
+        id: tag
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=v$(date +%Y%m%d-%H%M%S)" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.tag.outputs.tag }}
           files: quantum_mcagi_full.zip
-          name: "Release Full Zip"
+          name: "Quantum MCAGI Full Release"
           body: |
             Full Quantum MCAGI release by Cory N.B. Blackburn
             Architecture: RQR³ · Orch-OR · Self-Evolving · No-LLM
