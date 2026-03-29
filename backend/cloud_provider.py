@@ -165,8 +165,12 @@ class LocalProvider(CloudProvider):
         return "Local Storage"
 
     def _resolve(self, path: str) -> Path:
-        safe = path.replace('/', os.sep)
-        target = self._base / f"{safe}.json"
+        # Strip any path traversal attempts
+        safe = path.replace('..', '').replace('/', os.sep)
+        target = (self._base / f"{safe}.json").resolve()
+        # Ensure target stays within base directory
+        if not str(target).startswith(str(self._base.resolve())):
+            raise ValueError(f"Path traversal blocked: {path}")
         target.parent.mkdir(parents=True, exist_ok=True)
         return target
 
