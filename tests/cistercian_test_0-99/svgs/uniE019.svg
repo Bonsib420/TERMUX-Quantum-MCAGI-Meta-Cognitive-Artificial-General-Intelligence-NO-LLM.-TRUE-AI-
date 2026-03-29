@@ -1,0 +1,6 @@
+<svg width="100" height="166.66666666666669" viewBox="-3 -5 6 10" xmlns="http://www.w3.org/2000/svg">
+  <!-- Central vertical staff -->
+  <line x1="0" y1="-5" x2="0" y2="5" stroke="#000000" stroke-width="1.5" stroke-linecap="round"/>
+  <polygon points="0,-5 2,-5 0,-3" fill="#000000" stroke="#000000" stroke-width="1.5" stroke-linejoin="round"/>
+  <line x1="0" y1="-3" x2="-2" y2="-3" stroke="#000000" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
