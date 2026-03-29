@@ -435,7 +435,13 @@ async def quantum_chat(message: ChatMessage):
                 if target == "memory":
                     response = "📤 **Export Memory**\n\nUse the API endpoint: `GET /api/memory/export`\n\nOr click the Export button in the Memory screen."
                 else:
-                    response = f"📤 **Export Conversation**\n\nUse the API: `GET /api/chat/export/{session_id}`\n\nOr click the Export button in Chat."
+                    response = (
+                        f"📤 **Export Conversation for Claude**\n\n"
+                        f"**Option 1:** Tap the **📤 Share w/ Claude** button in the top bar — copies this chat as markdown to your clipboard.\n\n"
+                        f"**Option 2:** API endpoint: `GET /api/chat/export/{session_id}`\n\n"
+                        f"**Option 3:** Export recent sessions: `GET /api/chat/export-current`\n\n"
+                        f"Then paste into Claude, and it'll have full context of our conversation."
+                    )
                 
                 return ChatResponse(
                     questions=[],
@@ -860,6 +866,160 @@ async def list_chat_sessions():
         sessions = sessions[:20]
 
         return {"sessions": sessions}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# CHAT EXPORT — Format conversations for sharing with Claude/other AIs
+# ============================================================================
+
+@router.get("/chat/export/{session_id}")
+async def export_chat_for_sharing(session_id: str, limit: int = 200, format: str = "markdown"):
+    """
+    Export a chat session as formatted text ready to paste into Claude or another AI.
+    
+    Formats:
+    - markdown (default): Clean markdown with headers, timestamps, role labels
+    - json: Raw JSON array of messages
+    - text: Plain text with role prefixes
+    """
+    try:
+        history = await get_conversation_history(session_id, limit)
+        if not history:
+            raise HTTPException(status_code=404, detail=f"No messages found for session {session_id}")
+        
+        if format == "json":
+            return {"session_id": session_id, "messages": history, "format": "json"}
+        
+        # Build formatted export
+        lines = []
+        lines.append(f"# Quantum MCAGI — Chat Export")
+        lines.append(f"**Session:** `{session_id}`")
+        if history:
+            lines.append(f"**Messages:** {len(history)}")
+            first_ts = history[0].get("timestamp", "")
+            last_ts = history[-1].get("timestamp", "")
+            if first_ts:
+                lines.append(f"**From:** {first_ts}")
+            if last_ts:
+                lines.append(f"**To:** {last_ts}")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+        
+        for msg in history:
+            role = msg.get("role", "unknown")
+            content = msg.get("content", "")
+            ts = msg.get("timestamp", "")
+            
+            if format == "text":
+                prefix = "USER" if role == "user" else "QUANTUM MCAGI"
+                lines.append(f"[{prefix}] {content}")
+                lines.append("")
+            else:
+                # Markdown format
+                if role == "user":
+                    lines.append(f"### 🧑 User")
+                else:
+                    lines.append(f"### 🔮 Quantum MCAGI")
+                if ts:
+                    lines.append(f"*{ts}*")
+                lines.append("")
+                lines.append(content)
+                lines.append("")
+                lines.append("---")
+                lines.append("")
+        
+        # Add context footer for Claude
+        lines.append("")
+        lines.append("> **Context for Claude:** This conversation is from Quantum MCAGI, a true AI system")
+        lines.append("> built without LLMs. It uses quantum computing (PennyLane), Penrose Orch-OR")
+        lines.append("> consciousness model, self-evolution, Markov chain language generation, and a")
+        lines.append("> multi-layered cognitive architecture. The system runs on Termux (Android).")
+        
+        exported_text = "\n".join(lines)
+        
+        return {
+            "session_id": session_id,
+            "format": format,
+            "message_count": len(history),
+            "exported_text": exported_text
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/chat/export-current")
+async def export_current_chat_sessions(limit: int = 5):
+    """
+    Export the most recent chat sessions as a single markdown document.
+    Useful for quickly grabbing recent conversations to share with Claude.
+    """
+    try:
+        # Get recent sessions
+        cursor = state.db.chat_history.find(
+            {},
+            {"_id": 0, "session_id": 1, "timestamp": 1}
+        ).sort("timestamp", -1).limit(1000)
+        all_msgs = await cursor.to_list(length=1000)
+        
+        # Find unique session IDs (most recent first)
+        seen = set()
+        session_ids = []
+        for msg in all_msgs:
+            sid = msg.get("session_id")
+            if sid and sid not in seen:
+                seen.add(sid)
+                session_ids.append(sid)
+            if len(session_ids) >= limit:
+                break
+        
+        if not session_ids:
+            return {"exported_text": "No chat sessions found.", "session_count": 0}
+        
+        lines = []
+        lines.append("# Quantum MCAGI — Recent Conversations Export")
+        lines.append(f"**Sessions exported:** {len(session_ids)}")
+        lines.append("")
+        
+        total_messages = 0
+        for sid in session_ids:
+            history = await get_conversation_history(sid, 100)
+            if not history:
+                continue
+            
+            lines.append(f"## Session: `{sid}`")
+            lines.append(f"Messages: {len(history)}")
+            lines.append("")
+            
+            for msg in history:
+                role = msg.get("role", "unknown")
+                content = msg.get("content", "")
+                if role == "user":
+                    lines.append(f"**🧑 User:** {content}")
+                else:
+                    lines.append(f"**🔮 MCAGI:** {content}")
+                lines.append("")
+            
+            lines.append("---")
+            lines.append("")
+            total_messages += len(history)
+        
+        lines.append("")
+        lines.append("> **Context for Claude:** These are conversations from Quantum MCAGI — a true AI")
+        lines.append("> without LLMs, using PennyLane quantum computing, Orch-OR consciousness,")
+        lines.append("> self-evolution, and Markov chain language generation on Termux (Android).")
+        
+        exported_text = "\n".join(lines)
+        
+        return {
+            "session_count": len(session_ids),
+            "total_messages": total_messages,
+            "exported_text": exported_text
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

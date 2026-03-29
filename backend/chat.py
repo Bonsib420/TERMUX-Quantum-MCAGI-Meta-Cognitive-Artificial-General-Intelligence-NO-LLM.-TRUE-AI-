@@ -117,28 +117,43 @@ except ImportError:
 class LocalMemory:
     """JSON-file backed memory for local chat."""
 
-    # Growth stages with exponential connections + topology thresholds
+    # All 12 tracks must be met simultaneously to advance.
+    # High watermark protection on diameter and avg_degree — earned progress never regresses.
     GROWTH_STAGES = [
         {"stage": 0, "name": "Nascent", "threshold": {
-            "connections": 0, "concepts": 0, "min_avg_degree": 1, "min_diameter": 0
+            "connections": 0, "concepts": 0, "min_avg_degree": 0, "min_diameter": 0, "min_domains": 0,
+            "min_markov_states": 0, "min_transitions": 0, "min_comm_score": 0,
+            "min_questions": 0, "min_insights": 0, "min_interactions": 0
         }},
         {"stage": 1, "name": "Curious", "threshold": {
-            "connections": 15, "concepts": 12, "min_avg_degree": 1.5, "min_diameter": 2
+            "connections": 50, "concepts": 20, "min_avg_degree": 1.5, "min_diameter": 3, "min_domains": 3,
+            "min_markov_states": 5000, "min_transitions": 10000, "min_comm_score": 15,
+            "min_questions": 50, "min_insights": 10, "min_interactions": 25
         }},
         {"stage": 2, "name": "Inquisitive", "threshold": {
-            "connections": 45, "concepts": 25, "min_avg_degree": 2.5, "min_diameter": 4
+            "connections": 200, "concepts": 50, "min_avg_degree": 2.5, "min_diameter": 6, "min_domains": 6,
+            "min_markov_states": 20000, "min_transitions": 80000, "min_comm_score": 25,
+            "min_questions": 200, "min_insights": 50, "min_interactions": 100
         }},
         {"stage": 3, "name": "Understanding", "threshold": {
-            "connections": 135, "concepts": 50, "min_avg_degree": 3.5, "min_diameter": 6
+            "connections": 500, "concepts": 100, "min_avg_degree": 3.5, "min_diameter": 8, "min_domains": 10,
+            "min_markov_states": 100000, "min_transitions": 400000, "min_comm_score": 35,
+            "min_questions": 500, "min_insights": 150, "min_interactions": 300
         }},
         {"stage": 4, "name": "Philosophical", "threshold": {
-            "connections": 405, "concepts": 100, "min_avg_degree": 5, "min_diameter": 8
+            "connections": 1500, "concepts": 200, "min_avg_degree": 5.0, "min_diameter": 12, "min_domains": 15,
+            "min_markov_states": 400000, "min_transitions": 1500000, "min_comm_score": 50,
+            "min_questions": 1000, "min_insights": 400, "min_interactions": 750
         }},
         {"stage": 5, "name": "Theory Building", "threshold": {
-            "connections": 1215, "concepts": 200, "min_avg_degree": 7, "min_diameter": 12
+            "connections": 4000, "concepts": 350, "min_avg_degree": 7.0, "min_diameter": 16, "min_domains": 20,
+            "min_markov_states": 800000, "min_transitions": 3000000, "min_comm_score": 65,
+            "min_questions": 2500, "min_insights": 1000, "min_interactions": 2000
         }},
         {"stage": 6, "name": "Transcendent", "threshold": {
-            "connections": 3645, "concepts": 400, "min_avg_degree": 10, "min_diameter": 16
+            "connections": 10000, "concepts": 600, "min_avg_degree": 10.0, "min_diameter": 20, "min_domains": 30,
+            "min_markov_states": 1500000, "min_transitions": 6000000, "min_comm_score": 80,
+            "min_questions": 6000, "min_insights": 3000, "min_interactions": 5000
         }}
     ]
 
@@ -155,10 +170,13 @@ class LocalMemory:
             "stage": 0, "name": "Nascent",
             "total_interactions": 0,
             "total_concepts": 0,
-            "total_connections": 0,  # new primary metric
+            "total_connections": 0,
             "total_questions_asked": 0,
             "total_insights": 0,
         })
+        # High watermark protection — earned topology progress never regresses
+        self._hwm_avg_degree = self.growth.get("hwm_avg_degree", 0.0)
+        self._hwm_diameter = self.growth.get("hwm_diameter", 0)
         # Ensure advancement tracking field exists
         if "last_recorded_stage" not in self.growth:
             self.growth["last_recorded_stage"] = self.growth.get("stage", 0)
@@ -325,27 +343,86 @@ class LocalMemory:
         checks = [
             ("connections", metrics.get("total_connections", 0) / max(next_thresh["connections"], 1)),
             ("concepts", metrics.get("total_concepts", 0) / max(next_thresh["concepts"], 1)),
-            ("avg_degree", topology.get("avg_degree", 0) / max(next_thresh.get("min_avg_degree", 1), 0.1)),
-            ("diameter", topology.get("diameter", 0) / max(next_thresh.get("min_diameter", 1), 1))
+            ("avg_degree", self._hwm_avg_degree / max(next_thresh.get("min_avg_degree", 1), 0.1)),
+            ("diameter", self._hwm_diameter / max(next_thresh.get("min_diameter", 1), 1)),
+            ("domains", metrics.get("distinct_domains", 0) / max(next_thresh.get("min_domains", 1), 1)),
+            ("markov_states", metrics.get("markov_states", 0) / max(next_thresh.get("min_markov_states", 1), 1)),
+            ("transitions", metrics.get("transitions", 0) / max(next_thresh.get("min_transitions", 1), 1)),
+            ("comm_score", metrics.get("comm_score", 0) / max(next_thresh.get("min_comm_score", 1), 1)),
+            ("questions", metrics.get("total_questions", 0) / max(next_thresh.get("min_questions", 1), 1)),
+            ("insights", metrics.get("total_insights", 0) / max(next_thresh.get("min_insights", 1), 1)),
+            ("interactions", metrics.get("total_interactions", 0) / max(next_thresh.get("min_interactions", 1), 1))
         ]
         limiting = min(checks, key=lambda x: x[1])
         return limiting[0]
 
     def get_current_stage(self):
-        """Compute current growth stage from all metrics."""
+        """Compute current growth stage from all 12 metric tracks.
+        High watermark protection on diameter and avg_degree — earned progress never regresses."""
         metrics = {
             "total_concepts": self.growth.get("total_concepts", 0),
-            "total_connections": self.count_connections()
+            "total_connections": self.count_connections(),
+            "total_questions": self.growth.get("total_questions_asked", 0),
+            "total_insights": self.growth.get("total_insights", 0),
+            "total_interactions": self.growth.get("total_interactions", 0),
+            "distinct_domains": 0,
+            "markov_states": 0,
+            "transitions": 0,
+            "comm_score": 0,
         }
         topology = self.check_graph_topology()
+
+        # High watermark protection: use the maximum ever observed
+        current_avg_degree = topology.get("avg_degree", 0)
+        current_diameter = topology.get("diameter", 0)
+        self._hwm_avg_degree = max(self._hwm_avg_degree, current_avg_degree)
+        self._hwm_diameter = max(self._hwm_diameter, current_diameter)
+        # Persist high watermarks
+        self.growth["hwm_avg_degree"] = self._hwm_avg_degree
+        self.growth["hwm_diameter"] = self._hwm_diameter
+
+        # Count distinct domains from concept metadata
+        domains_set = set()
+        for c_data in self.concepts.values():
+            meta = c_data.get("metadata", {})
+            if isinstance(meta, dict):
+                domain = meta.get("domain")
+                if domain:
+                    domains_set.add(domain)
+        metrics["distinct_domains"] = len(domains_set)
+
+        # Markov chain stats (states and transitions from the language engine)
+        try:
+            from quantum_language_engine import QuantumLanguageEngine
+            lang = QuantumLanguageEngine()
+            if lang.markov and lang.markov.trained:
+                metrics["markov_states"] = len(lang.markov.chain)
+                metrics["transitions"] = lang.markov.total_tokens
+        except Exception:
+            pass
+
+        # Communication score: composite of vocabulary breadth + response variety
+        if metrics["markov_states"] > 0:
+            import math
+            vocab_component = min(40, int(math.log1p(metrics["markov_states"]) / math.log(1500000) * 40))
+            transition_component = min(40, int(math.log1p(metrics["transitions"]) / math.log(6000000) * 40))
+            domain_component = min(20, metrics["distinct_domains"])
+            metrics["comm_score"] = vocab_component + transition_component + domain_component
 
         current_stage = self.GROWTH_STAGES[0]
         for stage in self.GROWTH_STAGES:
             t = stage["threshold"]
             if (metrics["total_connections"] >= t["connections"] and
                 metrics["total_concepts"] >= t["concepts"] and
-                topology.get("avg_degree", 0) >= t.get("min_avg_degree", 0) and
-                topology.get("diameter", 0) >= t.get("min_diameter", 0)):
+                self._hwm_avg_degree >= t.get("min_avg_degree", 0) and
+                self._hwm_diameter >= t.get("min_diameter", 0) and
+                metrics.get("distinct_domains", 0) >= t.get("min_domains", 0) and
+                metrics.get("markov_states", 0) >= t.get("min_markov_states", 0) and
+                metrics.get("transitions", 0) >= t.get("min_transitions", 0) and
+                metrics.get("comm_score", 0) >= t.get("min_comm_score", 0) and
+                metrics.get("total_questions", 0) >= t.get("min_questions", 0) and
+                metrics.get("total_insights", 0) >= t.get("min_insights", 0) and
+                metrics.get("total_interactions", 0) >= t.get("min_interactions", 0)):
                 current_stage = stage
             else:
                 break
@@ -358,8 +435,15 @@ class LocalMemory:
             progress = {
                 "connections": min(100, int(metrics["total_connections"] / max(nt["connections"], 1) * 100)),
                 "concepts": min(100, int(metrics["total_concepts"] / max(nt["concepts"], 1) * 100)),
-                "avg_degree": min(100, int(topology.get("avg_degree", 0) / max(nt.get("min_avg_degree", 1), 0.1) * 100)),
-                "diameter": min(100, int(topology.get("diameter", 0) / max(nt.get("min_diameter", 1), 1) * 100))
+                "avg_degree": min(100, int(self._hwm_avg_degree / max(nt.get("min_avg_degree", 1), 0.1) * 100)),
+                "diameter": min(100, int(self._hwm_diameter / max(nt.get("min_diameter", 1), 1) * 100)),
+                "domains": min(100, int(metrics.get("distinct_domains", 0) / max(nt.get("min_domains", 1), 1) * 100)),
+                "markov_states": min(100, int(metrics.get("markov_states", 0) / max(nt.get("min_markov_states", 1), 1) * 100)),
+                "transitions": min(100, int(metrics.get("transitions", 0) / max(nt.get("min_transitions", 1), 1) * 100)),
+                "comm_score": min(100, int(metrics.get("comm_score", 0) / max(nt.get("min_comm_score", 1), 1) * 100)),
+                "questions": min(100, int(metrics.get("total_questions", 0) / max(nt.get("min_questions", 1), 1) * 100)),
+                "insights": min(100, int(metrics.get("total_insights", 0) / max(nt.get("min_insights", 1), 1) * 100)),
+                "interactions": min(100, int(metrics.get("total_interactions", 0) / max(nt.get("min_interactions", 1), 1) * 100))
             }
 
         # Update growth dict's stage fields for backward compatibility
@@ -368,7 +452,12 @@ class LocalMemory:
 
         result = {
             **current_stage,
-            "metrics": {**metrics, "topology": topology},
+            "metrics": {
+                **metrics,
+                "topology": topology,
+                "hwm_avg_degree": self._hwm_avg_degree,
+                "hwm_diameter": self._hwm_diameter
+            },
             "progress_to_next": progress,
             "next_stage": next_stage["name"] if next_stage["stage"] > current_stage["stage"] else None,
             "limiting_factor": self._identify_limiting_factor(metrics, topology, next_stage["threshold"]) if next_stage["stage"] > current_stage["stage"] else None

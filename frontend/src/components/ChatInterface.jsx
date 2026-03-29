@@ -82,6 +82,45 @@ function ChatInterface() {
   };
   };
 
+  const exportForClaude = async () => {
+    try {
+      // Build markdown from current messages in state (works offline too)
+      const lines = [];
+      lines.push('# Quantum MCAGI — Chat Export');
+      lines.push(`**Session:** \`${sessionId}\``);
+      lines.push(`**Messages:** ${messages.length}`);
+      lines.push(`**Exported:** ${new Date().toISOString()}`);
+      lines.push('');
+      lines.push('---');
+      lines.push('');
+
+      messages.forEach(msg => {
+        if (msg.role === 'user') {
+          lines.push('### 🧑 User');
+        } else {
+          lines.push('### 🔮 Quantum MCAGI');
+        }
+        lines.push('');
+        lines.push(typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content));
+        lines.push('');
+        lines.push('---');
+        lines.push('');
+      });
+
+      lines.push('');
+      lines.push('> **Context for Claude:** This conversation is from Quantum MCAGI, a true AI system');
+      lines.push('> built without LLMs. It uses quantum computing (PennyLane), Penrose Orch-OR');
+      lines.push('> consciousness model, self-evolution, Markov chain language generation, and a');
+      lines.push('> multi-layered cognitive architecture. The system runs on Termux (Android).');
+
+      const exported = lines.join('\n');
+      await copyToClipboard(exported);
+    } catch (err) {
+      console.error('Export failed:', err);
+      alert('Export failed. Check console for details.');
+    }
+  };
+
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
 
@@ -309,19 +348,36 @@ function ChatInterface() {
             </button>
           </div>
           <h2 style={{ margin: 0, color: '#00d4ff', fontSize: '1.2rem' }}>Quantum MCAGI</h2>
-          <button
-            onClick={startNewChat}
-            style={{
-              background: '#1a3a5c',
-              border: '1px solid #2a5a8c',
-              color: '#6ee7b7',
-              padding: '0.5rem 1rem',
-              borderRadius: '8px',
-              cursor: 'pointer'
-            }}
-          >
-            + New Chat
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              onClick={exportForClaude}
+              style={{
+                background: '#2a1a3c',
+                border: '1px solid #6b46c1',
+                color: '#d6bcfa',
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '0.85rem'
+              }}
+              title="Export this conversation as markdown — copies to clipboard, ready to paste into Claude"
+            >
+              📤 Share w/ Claude
+            </button>
+            <button
+              onClick={startNewChat}
+              style={{
+                background: '#1a3a5c',
+                border: '1px solid #2a5a8c',
+                color: '#6ee7b7',
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                cursor: 'pointer'
+              }}
+            >
+              + New Chat
+            </button>
+          </div>
         </div>
 
         {/* Messages Area */}
@@ -399,6 +455,7 @@ function ChatInterface() {
           <QuickCommandButton label="📈 Analyze" command="analyze" />
           <QuickCommandButton label="🎭 Personality" command="personality" />
           <QuickCommandButton label="🔍 Collapse" command="collapse" />
+          <QuickCommandButton label="📤 Export" command="export" />
         </div>
 
         {/* Input Area */}

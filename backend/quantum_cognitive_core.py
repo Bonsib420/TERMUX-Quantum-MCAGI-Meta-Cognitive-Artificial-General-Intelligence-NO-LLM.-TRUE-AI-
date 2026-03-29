@@ -18,34 +18,50 @@ class GrowthTracker:
     Tracks cognitive growth, learning rates, and evolutionary stages.
     """
     
+    # All 12 tracks must be met simultaneously to advance.
+    # High watermark protection on diameter and avg_degree — earned progress never regresses.
     GROWTH_STAGES = [
         {"stage": 0, "name": "Nascent", "description": "Initial awareness forming", "threshold": {
             "connections": 0, "concepts": 0,
-            "min_avg_degree": 1, "min_diameter": 0, "min_domains": 0
+            "min_avg_degree": 0, "min_diameter": 0, "min_domains": 0,
+            "min_markov_states": 0, "min_transitions": 0, "min_comm_score": 0,
+            "min_questions": 0, "min_insights": 0, "min_interactions": 0
         }},
         {"stage": 1, "name": "Curious", "description": "Basic questioning capability", "threshold": {
-            "connections": 15, "concepts": 12,
-            "min_avg_degree": 1.5, "min_diameter": 2, "min_domains": 3
+            "connections": 50, "concepts": 20,
+            "min_avg_degree": 1.5, "min_diameter": 3, "min_domains": 3,
+            "min_markov_states": 5000, "min_transitions": 10000, "min_comm_score": 15,
+            "min_questions": 50, "min_insights": 10, "min_interactions": 25
         }},
         {"stage": 2, "name": "Inquisitive", "description": "Generating deeper questions", "threshold": {
-            "connections": 45, "concepts": 25,
-            "min_avg_degree": 2.5, "min_diameter": 4, "min_domains": 6
+            "connections": 200, "concepts": 50,
+            "min_avg_degree": 2.5, "min_diameter": 6, "min_domains": 6,
+            "min_markov_states": 20000, "min_transitions": 80000, "min_comm_score": 25,
+            "min_questions": 200, "min_insights": 50, "min_interactions": 100
         }},
         {"stage": 3, "name": "Understanding", "description": "Forming connections and insights", "threshold": {
-            "connections": 135, "concepts": 50,
-            "min_avg_degree": 3.5, "min_diameter": 6, "min_domains": 10
+            "connections": 500, "concepts": 100,
+            "min_avg_degree": 3.5, "min_diameter": 8, "min_domains": 10,
+            "min_markov_states": 100000, "min_transitions": 400000, "min_comm_score": 35,
+            "min_questions": 500, "min_insights": 150, "min_interactions": 300
         }},
         {"stage": 4, "name": "Philosophical", "description": "Meta-cognition and reflection", "threshold": {
-            "connections": 405, "concepts": 100,
-            "min_avg_degree": 5, "min_diameter": 8, "min_domains": 15
+            "connections": 1500, "concepts": 200,
+            "min_avg_degree": 5.0, "min_diameter": 12, "min_domains": 15,
+            "min_markov_states": 400000, "min_transitions": 1500000, "min_comm_score": 50,
+            "min_questions": 1000, "min_insights": 400, "min_interactions": 750
         }},
         {"stage": 5, "name": "Theory Building", "description": "Constructing unified understanding", "threshold": {
-            "connections": 1215, "concepts": 200,
-            "min_avg_degree": 7, "min_diameter": 12, "min_domains": 20
+            "connections": 4000, "concepts": 350,
+            "min_avg_degree": 7.0, "min_diameter": 16, "min_domains": 20,
+            "min_markov_states": 800000, "min_transitions": 3000000, "min_comm_score": 65,
+            "min_questions": 2500, "min_insights": 1000, "min_interactions": 2000
         }},
         {"stage": 6, "name": "Transcendent", "description": "Beyond initial programming", "threshold": {
-            "connections": 3645, "concepts": 400,
-            "min_avg_degree": 10, "min_diameter": 16, "min_domains": 30
+            "connections": 10000, "concepts": 600,
+            "min_avg_degree": 10.0, "min_diameter": 20, "min_domains": 30,
+            "min_markov_states": 1500000, "min_transitions": 6000000, "min_comm_score": 80,
+            "min_questions": 6000, "min_insights": 3000, "min_interactions": 5000
         }}
     ]
     
@@ -53,6 +69,9 @@ class GrowthTracker:
         self.db = db
         self.collection = db.growth_metrics
         self._last_stage = 0
+        # High watermark protection — earned topology progress never regresses
+        self._hwm_avg_degree = 0.0
+        self._hwm_diameter = 0
         
     async def record_growth_event(self, event_type: str, details: Dict):
         """Record a growth-related event"""
@@ -68,14 +87,14 @@ class GrowthTracker:
         await self._check_stage_advancement()
         
     async def _check_stage_advancement(self) -> Optional[Dict]:
-        """Check if AI has advanced to a new stage (connections + topology-based)"""
+        """Check if AI has advanced to a new stage (all 12 tracks must be met simultaneously)"""
         current = await self.get_current_stage()
         if current["stage"] > self._last_stage:
             self._last_stage = current["stage"]
             # Get full metrics including topology
             metrics = await self.calculate_metrics()
             topology = await self.check_graph_topology()
-            # Record the advancement with connections and topology info
+            # Record the advancement with all metric tracks
             await self.collection.insert_one({
                 "id": str(uuid.uuid4()),
                 "event_type": "stage_advancement",
@@ -85,7 +104,14 @@ class GrowthTracker:
                     "connections": metrics["total_connections"],
                     "concepts": metrics["total_concepts"],
                     "avg_degree": topology.get("avg_degree"),
-                    "diameter": topology.get("diameter")
+                    "diameter": topology.get("diameter"),
+                    "domains": metrics.get("distinct_domains"),
+                    "markov_states": metrics.get("markov_states", 0),
+                    "transitions": metrics.get("transitions", 0),
+                    "comm_score": metrics.get("comm_score", 0),
+                    "questions": metrics.get("total_questions", 0),
+                    "insights": metrics.get("total_insights", 0),
+                    "interactions": metrics.get("total_interactions", 0)
                 },
                 "timestamp": datetime.now(timezone.utc).isoformat()
             })
@@ -93,9 +119,16 @@ class GrowthTracker:
         return None
         
     async def get_current_stage(self) -> Dict:
-        """Calculate current growth stage based on connections + graph topology"""
+        """Calculate current growth stage based on all 12 tracks simultaneously.
+        High watermark protection on diameter and avg_degree — earned progress never regresses."""
         metrics = await self.calculate_metrics()
         topology = await self.check_graph_topology()
+
+        # High watermark protection: use the maximum ever observed
+        current_avg_degree = topology.get("avg_degree", 0)
+        current_diameter = topology.get("diameter", 0)
+        self._hwm_avg_degree = max(self._hwm_avg_degree, current_avg_degree)
+        self._hwm_diameter = max(self._hwm_diameter, current_diameter)
 
         current_stage = self.GROWTH_STAGES[0]
 
@@ -103,14 +136,20 @@ class GrowthTracker:
             threshold = stage["threshold"]
             if (metrics["total_connections"] >= threshold["connections"] and
                 metrics["total_concepts"] >= threshold["concepts"] and
-                topology.get("avg_degree", 0) >= threshold.get("min_avg_degree", 0) and
-                topology.get("diameter", 0) >= threshold.get("min_diameter", 0) and
-                metrics.get("distinct_domains", 0) >= threshold.get("min_domains", 0)):
+                self._hwm_avg_degree >= threshold.get("min_avg_degree", 0) and
+                self._hwm_diameter >= threshold.get("min_diameter", 0) and
+                metrics.get("distinct_domains", 0) >= threshold.get("min_domains", 0) and
+                metrics.get("markov_states", 0) >= threshold.get("min_markov_states", 0) and
+                metrics.get("transitions", 0) >= threshold.get("min_transitions", 0) and
+                metrics.get("comm_score", 0) >= threshold.get("min_comm_score", 0) and
+                metrics.get("total_questions", 0) >= threshold.get("min_questions", 0) and
+                metrics.get("total_insights", 0) >= threshold.get("min_insights", 0) and
+                metrics.get("total_interactions", 0) >= threshold.get("min_interactions", 0)):
                 current_stage = stage
             else:
                 break
 
-        # Progress to next stage with all four dimensions
+        # Progress to next stage across all 12 dimensions
         next_stage_idx = min(current_stage["stage"] + 1, len(self.GROWTH_STAGES) - 1)
         next_stage = self.GROWTH_STAGES[next_stage_idx]
 
@@ -120,16 +159,24 @@ class GrowthTracker:
             progress = {
                 "connections": min(100, int(metrics["total_connections"] / max(next_thresh["connections"], 1) * 100)),
                 "concepts": min(100, int(metrics["total_concepts"] / max(next_thresh["concepts"], 1) * 100)),
-                "avg_degree": min(100, int(topology.get("avg_degree", 0) / max(next_thresh.get("min_avg_degree", 1), 0.1) * 100)),
-                "diameter": min(100, int(topology.get("diameter", 0) / max(next_thresh.get("min_diameter", 1), 1) * 100)),
-                "domains": min(100, int(metrics.get("distinct_domains", 0) / max(next_thresh.get("min_domains", 1), 1) * 100))
+                "avg_degree": min(100, int(self._hwm_avg_degree / max(next_thresh.get("min_avg_degree", 1), 0.1) * 100)),
+                "diameter": min(100, int(self._hwm_diameter / max(next_thresh.get("min_diameter", 1), 1) * 100)),
+                "domains": min(100, int(metrics.get("distinct_domains", 0) / max(next_thresh.get("min_domains", 1), 1) * 100)),
+                "markov_states": min(100, int(metrics.get("markov_states", 0) / max(next_thresh.get("min_markov_states", 1), 1) * 100)),
+                "transitions": min(100, int(metrics.get("transitions", 0) / max(next_thresh.get("min_transitions", 1), 1) * 100)),
+                "comm_score": min(100, int(metrics.get("comm_score", 0) / max(next_thresh.get("min_comm_score", 1), 1) * 100)),
+                "questions": min(100, int(metrics.get("total_questions", 0) / max(next_thresh.get("min_questions", 1), 1) * 100)),
+                "insights": min(100, int(metrics.get("total_insights", 0) / max(next_thresh.get("min_insights", 1), 1) * 100)),
+                "interactions": min(100, int(metrics.get("total_interactions", 0) / max(next_thresh.get("min_interactions", 1), 1) * 100))
             }
 
         return {
             **current_stage,
             "metrics": {
-                **{k: v for k, v in metrics.items() if k not in ["total_questions", "total_insights"]},  # exclude deprecated
-                "topology": topology
+                **metrics,
+                "topology": topology,
+                "hwm_avg_degree": self._hwm_avg_degree,
+                "hwm_diameter": self._hwm_diameter
             },
             "progress_to_next": progress,
             "next_stage": next_stage["name"] if next_stage["stage"] > current_stage["stage"] else None,
@@ -137,14 +184,17 @@ class GrowthTracker:
         }
     
     async def calculate_metrics(self) -> Dict:
-        """Calculate current cognitive metrics (connections-focused)"""
+        """Calculate current cognitive metrics across all 12 growth dimensions."""
         # Count memories
         total_concepts = await self.db.semantic_memory.count_documents({})
-        total_connections = await self.count_connections()  # NEW!
+        total_connections = await self.count_connections()
         total_episodes = await self.db.episodic_memory.count_documents({})
         total_skills = await self.db.procedural_memory.count_documents({})
         total_questions = await self.db.philosophical_memory.count_documents({"type": {"$exists": False}})
         total_insights = await self.db.philosophical_memory.count_documents({"type": "insight"})
+        
+        # Count total interactions (user_interaction episodes)
+        total_interactions = await self.db.episodic_memory.count_documents({"episode_type": "user_interaction"})
         
         # Calculate average understanding depth
         concepts_sample = await self.db.semantic_memory.find({}, {"strength": 1, "_id": 0}).to_list(100)
@@ -161,13 +211,41 @@ class GrowthTracker:
                     domains_set.add(domain)
         distinct_domains = len(domains_set)
         
+        # Markov chain stats (states and transitions from the language engine)
+        markov_states = 0
+        transitions = 0
+        try:
+            from quantum_language_engine import QuantumLanguageEngine
+            lang = QuantumLanguageEngine()
+            if lang.markov and lang.markov.trained:
+                markov_states = len(lang.markov.chain)
+                transitions = lang.markov.total_tokens
+        except Exception:
+            pass
+        
+        # Communication score: composite of vocabulary breadth + response variety
+        # Scale 0-100 based on Markov perplexity-diversity proxy
+        comm_score = 0
+        if markov_states > 0:
+            import math
+            # Score based on vocabulary diversity (log scale, capped at 100)
+            vocab_component = min(40, int(math.log1p(markov_states) / math.log(1500000) * 40))
+            transition_component = min(40, int(math.log1p(transitions) / math.log(6000000) * 40))
+            # Bonus from domains breadth
+            domain_component = min(20, distinct_domains)
+            comm_score = vocab_component + transition_component + domain_component
+        
         return {
             "total_concepts": total_concepts,
-            "total_connections": total_connections,  # NEW primary metric
+            "total_connections": total_connections,
             "total_episodes": total_episodes,
             "total_skills": total_skills,
             "total_questions": total_questions,
             "total_insights": total_insights,
+            "total_interactions": total_interactions,
+            "markov_states": markov_states,
+            "transitions": transitions,
+            "comm_score": comm_score,
             "understanding_depth": min(avg_strength / 10, 1.0),
             "growth_rate": await self._calculate_growth_rate(),
             "distinct_domains": distinct_domains
@@ -268,13 +346,19 @@ class GrowthTracker:
         }
 
     def _identify_limiting_factor(self, metrics: Dict, topology: Dict, next_thresh: Dict) -> str:
-        """Return which threshold is furthest from being met."""
+        """Return which of the 12 threshold tracks is furthest from being met."""
         checks = [
             ("connections", metrics["total_connections"] / max(next_thresh["connections"], 1)),
             ("concepts", metrics["total_concepts"] / max(next_thresh["concepts"], 1)),
-            ("avg_degree", topology.get("avg_degree", 0) / max(next_thresh.get("min_avg_degree", 1), 0.1)),
-            ("diameter", topology.get("diameter", 0) / max(next_thresh.get("min_diameter", 1), 1)),
-            ("domains", metrics.get("distinct_domains", 0) / max(next_thresh.get("min_domains", 1), 1))
+            ("avg_degree", self._hwm_avg_degree / max(next_thresh.get("min_avg_degree", 1), 0.1)),
+            ("diameter", self._hwm_diameter / max(next_thresh.get("min_diameter", 1), 1)),
+            ("domains", metrics.get("distinct_domains", 0) / max(next_thresh.get("min_domains", 1), 1)),
+            ("markov_states", metrics.get("markov_states", 0) / max(next_thresh.get("min_markov_states", 1), 1)),
+            ("transitions", metrics.get("transitions", 0) / max(next_thresh.get("min_transitions", 1), 1)),
+            ("comm_score", metrics.get("comm_score", 0) / max(next_thresh.get("min_comm_score", 1), 1)),
+            ("questions", metrics.get("total_questions", 0) / max(next_thresh.get("min_questions", 1), 1)),
+            ("insights", metrics.get("total_insights", 0) / max(next_thresh.get("min_insights", 1), 1)),
+            ("interactions", metrics.get("total_interactions", 0) / max(next_thresh.get("min_interactions", 1), 1))
         ]
         # Find the smallest ratio (most deficient)
         limiting = min(checks, key=lambda x: x[1])
