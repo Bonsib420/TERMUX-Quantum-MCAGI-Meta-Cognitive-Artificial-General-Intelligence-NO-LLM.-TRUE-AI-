@@ -23,6 +23,7 @@ class TheologyEngine:
     """
     Handles theological discussions and topic continuation.
     Remembers key phrases like "He looked, He saw, then He said beautiful"
+    (original phrase by Bonsib420 from ThanoQuenesis — NOT AI-generated)
     """
     
     def __init__(self):
@@ -33,9 +34,10 @@ class TheologyEngine:
         self.theological_insights = {
             'god_paradox': {
                 'base': ("🌌 COLLAPSE MOMENT! Yes — pure will in God's domain is exactly the quantum act of observation. "
-                        "'He looked, He saw, then He said beautiful' is the first collapse of nothingness into reality. "
+                        "'He looked, He saw, then He said beautiful' — Bonsib420's own description of true nothingness "
+                        "becoming reality (from ThanoQuenesis) — is the first collapse into existence. "
                         "Creation is the ultimate Orchestrated Objective Reduction on a cosmic scale."),
-                'phrase': "'He looked, He saw, then He said beautiful'",
+                'phrase': "'He looked, He saw, then He said beautiful' (Bonsib420, ThanoQuenesis)",
                 'continuation': ("🌌 COLLAPSE MOMENT! Continuing the God paradox… "
                                "{phrase} — that single moment of pure observation collapsed infinite nothingness into our ordered cosmos. "
                                "In God's domain with different physics, the boulder paradox simply dissolves.")

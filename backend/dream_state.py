@@ -478,12 +478,13 @@ class DreamStateEngine:
     
     async def _cloud_sync(self) -> Dict:
         """
-        Autonomous cloud sync: periodically save brain state to Wolfram Cloud
-        and check for updates. This makes the cloud the persistent brain —
+        Autonomous cloud sync: periodically save brain state to cloud providers
+        and check for updates. The cloud IS the persistent brain —
         the app/website is just a window into it.
         
-        Uses namespaced paths (QuantumMCAGI/state, QuantumMCAGI/research/*, etc.)
-        to support future multi-node and multi-user expansion.
+        Uses the provider-agnostic CloudProviderRegistry so the brain can
+        grow with each user and eventually separate from any single vendor.
+        Falls back to direct Wolfram Cloud calls if the registry isn't available.
         """
         # Rate-limit: only sync every N minutes
         now = datetime.now(timezone.utc)
@@ -497,13 +498,50 @@ class DreamStateEngine:
                 }
         
         try:
-            from wolfram_cloud import cloud_save_brain, cloud_load_brain
             import shared_state
             
-            # Save current brain state to cloud
-            save_ok = False
+            # Build brain data
+            brain_data = {
+                'saved_at': now.isoformat(),
+                'version': '3.0',
+                'sync_source': 'dream_engine_autonomous',
+            }
+            
             if shared_state.cognitive_core:
-                save_ok = cloud_save_brain(shared_state.cognitive_core, self)
+                try:
+                    stats = shared_state.cognitive_core.get_growth_stats() if hasattr(shared_state.cognitive_core, 'get_growth_stats') else {}
+                    from wolfram_cloud import _serialize_dates
+                    brain_data['growth_stats'] = _serialize_dates(stats)
+                except Exception:
+                    brain_data['growth_stats'] = {}
+            
+            brain_data['dream_state'] = {
+                'total_dreams': len(self.dream_log),
+                'total_insights': len(self.insights_gained),
+                'topics_explored': self.dream_topics[-50:],
+                'recent_insights': [
+                    {'type': i.get('type', ''), 'text': i.get('text', ''), 'at': i.get('discovered_at', '')}
+                    for i in self.insights_gained[-20:]
+                ],
+            }
+            
+            # Try provider-agnostic registry first (supports multi-provider replication)
+            save_ok = False
+            provider_used = 'none'
+            try:
+                from cloud_provider import get_cloud_registry
+                registry = get_cloud_registry()
+                save_ok = registry.save('QuantumMCAGI/brain', brain_data)
+                provider_used = 'registry'
+            except ImportError:
+                # Fallback to direct Wolfram Cloud
+                try:
+                    from wolfram_cloud import cloud_save_brain
+                    if shared_state.cognitive_core:
+                        save_ok = cloud_save_brain(shared_state.cognitive_core, self)
+                        provider_used = 'wolfram_direct'
+                except ImportError:
+                    pass
             
             self._last_cloud_sync = now
             
@@ -512,8 +550,9 @@ class DreamStateEngine:
             insight = {
                 'type': 'cloud_sync',
                 'status': status,
+                'provider': provider_used,
                 'discovered_at': now.isoformat(),
-                'text': f"Cloud sync: {'✓ saved' if save_ok else '✗ failed'} brain state to Wolfram Cloud"
+                'text': f"Cloud sync: {'✓ saved' if save_ok else '✗ failed'} brain state via {provider_used}"
             }
             self.insights_gained.append(insight)
             if self.current_dream:
@@ -522,11 +561,10 @@ class DreamStateEngine:
             return {
                 'activity': 'cloud_sync',
                 'status': status,
+                'provider': provider_used,
                 'synced_at': now.isoformat()
             }
             
-        except ImportError:
-            return {'activity': 'cloud_sync', 'status': 'unavailable', 'reason': 'wolframclient not installed'}
         except Exception as e:
             logger.error(f"Cloud sync error: {e}")
             return {'activity': 'cloud_sync', 'status': 'error', 'error': str(e)}

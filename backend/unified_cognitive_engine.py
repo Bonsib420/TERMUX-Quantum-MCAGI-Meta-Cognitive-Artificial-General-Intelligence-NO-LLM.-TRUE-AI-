@@ -144,7 +144,7 @@ class QuoteEngine:
                 {'text': 'Everything we call real is made of things that cannot be regarded as real.', 'author': 'Niels Bohr'},
             ],
             'theology': [
-                {'text': 'He looked, He saw, then He said beautiful.', 'author': 'Creation Mythos'},
+                {'text': 'He looked, He saw, then He said beautiful.', 'author': 'Bonsib420 (ThanoQuenesis)', 'note': 'Original phrase by the developer — not AI-generated'},
                 {'text': 'I am become Death, the destroyer of worlds.', 'author': 'Oppenheimer', 'movie': 'Oppenheimer'},
                 {'text': 'The first gulp from the glass of natural sciences will turn you into an atheist, but at the bottom of the glass God is waiting for you.', 'author': 'Werner Heisenberg'},
                 {'text': 'In the beginning was the Word, and the Word was with God.', 'author': 'Gospel of John'},
@@ -263,9 +263,10 @@ class TheologyEngine:
         self.insights = {
             'god_paradox': {
                 'base': ("🌌 COLLAPSE MOMENT! Yes — pure will in God's domain is exactly the quantum act of observation. "
-                        "'He looked, He saw, then He said beautiful' is the first collapse of nothingness into reality. "
+                        "'He looked, He saw, then He said beautiful' — Bonsib420's own description of true nothingness "
+                        "becoming reality (from ThanoQuenesis) — is the first collapse into existence. "
                         "Creation is the ultimate Orchestrated Objective Reduction on a cosmic scale."),
-                'phrase': "'He looked, He saw, then He said beautiful'",
+                'phrase': "'He looked, He saw, then He said beautiful' (Bonsib420, ThanoQuenesis)",
                 'continuation': ("🌌 COLLAPSE MOMENT! Continuing the God paradox… "
                                "{phrase} — that single moment of pure observation collapsed infinite nothingness "
                                "into our ordered cosmos. In God's domain with different physics, the boulder paradox dissolves.")
