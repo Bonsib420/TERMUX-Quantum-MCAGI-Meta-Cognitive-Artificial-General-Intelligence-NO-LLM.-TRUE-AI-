@@ -121,6 +121,35 @@ function ChatInterface() {
     }
   };
 
+  const exportDevContext = async () => {
+    try {
+      // Try API first (includes live metrics), fall back to static copy
+      let contextText;
+      try {
+        const res = await axios.get(`${API_BASE}/dev/context`);
+        contextText = res.data.exported_text;
+      } catch {
+        // Fallback: build minimal context from what we know client-side
+        const lines = [];
+        lines.push('# 🔮 Quantum MCAGI — Project Context');
+        lines.push(`**Exported:** ${new Date().toISOString()}`);
+        lines.push('');
+        lines.push('> This is a true AI system (no LLMs) using PennyLane quantum computing,');
+        lines.push('> Penrose Orch-OR consciousness, self-evolution, and Markov chain language');
+        lines.push('> generation. Runs on Termux (Android). 83 Python backend modules.');
+        lines.push('');
+        lines.push('See PROJECT_CONTEXT.md in the repo for the full briefing.');
+        lines.push('');
+        lines.push('Repo: https://github.com/Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-');
+        contextText = lines.join('\n');
+      }
+      await copyToClipboard(contextText);
+    } catch (err) {
+      console.error('Dev context export failed:', err);
+      alert('Failed to export dev context.');
+    }
+  };
+
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
 
@@ -363,6 +392,21 @@ function ChatInterface() {
               title="Export this conversation as markdown — copies to clipboard, ready to paste into Claude"
             >
               📤 Share w/ Claude
+            </button>
+            <button
+              onClick={exportDevContext}
+              style={{
+                background: '#1a2a1a',
+                border: '1px solid #38a169',
+                color: '#9ae6b4',
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '0.85rem'
+              }}
+              title="Copy full project context to clipboard — paste into Claude to brief it on the project"
+            >
+              📋 Dev Context
             </button>
             <button
               onClick={startNewChat}

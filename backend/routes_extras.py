@@ -1357,3 +1357,94 @@ async def research_history(limit: int = 20):
         return {"history": history}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# DEV CONTEXT — Project state export for sharing with Claude / other AIs
+# ============================================================================
+
+@router.get("/dev/context")
+async def get_dev_context():
+    """
+    Generate current project context as markdown — ready to paste into Claude.
+    Reads PROJECT_CONTEXT.md and appends live metrics from the database.
+    """
+    try:
+        import pathlib
+        
+        # Read the static PROJECT_CONTEXT.md
+        context_path = pathlib.Path(__file__).parent.parent / "PROJECT_CONTEXT.md"
+        static_context = ""
+        if context_path.exists():
+            static_context = context_path.read_text()
+        
+        # Append live metrics if database is available
+        live_section = []
+        live_section.append("\n\n---\n")
+        live_section.append("## 📊 Live Metrics Snapshot\n")
+        live_section.append(f"*Generated: {datetime.now(timezone.utc).isoformat()}*\n")
+        
+        try:
+            total_concepts = await state.db.semantic_memory.count_documents({})
+            total_episodes = await state.db.episodic_memory.count_documents({})
+            total_skills = await state.db.procedural_memory.count_documents({})
+            total_questions = await state.db.philosophical_memory.count_documents({"type": {"$exists": False}})
+            total_insights = await state.db.philosophical_memory.count_documents({"type": "insight"})
+            total_interactions = await state.db.episodic_memory.count_documents({"episode_type": "user_interaction"})
+            total_growth_events = await state.db.growth_metrics.count_documents({})
+            
+            live_section.append(f"- **Concepts stored:** {total_concepts}")
+            live_section.append(f"- **Episodes:** {total_episodes}")
+            live_section.append(f"- **Skills:** {total_skills}")
+            live_section.append(f"- **Questions generated:** {total_questions}")
+            live_section.append(f"- **Insights formed:** {total_insights}")
+            live_section.append(f"- **User interactions:** {total_interactions}")
+            live_section.append(f"- **Growth events:** {total_growth_events}")
+        except Exception:
+            live_section.append("- *(Database not available — connect MongoDB to see live metrics)*")
+        
+        live_section.append("")
+        
+        exported_text = static_context + "\n".join(live_section)
+        
+        return {
+            "format": "markdown",
+            "exported_text": exported_text
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/dev/changelog")
+async def get_dev_changelog():
+    """
+    Return the development changelog section from PROJECT_CONTEXT.md.
+    Useful for quickly checking what changed recently.
+    """
+    try:
+        import pathlib
+        
+        context_path = pathlib.Path(__file__).parent.parent / "PROJECT_CONTEXT.md"
+        if not context_path.exists():
+            return {"changelog": "No PROJECT_CONTEXT.md found."}
+        
+        content = context_path.read_text()
+        
+        # Extract changelog section
+        changelog_start = content.find("## Development Changelog")
+        if changelog_start == -1:
+            return {"changelog": "No changelog section found in PROJECT_CONTEXT.md."}
+        
+        # Find the next ## heading after the changelog
+        next_section = content.find("\n## ", changelog_start + 1)
+        if next_section == -1:
+            changelog = content[changelog_start:]
+        else:
+            changelog = content[changelog_start:next_section]
+        
+        return {
+            "format": "markdown",
+            "changelog": changelog.strip()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
