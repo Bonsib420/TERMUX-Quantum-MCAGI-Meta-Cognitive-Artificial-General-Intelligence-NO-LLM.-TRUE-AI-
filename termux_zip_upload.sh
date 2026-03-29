@@ -7,17 +7,13 @@
 set -e
 
 ZIP_FILE="/storage/emulated/0/Download/quantum_mcagi_full.zip"
+FOLDER="/storage/emulated/0/Download/quantum_mcagi_full"
 REPO="Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-"
 
 echo "================================="
 echo " Quantum MCAGI — Upload Zip"
 echo "================================="
 echo ""
-
-# Install gh CLI
-echo "[1/3] Installing GitHub CLI..."
-pkg update -y
-pkg install -y gh
 
 # Grant storage access if needed
 if [ ! -d "/storage/emulated/0" ]; then
@@ -26,19 +22,29 @@ if [ ! -d "/storage/emulated/0" ]; then
     exit 1
 fi
 
+# If the zip doesn't exist but the folder does, create the zip
+if [ ! -f "$ZIP_FILE" ] && [ -d "$FOLDER" ]; then
+    echo "[1/2] Zipping $FOLDER ..."
+    echo "  This may take several minutes for 500+ MB..."
+    pkg install -y zip
+    cd /storage/emulated/0/Download
+    zip -r "$ZIP_FILE" quantum_mcagi_full \
+        -x "*.git*" -x "*__pycache__*" -x "*.pyc"
+    echo "  Zip created."
+fi
+
 # Check the zip exists
-echo "[2/3] Checking zip file..."
 if [ ! -f "$ZIP_FILE" ]; then
-    echo "ERROR: File not found: $ZIP_FILE"
+    echo "ERROR: Neither zip nor folder found at:"
+    echo "  $ZIP_FILE"
+    echo "  $FOLDER"
     exit 1
 fi
 ZIP_SIZE=$(du -h "$ZIP_FILE" | cut -f1)
 echo "  Found: $ZIP_FILE ($ZIP_SIZE)"
 
 # Upload to GitHub Release
-echo "[3/3] Uploading to GitHub Release..."
-echo ""
-gh auth login
+echo "[2/2] Uploading to GitHub Release..."
 TAG="v1.0.0"
 if gh release view "$TAG" --repo "$REPO" > /dev/null 2>&1; then
     TAG="v1.0.0-$(date +%Y%m%d-%H%M%S)"

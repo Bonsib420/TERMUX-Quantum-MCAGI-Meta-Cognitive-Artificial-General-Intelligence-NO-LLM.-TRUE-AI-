@@ -6,30 +6,33 @@
 
 ---
 
-## Upload Your Zip from Termux
+## Upload from Termux
 
-You already have `quantum_mcagi_full.zip` on your phone. Open **Termux** and run:
-
-```bash
-pkg install -y curl && curl -sL https://raw.githubusercontent.com/Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-/main/termux_zip_upload.sh -o ~/upload.sh && bash ~/upload.sh
-```
-
-It will find your zip and upload it straight to GitHub Releases.
-
-### Or Do It Manually in 3 Steps
+You're already logged in with `gh auth login`. Now just run:
 
 ```bash
-# 1. Install GitHub CLI
-pkg install -y gh
-
-# 2. Log in
-gh auth login
-
-# 3. Upload your zip
+# If you have the zip already:
 gh release create v1.0.0 /storage/emulated/0/Download/quantum_mcagi_full.zip \
     --repo Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI- \
     --title "Quantum MCAGI Full Release" \
     --notes "Full release by Cory N.B. Blackburn"
+```
+
+```bash
+# If you only have the folder (no zip yet):
+pkg install -y zip
+cd /storage/emulated/0/Download
+zip -r quantum_mcagi_full.zip quantum_mcagi_full
+gh release create v1.0.0 quantum_mcagi_full.zip \
+    --repo Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI- \
+    --title "Quantum MCAGI Full Release" \
+    --notes "Full release by Cory N.B. Blackburn"
+```
+
+Or run the script which handles both automatically:
+
+```bash
+curl -sL https://raw.githubusercontent.com/Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-/main/termux_zip_upload.sh -o ~/upload.sh && bash ~/upload.sh
 ```
 
 Once done, download at: [**Releases**](https://github.com/Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-/releases)
