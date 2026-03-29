@@ -56,7 +56,7 @@
 | 7 | Emergent Behavior         | 2/4   | Breaking mid-sentence into its own question at "contained" is an accidental philosophical move. |
 | 8 | Question Generation       | 2/4   | "What is the deeper nature of god?" goes to essence. Template pattern but decent. |
 | 9 | Quote Transformation      | 0/4   | No quote fired (probabilistic). |
-| 10| Dream Integration         | 0/4   | No dream fragment (10% probability didn't trigger). |
+| 10| Dream Integration         | 0/4   | No dream fragment (35% probability didn't trigger). |
 | **TOTAL** | | **13/40** | **Honest nascent-stage performance** |
 
 ### Replit Response (More mature instance)
