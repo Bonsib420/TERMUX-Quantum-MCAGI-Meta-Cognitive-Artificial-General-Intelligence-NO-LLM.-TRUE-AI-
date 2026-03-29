@@ -15,11 +15,11 @@ No PIL, no NumPy, no ML models — every pixel is computed from pure mathematics
 | **Ridge Noise** | Sharp ridge-like features for energy patterns |
 | **Voronoi Noise** | Cellular patterns for quantum-field visualisation |
 | **Gravitational Lensing** | Radial + tangential pixel displacement simulating light-bending |
-| **Blackbody Colours** | Physically-based star and accretion-disk colouring |
+| **Blackbody Colors** | Physically-based star and accretion-disk coloring |
 | **Logarithmic Spirals** | Keplerian-inspired spiral arm rendering |
 | **Separable Gaussian Bloom** | Efficient two-pass glow around bright regions |
 | **ACES Tone Mapping** | Filmic HDR-to-SDR conversion |
-| **Cinematic Colour Grading** | Tint, contrast, saturation, shadow-colour adjustments |
+| **Cinematic Color Grading** | Tint, contrast, saturation, shadow-color adjustments |
 
 ## Quick Start
 
@@ -45,7 +45,7 @@ python -m quantum_image_generator --preset quantum_field --format bmp
 | Preset | Description |
 |---|---|
 | `cosmic_vortex` | Black hole with swirling accretion disk and gravitational lensing |
-| `nebula` | Colourful interstellar gas cloud with emission layers |
+| `nebula` | Colorful interstellar gas cloud with emission layers |
 | `galaxy` | Spiral galaxy with central bulge |
 | `quantum_field` | Abstract quantum energy-field with Voronoi cells and ridges |
 
@@ -91,7 +91,7 @@ buf.save("custom_scene.png")
 quantum_image_generator/
 ├── __init__.py     # Public API
 ├── __main__.py     # CLI entry-point
-├── core.py         # PixelBuffer, image I/O (BMP + PNG), colour math
+├── core.py         # PixelBuffer, image I/O (BMP + PNG), color math
 ├── noise.py        # Perlin noise, fBm, turbulence, ridges, Voronoi
 └── renderer.py     # Scene generators, compositing, post-processing
 ```
@@ -119,7 +119,7 @@ No `pip install` required — clone and run.
 
 3. **Post-Processing Pipeline** — Bloom extracts bright pixels, applies
    separable Gaussian blur, and adds the glow back. Vignette darkens edges.
-   ACES tone mapping compresses HDR to displayable range. Colour grading
+   ACES tone mapping compresses HDR to displayable range. Color grading
    adds the final cinematic feel.
 
 4. **Deterministic Seeds** — Every `--seed` value produces the exact same

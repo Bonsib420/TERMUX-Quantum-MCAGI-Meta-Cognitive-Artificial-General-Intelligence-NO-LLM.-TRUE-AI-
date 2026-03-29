@@ -23,7 +23,7 @@ def main():
 presets
 -------
   cosmic_vortex   Black hole with accretion disk & gravitational lensing
-  nebula          Colourful interstellar nebula cloud
+  nebula          Colorful interstellar nebula cloud
   galaxy          Spiral galaxy with central bulge
   quantum_field   Abstract quantum energy-field visualisation
 

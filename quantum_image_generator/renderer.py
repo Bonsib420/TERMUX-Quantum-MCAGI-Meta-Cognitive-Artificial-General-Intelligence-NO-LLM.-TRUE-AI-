@@ -22,7 +22,7 @@ from .noise import PerlinNoise, VoronoiNoise
 
 def render_starfield(buf, density=0.003, seed=42,
                      brightness_range=(0.3, 1.5)):
-    """Scatter stars with varying brightness and colour temperature."""
+    """Scatter stars with varying brightness and color temperature."""
     rng = random.Random(seed)
     w, h = buf.width, buf.height
     num_stars = int(w * h * density)
@@ -426,7 +426,7 @@ def apply_tone_mapping(buf):
 def apply_color_grade(buf, tint=(1.0, 0.95, 0.9),
                       shadows=(0.05, 0.02, 0.08),
                       contrast=1.1, saturation=1.2):
-    """Cinematic colour grading pass."""
+    """Cinematic color grading pass."""
     d = buf.data
     _clamp = clamp
     for i in range(0, len(d), 3):
@@ -527,7 +527,7 @@ def create_cosmic_vortex(width=512, height=512, seed=42):
 
 
 def create_nebula(width=512, height=512, seed=42):
-    """Colourful interstellar nebula cloud."""
+    """Colorful interstellar nebula cloud."""
     print(f"Generating nebula ({width}x{height}, seed={seed})...")
     buf = PixelBuffer(width, height)
     noise  = PerlinNoise(seed)

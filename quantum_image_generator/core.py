@@ -239,7 +239,7 @@ def blackbody_color(temp):
 
 
 def gradient_sample(t, stops):
-    """Sample a colour gradient.  *stops* = [(pos, (r,g,b)), …] sorted."""
+    """Sample a color gradient.  *stops* = [(pos, (r,g,b)), …] sorted."""
     if t <= stops[0][0]:
         return stops[0][1]
     if t >= stops[-1][0]:
