@@ -479,7 +479,12 @@ def initialize():
     is_idle = False
     
     async def monitor_idle():
-        """Background task: check idle status and manage dream state."""
+        """Background task: check idle status and manage dream state.
+        When idle, runs dream cycles which now include:
+        - dream_driven_research (auto-fetches web content from ideas)
+        - cloud_sync (auto-saves brain to Wolfram Cloud)
+        - plus the original activities (consolidation, reflection, ideas, etc.)
+        """
         global last_activity_time, is_idle, dream_task
         
         while True:
@@ -512,10 +517,11 @@ def initialize():
                 try:
                     cycle_result = await dream_engine.dream_cycle()
                     if cycle_result and not cycle_result.get('error'):
-                        logger.info(f"Dream cycle: {cycle_result.get('activity')} - {cycle_result.get('result','')[:50]}")
+                        activity = cycle_result.get('activity', '')
+                        logger.info(f"Dream cycle: {activity} - {str(cycle_result)[:80]}")
                 except Exception as e:
                     logger.error(f"Dream cycle error: {e}")
     
     # Start the monitor task
-    # dream_task = asyncio.create_task(monitor_idle())  # disabled for debugging
-    logger.info("✅ Background idle/dream monitor started (disabled)")
+    dream_task = asyncio.create_task(monitor_idle())
+    logger.info("✅ Background idle/dream monitor started (autonomous research + cloud sync enabled)")

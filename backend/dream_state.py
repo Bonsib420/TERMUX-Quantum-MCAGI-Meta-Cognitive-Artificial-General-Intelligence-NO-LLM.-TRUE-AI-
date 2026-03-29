@@ -3,9 +3,12 @@
 When the AI is not actively chatting, it enters Dream State.
 - Autonomous background activities
 - Self-reflection and learning
+- Dream-driven research: ideas → live web research → knowledge growth
+- Autonomous cloud sync: brain state ↔ Wolfram Cloud
 - Users can see what AI was doing while away
 """
 
+import re
 import random
 import logging
 from typing import Dict, List, Optional
@@ -37,7 +40,7 @@ class DreamStateEngine:
         self.last_active = datetime.now(timezone.utc)
         self.idle_threshold_minutes = 5  # Enter dream state after 5 min idle
         
-        # Dream activities
+        # Dream activities — includes autonomous research + cloud sync
         self.dream_activities = [
             'memory_consolidation',
             'curiosity_research',
@@ -45,8 +48,14 @@ class DreamStateEngine:
             'idea_generation',
             'code_contemplation',
             'personality_development',
-            'question_formation'
+            'question_formation',
+            'dream_driven_research',
+            'cloud_sync',
         ]
+        
+        # Track cloud sync timing (don't sync every cycle)
+        self._last_cloud_sync = None
+        self._cloud_sync_interval_minutes = 15
     
     def enter_dream_state(self) -> Dict:
         """Enter dream state when idle"""
@@ -140,6 +149,12 @@ class DreamStateEngine:
         
         elif activity == 'question_formation':
             return await self._form_questions()
+        
+        elif activity == 'dream_driven_research':
+            return await self._dream_driven_research()
+        
+        elif activity == 'cloud_sync':
+            return await self._cloud_sync()
         
         return {'activity': activity, 'status': 'completed'}
     
@@ -327,6 +342,194 @@ class DreamStateEngine:
             'activity': 'question_formation',
             'question': question
         }
+    
+    async def _dream_driven_research(self) -> Dict:
+        """
+        Dream-driven research: the dream engine generates an idea or picks a
+        curiosity topic, then ACTUALLY researches it — fetching live web content
+        and ingesting it into the knowledge graph. This is the dream→research
+        pipeline that lets the AI grow autonomously.
+        """
+        try:
+            # Build a research query from dream insights or curiosity
+            query = None
+            source_type = None
+            
+            # Strategy 1: Research a topic from a recent dream insight
+            if self.insights_gained:
+                recent = self.insights_gained[-5:]
+                idea_insights = [i for i in recent if i.get('type') == 'idea']
+                if idea_insights:
+                    insight = random.choice(idea_insights)
+                    concepts = insight.get('concepts', ())
+                    if concepts:
+                        query = f"{concepts[0]} {concepts[1]} connection significance"
+                        source_type = 'dream_idea'
+            
+            # Strategy 2: Research from queued dream topics
+            if not query and self.dream_topics:
+                topic = random.choice(self.dream_topics[-10:])
+                query = f"{topic} research findings"
+                source_type = 'dream_curiosity'
+            
+            # Strategy 3: Pick from exploration topics
+            if not query:
+                from research_topics import EXPLORATION_TOPICS
+                query = random.choice(EXPLORATION_TOPICS)
+                source_type = 'exploration_topic'
+            
+            # Strategy 4: Pick a URL from the research feeds
+            use_feed_url = random.random() < 0.4  # 40% chance to use a curated feed URL
+            feed_url = None
+            if use_feed_url:
+                try:
+                    import json, os
+                    feeds_path = os.path.join(os.path.dirname(__file__), 'research_feeds.json')
+                    if os.path.exists(feeds_path):
+                        with open(feeds_path, 'r') as f:
+                            feeds = json.load(f)
+                        # Collect all URLs across all categories
+                        all_urls = []
+                        for cat_key, cat_data in feeds.items():
+                            if cat_key.startswith('_'):
+                                continue
+                            all_urls.extend(cat_data.get('urls', []))
+                        if all_urls:
+                            feed_url = random.choice(all_urls)
+                            source_type = 'feed_url'
+                except Exception:
+                    pass  # Fall back to search query
+            
+            # Execute the research
+            text = None
+            research_source = query
+            
+            if feed_url:
+                # Fetch and extract from the curated URL
+                try:
+                    from document_ingester import fetch_url
+                    fetched_text, status = fetch_url(feed_url)
+                    if fetched_text and len(fetched_text) > 100:
+                        text = fetched_text
+                        research_source = feed_url
+                except Exception as e:
+                    logger.warning(f"Dream research URL fetch failed: {e}")
+            
+            if not text:
+                # Fall back to DuckDuckGo search
+                try:
+                    from self_research import DDGS
+                    ddgs = DDGS()
+                    results = list(ddgs.text(query, max_results=5))
+                    if results:
+                        text = ' '.join([r.get('body', '') for r in results])
+                except Exception as e:
+                    logger.warning(f"Dream research search failed: {e}")
+            
+            if not text or len(text) < 50:
+                return {
+                    'activity': 'dream_driven_research',
+                    'status': 'no_results',
+                    'query': query
+                }
+            
+            # Ingest via cognitive core
+            concepts_learned = 0
+            try:
+                from quantum_cognitive_core import QuantumCognitiveCore
+                import shared_state
+                if shared_state.cognitive_core:
+                    from self_research import SelfResearchEngine
+                    engine = SelfResearchEngine(self.db)
+                    domain = engine._topic_to_domain(query)
+                    result = await shared_state.cognitive_core.ingest_text(
+                        text, domain=domain, source='dream_research', max_concepts=15
+                    )
+                    concepts_learned = result.get('stored', 0)
+            except Exception as e:
+                logger.warning(f"Dream research ingest failed: {e}")
+            
+            # Record insight
+            insight = {
+                'type': 'dream_research',
+                'query': query,
+                'source': research_source,
+                'source_type': source_type,
+                'concepts_learned': concepts_learned,
+                'discovered_at': datetime.now(timezone.utc).isoformat(),
+                'text': f"Dream research: {query} (+{concepts_learned} concepts)"
+            }
+            self.insights_gained.append(insight)
+            if self.current_dream:
+                self.current_dream['insights'].append(insight)
+                self.current_dream['topics_explored'].append(query)
+            
+            return {
+                'activity': 'dream_driven_research',
+                'query': query,
+                'source_type': source_type,
+                'concepts_learned': concepts_learned,
+                'status': 'researched'
+            }
+            
+        except Exception as e:
+            logger.error(f"Dream-driven research error: {e}")
+            return {'activity': 'dream_driven_research', 'error': str(e)}
+    
+    async def _cloud_sync(self) -> Dict:
+        """
+        Autonomous cloud sync: periodically save brain state to Wolfram Cloud
+        and check for updates. This makes the cloud the persistent brain —
+        the app/website is just a window into it.
+        
+        Uses namespaced paths (QuantumMCAGI/state, QuantumMCAGI/research/*, etc.)
+        to support future multi-node and multi-user expansion.
+        """
+        # Rate-limit: only sync every N minutes
+        now = datetime.now(timezone.utc)
+        if self._last_cloud_sync:
+            elapsed = (now - self._last_cloud_sync).total_seconds() / 60
+            if elapsed < self._cloud_sync_interval_minutes:
+                return {
+                    'activity': 'cloud_sync',
+                    'status': 'skipped',
+                    'reason': f'Last sync {elapsed:.1f} min ago (interval: {self._cloud_sync_interval_minutes} min)'
+                }
+        
+        try:
+            from wolfram_cloud import cloud_save_brain, cloud_load_brain
+            import shared_state
+            
+            # Save current brain state to cloud
+            save_ok = False
+            if shared_state.cognitive_core:
+                save_ok = cloud_save_brain(shared_state.cognitive_core, self)
+            
+            self._last_cloud_sync = now
+            
+            status = 'synced' if save_ok else 'save_failed'
+            
+            insight = {
+                'type': 'cloud_sync',
+                'status': status,
+                'discovered_at': now.isoformat(),
+                'text': f"Cloud sync: {'✓ saved' if save_ok else '✗ failed'} brain state to Wolfram Cloud"
+            }
+            self.insights_gained.append(insight)
+            if self.current_dream:
+                self.current_dream['insights'].append(insight)
+            
+            return {
+                'activity': 'cloud_sync',
+                'status': status,
+                'synced_at': now.isoformat()
+            }
+            
+        except ImportError:
+            return {'activity': 'cloud_sync', 'status': 'unavailable', 'reason': 'wolframclient not installed'}
+        except Exception as e:
+            logger.error(f"Cloud sync error: {e}")
+            return {'activity': 'cloud_sync', 'status': 'error', 'error': str(e)}
     
     def _create_dream_summary(self) -> Dict:
         """Create a summary of what happened during dream state"""
