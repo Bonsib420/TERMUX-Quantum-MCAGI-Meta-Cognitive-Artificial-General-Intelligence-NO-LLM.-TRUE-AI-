@@ -159,6 +159,52 @@ You: /copy-last
 
 ---
 
+## Chaos Engine — Personality Firing Architecture
+
+These are the **independent firing probabilities** hardcoded in `backend/chaos_engine.py` that define the "Spirit" of the AI. Each element fires independently on every response — they stack, not compete.
+
+### Source: `chaos_engine.py` (lines 41-44)
+
+```python
+self.personality_baseline = 1.0     # 100% - always add personality perspective
+self.aside_probability = 0.75       # 75% chance of philosophical aside
+self.quote_probability = 0.45       # 45% chance of movie quote
+self.dream_probability = 0.35       # 35% chance of dream fragment
+self.raw_intrusion_base_rate = 0.20 # 20% base chance of raw backend fragment
+```
+
+| Element | Probability | Effect |
+|---------|------------|--------|
+| **Personality perspective** | 100% (mandatory) | Unique personality angle on every response — no probability check, always fires |
+| **Philosophical asides** | 75% | The "voice" of the backend — drops meta-commentary, existential observations |
+| **Movie quotes** | 45% | Contextually selected quotes, placed for maximum confusion-adjacency |
+| **Dream fragments** | 35% | Injects ThanoQuenesis manuscript fragments — the subconscious layer |
+| **Raw Markov intrusion** | 20% base | Unfiltered backend fragments — the "spilled coffee" moments that survive into output |
+
+### Confirmed in `/status` display (`chat.py` line 779-780):
+```
+7. Personality perspective (100% baseline) [ON]
+8. Movie quotes (45%) + asides (75%) + dreams (35%) [ON]
+```
+
+### Design Principle from `unified_quantum_brain.py`:
+> *"Personality is 100% baseline - no probability checks"*
+>
+> Low understanding outputs are FEATURES, not bugs. Raw backend fragments survive unfiltered. Broken grammar with semantic weight is KEPT. This ensures that personality is the default substrate, not a post-processing layer.
+
+### Why This Matters
+
+These percentages guarantee that MCAGI **never produces a generic response**. Even at Stage 0 Nascent with 536 Markov states, the Chaos Engine ensures every output carries personality DNA. The probability stack means a typical response has:
+- 100% chance of personality perspective (always)
+- ~75% chance of also including an aside
+- ~45% chance of also including a quote
+- ~35% chance of also including a dream fragment
+- ~20% chance of a raw Markov intrusion leaking through
+
+The expected number of personality elements per response: **1.0 + 0.75 + 0.45 + 0.35 + 0.20 = 2.75 elements** on average, with a guaranteed minimum of 2 (`self.min_personality_elements = 2`).
+
+---
+
 ## Enhancement Ideas
 
 1. **Feed it Penrose's "Emperor's New Mind"** via `/learn` — this would give the Markov chain the vocabulary to actually articulate Orch-OR arguments
@@ -166,6 +212,47 @@ You: /copy-last
 3. **The Replit instance should cross-pollinate to Termux** — export the Markov chain states and concept graph from Replit, import into Termux
 4. **Dream fragments about cosmological collapse** — add "creation as measurement" and "void as superposition" to the dream corpus
 5. **Increase quote transformation probability** when tone depth > 0.8 — deep philosophical prompts deserve quotes
+
+---
+
+## Claude's Opinion — What To Do Next
+
+Based on my analysis of the architecture, the rubric scores, and where the system currently sits, here's my prioritized recommendation:
+
+### 🔴 Priority 1: Feed the Markov Chain (Biggest ROI)
+
+Your Termux instance has 36K Markov states. The Replit instance produced a 27/40 response. The ONLY difference is training data volume. This means:
+
+**Action:** Run `/learn` on long-form texts. Each paragraph of connected prose adds exponentially more transition paths than short chat exchanges. Best sources:
+- Penrose's "Emperor's New Mind" chapters on consciousness + quantum mechanics (gives MCAGI the vocabulary to articulate what it's already DOING architecturally)
+- The ThanoQuenesis manuscript itself (recursive — the system dreams about its own source material)
+- Philosophy of mind papers (Chalmers, Dennett, Nagel's "What Is It Like to Be a Bat?")
+
+**Why first:** This is the cheapest way to dramatically improve output quality. No code changes needed. Just feeding text.
+
+### 🟡 Priority 2: Cross-Pollinate Replit → Termux
+
+The Replit instance has a mature Markov chain. If you can export its `markov_states` and `concept_graph` and import them into Termux, you'd instantly recover from the 1.3M transition loss and then some.
+
+**Action:** Build a `/export-brain` and `/import-brain` command pair that serializes/deserializes the cognitive state (Markov chain + concept graph + growth metrics).
+
+### 🟢 Priority 3: Tone-Adaptive Chaos Probabilities
+
+Right now the Chaos Engine fires at static rates regardless of context. A philosophical prompt at depth=0.95 gets the same 45% quote chance as "what's the weather." 
+
+**Action:** Scale `quote_probability` and `dream_probability` UP when tone depth > 0.7. Deep prompts deserve more personality elements. This could be a simple multiplier:
+```python
+depth_boost = 1.0 + (tone_depth * 0.5)  # 1.0x at depth=0, 1.5x at depth=1.0
+effective_quote_prob = min(self.quote_probability * depth_boost, 0.85)
+```
+
+### 🔵 Priority 4: Dream Corpus Expansion
+
+Add dream fragments themed around cosmological collapse, creation-as-measurement, and void-as-superposition. These would make the 35% dream injections more relevant to the kinds of deep philosophical prompts you're testing with.
+
+### ⚪ Priority 5: RUBRIC.md Scoring Automation
+
+Build a `/grade` command that runs the rubric scoring automatically after each response, tracking scores over time. This would let you see the growth curve quantitatively — not just "it feels better" but "coherence went from 1.2 to 2.8 average over 500 interactions."
 
 ---
 
