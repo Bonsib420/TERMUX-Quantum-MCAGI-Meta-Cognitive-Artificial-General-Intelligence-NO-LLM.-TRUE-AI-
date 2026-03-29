@@ -23,6 +23,10 @@ Commands:
     /feed [CAT]   - Batch-fetch URLs from research_feeds.json (or /feed all)
     /export       - Export full conversation as markdown (file + terminal)
     /copy-last    - Print last AI response in a bordered box for easy copy
+    /cloud-save   - Save state to Wolfram Cloud
+    /cloud-load   - Load & merge concepts/growth from Wolfram Cloud
+    /cloud-pull   - Pull full brain snapshot from all cloud providers
+    /cloud-status - Show Wolfram Cloud status
     /quit         - Save and exit
 """
 
@@ -483,9 +487,6 @@ class LocalMemory:
     def _check_stage(self):
         # Backward compatibility: delegate to new system
         self._check_stage_advancement()
-
-    def get_known_concepts(self):
-        return list(self.concepts.keys())
 
     def get_known_concepts(self):
         return list(self.concepts.keys())
@@ -960,10 +961,96 @@ def run_chat(verbose=False):
                 continue
             elif cmd[0] == '/cloud-load':
                 if HAS_CLOUD:
-                    result = cloud_load()
-                    print(f"  {result}")
+                    print("  Loading from Wolfram Cloud (QuantumMCAGI/state)...")
+                    data = cloud_load()
+                    if data and isinstance(data, dict):
+                        # Merge concepts
+                        cloud_concepts = data.get("concepts", {})
+                        merged_concepts = 0
+                        for name, attrs in cloud_concepts.items():
+                            if name not in memory.concepts:
+                                memory.concepts[name] = attrs
+                                merged_concepts += 1
+                            else:
+                                # Merge relationships
+                                existing_rels = set(tuple(r) if isinstance(r, list) else r for r in memory.concepts[name].get("relationships", []))
+                                for rel in attrs.get("relationships", []):
+                                    key = tuple(rel) if isinstance(rel, list) else rel
+                                    if key not in existing_rels:
+                                        memory.concepts[name]["relationships"].append(rel)
+                                        merged_concepts += 1
+                        # Merge growth stats (take higher values)
+                        cloud_growth = data.get("growth", {})
+                        for key in ("total_interactions", "total_concepts", "total_connections", "total_questions_asked", "total_insights"):
+                            if cloud_growth.get(key, 0) > memory.growth.get(key, 0):
+                                memory.growth[key] = cloud_growth[key]
+                        print(f"  ✓ Merged {merged_concepts} concepts from cloud")
+                        print(f"  ✓ Concepts now: {len(memory.concepts)}")
+                        save_everything(memory, engine, state_dir)
+                    elif data:
+                        print(f"  Cloud returned: {str(data)[:200]}")
+                    else:
+                        print("  No data found in cloud.")
                 else:
                     print("  Wolfram Cloud not available.")
+                continue
+            elif cmd[0] == '/cloud-pull':
+                # Pull full brain snapshot via CloudProviderRegistry
+                print("  Pulling brain state from cloud providers...")
+                pulled = False
+                try:
+                    from cloud_provider import get_cloud_registry
+                    registry = get_cloud_registry()
+                    # Pull QuantumMCAGI/brain (full brain snapshot from dream sync)
+                    brain = registry.load('QuantumMCAGI/brain')
+                    if brain and isinstance(brain, dict):
+                        print(f"  ✓ Brain snapshot: v{brain.get('version', '?')} saved at {brain.get('saved_at', '?')}")
+                        gs = brain.get('growth_stats', {})
+                        if gs:
+                            print(f"    Growth stats: {len(gs)} fields")
+                        ds = brain.get('dream_state', {})
+                        if ds:
+                            print(f"    Dreams: {ds.get('total_dreams', 0)}, Insights: {ds.get('total_insights', 0)}")
+                        pulled = True
+                    else:
+                        print("  No brain snapshot found in cloud.")
+                    # Pull QuantumMCAGI/state (core memory: concepts, growth)
+                    state_data = registry.load('QuantumMCAGI/state')
+                    if state_data and isinstance(state_data, dict):
+                        cloud_concepts = state_data.get("concepts", {})
+                        merged = 0
+                        for name, attrs in cloud_concepts.items():
+                            if name not in memory.concepts:
+                                memory.concepts[name] = attrs
+                                merged += 1
+                        cloud_growth = state_data.get("growth", {})
+                        for key in ("total_interactions", "total_concepts", "total_connections", "total_questions_asked", "total_insights"):
+                            if cloud_growth.get(key, 0) > memory.growth.get(key, 0):
+                                memory.growth[key] = cloud_growth[key]
+                        print(f"  ✓ State: merged {merged} new concepts (total: {len(memory.concepts)})")
+                        save_everything(memory, engine, state_dir)
+                        pulled = True
+                    elif not pulled:
+                        print("  No state data found in cloud.")
+                    # List what's available
+                    objects = registry.list_objects('QuantumMCAGI/')
+                    if objects:
+                        print(f"  Cloud objects ({len(objects)}):")
+                        for obj in objects[:15]:
+                            print(f"    {obj}")
+                        if len(objects) > 15:
+                            print(f"    ... and {len(objects) - 15} more")
+                except ImportError:
+                    # Fallback to direct Wolfram Cloud
+                    if HAS_CLOUD:
+                        print("  Falling back to direct Wolfram Cloud...")
+                        data = cloud_load()
+                        if data:
+                            print(f"  ✓ Got state: {list(data.keys()) if isinstance(data, dict) else type(data).__name__}")
+                        else:
+                            print("  No data found.")
+                    else:
+                        print("  No cloud providers available.")
                 continue
             elif cmd[0] == '/pardon':
                 if evolution and len(cmd) > 1:
