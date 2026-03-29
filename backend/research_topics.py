@@ -174,4 +174,55 @@ EXPLORATION_TOPICS = [
     "botany plant biology", "plant taxonomy classification", "horticulture cultivation",
     "agriculture soil science", "ethnobotany plant uses", "mycorrhizal networks",
     "photosynthesis mechanisms", "plant hormones growth", "seed germination biology",
+
+    # CRIME & JUSTICE
+    "history of criminal justice", "piracy golden age", "maritime law history",
+    "smuggling trade routes", "alchemy transmutation history", "forensic science history",
+    "ancient legal codes hammurabi", "trial by ordeal medieval", "privateers corsairs",
+
+    # DAILY LIFE & MATERIAL CULTURE
+    "ancient roman daily life", "medieval food preservation", "ancient greek clothing fashion",
+    "aztec agriculture chinampas", "japanese architecture traditional", "ancient hygiene bathing",
+    "byzantine court life", "viking daily life", "ancient egyptian daily routines",
+
+    # RELIGION & MYTHOLOGY (expanded)
+    "egyptian religion afterlife", "zoroastrianism dualism", "persian mythology",
+    "armenian mythology legends", "shinto amaterasu", "gnosticism nag hammadi",
+    "hermeticism emerald tablet", "angelology hierarchy", "cosmological argument theology",
+    "theosophy blavatsky", "creation myths comparative", "sacred texts analysis",
+
+    # MEDICINE & DISEASE
+    "ancient egyptian medicine papyrus", "hippocratic medicine humors", "galen anatomy history",
+    "antonine plague roman empire", "vesalius anatomy revolution", "medieval plague medicine",
+    "chinese traditional medicine history", "ayurveda origins", "history of surgery",
+
+    # TECHNOLOGY & INVENTION
+    "antikythera mechanism analog computer", "astrolabe navigation history", "roman aqueducts engineering",
+    "ancient greek inventions", "printing press gutenberg revolution", "history of timekeeping clocks",
+    "telescope invention galileo", "history of computing machines", "ancient metallurgy techniques",
+
+    # MUSIC (new domain)
+    "ancient greek music modes", "pythagorean tuning mathematics", "baroque music theory",
+    "harmonic series acoustics physics", "music notation history evolution", "opera history origins",
+    "medieval plainchant gregorian", "musical instrument history", "ethnomusicology world traditions",
+
+    # LINGUISTICS (expanded)
+    "proto-indo-european reconstruction", "rosetta stone decipherment", "constructed languages conlang",
+    "universal grammar chomsky", "celtic languages history", "cuneiform writing system",
+    "egyptian hieroglyphics decoding", "linguistic relativity sapir whorf", "etymology word origins history",
+
+    # QUANTUM CONSCIOUSNESS (direct system alignment)
+    "orchestrated objective reduction penrose", "quantum mind hypothesis", "measurement problem physics",
+    "quantum decoherence environment", "many worlds interpretation", "copenhagen interpretation debate",
+    "observer effect quantum mechanics", "wave function collapse theories", "quantum biology photosynthesis",
+
+    # COSMOLOGY & CREATION
+    "big bang nucleosynthesis", "heat death universe entropy", "anthropic principle fine tuning",
+    "boltzmann brain paradox", "simulation hypothesis argument", "omega point tipler",
+    "cosmic inflation theory", "dark energy acceleration expansion", "holographic principle universe",
+
+    # SYSTEMS THEORY & EMERGENCE
+    "emergence complex systems", "autopoiesis self-creating systems", "cybernetics feedback loops",
+    "information theory shannon entropy", "strange loops hofstadter", "self-organization dissipative",
+    "complexity edge of chaos", "holism reductionism debate", "systems thinking senge",
 ]

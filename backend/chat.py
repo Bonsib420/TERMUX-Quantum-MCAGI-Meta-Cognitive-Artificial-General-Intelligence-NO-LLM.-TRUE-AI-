@@ -20,6 +20,7 @@ Commands:
     /personality  - Show personality profile
     /knowledge X  - Look up a topic
     /collapse X   - Show semantic collapse
+    /feed [CAT]   - Batch-fetch URLs from research_feeds.json (or /feed all)
     /export       - Export full conversation as markdown (file + terminal)
     /copy-last    - Print last AI response in a bordered box for easy copy
     /quit         - Save and exit
@@ -864,6 +865,82 @@ def run_chat(verbose=False):
                     print(result)
                 else:
                     print("  Document ingester not available.")
+                continue
+
+            elif cmd[0] == '/feed':
+                if not HAS_INGEST:
+                    print("  Document ingester not available.")
+                    continue
+                feeds_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'research_feeds.json')
+                if not os.path.exists(feeds_path):
+                    print("  research_feeds.json not found.")
+                    continue
+                with open(feeds_path, 'r') as f:
+                    feeds = json.load(f)
+                # Filter out metadata keys
+                categories = {k: v for k, v in feeds.items() if not k.startswith('_')}
+                if len(cmd) < 2:
+                    print()
+                    print("  ╔══ RESEARCH FEEDS ═══════════════════════════════")
+                    total = 0
+                    for cat_key, cat in categories.items():
+                        n = len(cat.get('urls', []))
+                        total += n
+                        bridges = ', '.join(cat.get('bridge_to', []))
+                        print(f"  ║ {cat_key:<28} {n:>3} URLs  → bridges: {bridges}")
+                    print(f"  ╠══════════════════════════════════════════════════")
+                    print(f"  ║ Total: {total} URLs across {len(categories)} domains")
+                    print(f"  ╚══════════════════════════════════════════════════")
+                    print()
+                    print("  Usage: /feed <category>   — process one category")
+                    print("         /feed all          — process all categories")
+                    print()
+                    continue
+                target = cmd[1].lower()
+                if target == 'all':
+                    targets = list(categories.keys())
+                elif target in categories:
+                    targets = [target]
+                else:
+                    # Fuzzy match
+                    matches = [k for k in categories if target in k]
+                    if matches:
+                        targets = matches
+                    else:
+                        print(f"  Unknown category: {target}")
+                        print(f"  Available: {', '.join(categories.keys())}")
+                        continue
+                total_words = 0
+                total_urls = 0
+                failed = 0
+                for cat_key in targets:
+                    cat = categories[cat_key]
+                    urls = cat.get('urls', [])
+                    print(f"\n  ── {cat.get('label', cat_key)} ({len(urls)} URLs) ──")
+                    for i, url in enumerate(urls, 1):
+                        short_url = url.split('/')[-1][:45] or url[:45]
+                        print(f"  [{i}/{len(urls)}] {short_url}...", end=' ', flush=True)
+                        try:
+                            result = handle_ingest_command(['/ingest', url], engine, memory)
+                            # Extract word count from result string
+                            if '+' in result and 'words' in result:
+                                import re as _re
+                                wm = _re.search(r'\+([0-9,]+)\s+words', result)
+                                if wm:
+                                    total_words += int(wm.group(1).replace(',', ''))
+                            total_urls += 1
+                            print("✓")
+                        except Exception as e:
+                            failed += 1
+                            print(f"✗ ({e})")
+                        time.sleep(0.5)  # Be polite to servers
+                print()
+                print(f"  ╔══ FEED COMPLETE ════════════════════════════════")
+                print(f"  ║ URLs processed: {total_urls} ({failed} failed)")
+                print(f"  ║ Words ingested: ~{total_words:,}")
+                print(f"  ║ Chain states:   {len(engine.markov.chain):,}")
+                print(f"  ╚════════════════════════════════════════════════")
+                print()
                 continue
             elif cmd[0] == '/cloud-save':
                 if HAS_CLOUD:

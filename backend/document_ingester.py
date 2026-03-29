@@ -198,7 +198,7 @@ def resolve_url(url):
     return url, 'direct'
 
 def fetch_url(url, max_chars=100000):
-    """Fetch text content from any URL."""
+    """Fetch text content from any URL. Smart extraction for known sources."""
     resolved_url, source_type = resolve_url(url)
 
     try:
@@ -237,19 +237,96 @@ def fetch_url(url, max_chars=100000):
             return text, status
 
         elif 'html' in content_type:
-            text = extract_html(html_text=r.text)
+            # Smart extraction for known high-value sources
+            text = _smart_extract_html(url, r.text)
             return text[:max_chars], f"extracted {len(text.split()):,} words from webpage"
 
         elif 'json' in content_type:
             return r.text[:max_chars], f"extracted JSON ({len(r.text.split()):,} words)"
 
         else:
-            # Try as plain text
+            # Try as plain text (covers Project Gutenberg .txt files)
             text = r.text[:max_chars]
             return text, f"extracted {len(text.split()):,} words"
 
     except Exception as e:
         return None, str(e)
+
+
+def _smart_extract_html(url, html_text):
+    """
+    Smart content extraction for known sources.
+    Extracts article body text, strips navigation/sidebars/footers.
+    Falls back to generic extraction for unknown sources.
+    """
+    try:
+        from bs4 import BeautifulSoup
+    except ImportError:
+        return extract_html(html_text=html_text)
+
+    soup = BeautifulSoup(html_text, 'html.parser')
+
+    # Wikipedia — extract #mw-content-text article body
+    if 'wikipedia.org' in url:
+        content = soup.find('div', {'id': 'mw-content-text'})
+        if content:
+            # Remove navboxes, sidebars, reference lists, edit links
+            for tag in content.find_all(['table', 'sup', 'span'], class_=lambda c: c and any(
+                x in str(c) for x in ['navbox', 'sidebar', 'reflist', 'mw-editsection', 'noprint', 'metadata'])):
+                tag.decompose()
+            for tag in content.find_all('div', class_=lambda c: c and any(
+                x in str(c) for x in ['reflist', 'navbox', 'sistersitebox', 'noprint'])):
+                tag.decompose()
+            return content.get_text(separator='\n', strip=True)
+
+    # Stanford Encyclopedia of Philosophy — extract #aueditable article body
+    if 'plato.stanford.edu' in url:
+        content = soup.find('div', {'id': 'aueditable'}) or soup.find('div', {'id': 'article-content'})
+        if content:
+            for tag in content.find_all(['nav', 'footer']):
+                tag.decompose()
+            return content.get_text(separator='\n', strip=True)
+
+    # World History Encyclopedia — extract article body
+    if 'worldhistory.org' in url:
+        content = soup.find('div', class_='article-content-main') or soup.find('article') or soup.find('div', {'id': 'content'})
+        if content:
+            for tag in content.find_all(['nav', 'footer', 'aside']):
+                tag.decompose()
+            return content.get_text(separator='\n', strip=True)
+
+    # arXiv abstract pages — extract abstract text
+    if 'arxiv.org' in url:
+        abstract = soup.find('blockquote', class_='abstract')
+        title = soup.find('h1', class_='title')
+        parts = []
+        if title:
+            parts.append(title.get_text(strip=True))
+        if abstract:
+            parts.append(abstract.get_text(strip=True))
+        if parts:
+            return '\n\n'.join(parts)
+
+    # Project Gutenberg HTML — extract body text
+    if 'gutenberg.org' in url:
+        content = soup.find('div', {'id': 'pg-machine-header'})
+        if content:
+            content.decompose()
+        body = soup.find('body')
+        if body:
+            for tag in body.find_all(['table', 'pre']):
+                if 'START OF' in tag.get_text() or 'END OF' in tag.get_text():
+                    tag.decompose()
+            return body.get_text(separator='\n', strip=True)
+
+    # Generic fallback — strip scripts/styles/nav/footer
+    for tag in soup(['script', 'style', 'nav', 'footer', 'aside', 'header']):
+        tag.decompose()
+    # Try to find main content area
+    main = soup.find('main') or soup.find('article') or soup.find('div', {'role': 'main'})
+    if main:
+        return main.get_text(separator='\n', strip=True)
+    return soup.get_text(separator='\n', strip=True)
 
 # ── Main interface ────────────────────────────────────────────────────────────
 
