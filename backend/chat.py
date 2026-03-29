@@ -20,6 +20,8 @@ Commands:
     /personality  - Show personality profile
     /knowledge X  - Look up a topic
     /collapse X   - Show semantic collapse
+    /export       - Export full conversation as markdown (file + terminal)
+    /copy-last    - Print last AI response in a bordered box for easy copy
     /quit         - Save and exit
 """
 
@@ -504,6 +506,7 @@ def run_chat(verbose=False):
     print("  Quantum MCAGI - Local Chat")
     print("  Real algorithms. No templates. No LLM.")
     print("  /status  /learn FILE  /save  /load  /quit")
+    print("  /export [N]  /copy-last  — share conversations")
     print()
 
     # Initialize all systems
@@ -905,10 +908,97 @@ def run_chat(verbose=False):
                     except Exception as e:
                         print(f"  Error: {e}")
                 continue
+
+            elif cmd[0] == '/export':
+                if len(memory.conversations) == 0:
+                    print("  No conversations to export.")
+                else:
+                    n = int(cmd[1]) if len(cmd) > 1 and cmd[1].isdigit() else len(memory.conversations)
+                    exchanges = memory.conversations[-n:]
+                    lines = [
+                        "# Quantum MCAGI — Local Chat Export",
+                        f"**Growth stage:** {memory.growth.get('stage', 0)} — {memory.growth.get('name', 'Unknown')}",
+                        f"**Concepts:** {memory.growth.get('total_concepts', len(memory.concepts))}",
+                        f"**Interactions:** {len(memory.conversations)}",
+                        f"**Exported:** {datetime.now().isoformat()}",
+                        "", "---", ""
+                    ]
+                    for ex in exchanges:
+                        ts = ex.get("timestamp", "")
+                        lines.append(f"### 🧑 User")
+                        if ts:
+                            lines.append(f"*{ts}*")
+                        lines.append("")
+                        lines.append(ex.get("user", ""))
+                        lines.append("")
+                        lines.append(f"### 🔮 Quantum MCAGI")
+                        lines.append("")
+                        lines.append(ex.get("ai", ""))
+                        concepts_list = ex.get("concepts", [])
+                        if concepts_list:
+                            lines.append(f"\n*Concepts: {', '.join(concepts_list)}*")
+                        questions_list = ex.get("questions", [])
+                        if questions_list:
+                            for q in questions_list[:3]:
+                                lines.append(f"- ❓ {q}")
+                        lines.extend(["", "---", ""])
+                    lines.extend([
+                        "",
+                        "> **Context:** This conversation is from Quantum MCAGI, a true AI system",
+                        "> built without LLMs. It uses quantum computing (PennyLane), Penrose Orch-OR",
+                        "> consciousness model, self-evolution, Markov chain language generation, and a",
+                        "> multi-layered cognitive architecture. The system runs on Termux (Android)."
+                    ])
+                    exported = "\n".join(lines)
+                    export_file = memory.data_dir / "export.md"
+                    with open(export_file, 'w') as f:
+                        f.write(exported)
+                    print(f"\n{exported}\n")
+                    print(f"  ✅ Exported {len(exchanges)} exchanges to {export_file}")
+                continue
+
+            elif cmd[0] in ('/copy-last', '/copy'):
+                if len(memory.conversations) == 0:
+                    print("  No conversations yet.")
+                else:
+                    last = memory.conversations[-1]
+                    ai_text = last.get("ai", "")
+                    user_text = last.get("user", "")
+                    concepts_list = last.get("concepts", [])
+                    width = max(len(line) for line in ai_text.split('\n')) + 4
+                    width = max(width, 50)
+                    width = min(width, 80)
+                    print()
+                    print(f"  ┌{'─' * width}┐")
+                    print(f"  │ {'YOU:':^{width - 2}} │")
+                    for line in user_text.split('\n'):
+                        while len(line) > width - 4:
+                            print(f"  │ {line[:width - 4]}  │")
+                            line = line[width - 4:]
+                        print(f"  │ {line:{width - 2}} │")
+                    print(f"  │{'─' * width}│")
+                    print(f"  │ {'AI:':^{width - 2}} │")
+                    for line in ai_text.split('\n'):
+                        while len(line) > width - 4:
+                            print(f"  │ {line[:width - 4]}  │")
+                            line = line[width - 4:]
+                        print(f"  │ {line:{width - 2}} │")
+                    if concepts_list:
+                        print(f"  │{'─' * width}│")
+                        tag = f"Concepts: {', '.join(concepts_list)}"
+                        while len(tag) > width - 4:
+                            print(f"  │ {tag[:width - 4]}  │")
+                            tag = tag[width - 4:]
+                        print(f"  │ {tag:{width - 2}} │")
+                    print(f"  └{'─' * width}┘")
+                    print()
+                continue
+
             else:
                 print("  Commands: /status /learn FILE /save /load /reset /quit")
                 print("  Gen:      /hybrid TEXT  /unified TEXT")
                 print("  Extra:    /analyze TEXT  /personality  /knowledge TOPIC  /collapse TEXT")
+                print("  Share:    /export [N]  /copy-last")
                 continue
 
         # ---- Process input ----
