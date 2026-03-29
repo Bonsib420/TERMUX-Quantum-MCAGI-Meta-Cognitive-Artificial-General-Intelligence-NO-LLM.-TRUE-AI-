@@ -8,34 +8,15 @@
 
 ## Upload from Termux
 
-You're already logged in with `gh auth login`. Now just run:
+Since your first upload got a TLS error, the release v1.0.0 already exists (empty). Just run this:
 
-```bash
-# If you have the zip already:
-gh release create v1.0.0 /storage/emulated/0/Download/quantum_mcagi_full.zip \
-    --repo Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI- \
-    --title "Quantum MCAGI Full Release" \
-    --notes "Full release by Cory N.B. Blackburn"
+```
+gh release upload v1.0.0 /storage/emulated/0/Download/quantum_mcagi_full.zip --repo Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI- --clobber
 ```
 
-```bash
-# If you only have the folder (no zip yet):
-pkg install -y zip
-cd /storage/emulated/0/Download
-zip -r quantum_mcagi_full.zip quantum_mcagi_full
-gh release create v1.0.0 quantum_mcagi_full.zip \
-    --repo Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI- \
-    --title "Quantum MCAGI Full Release" \
-    --notes "Full release by Cory N.B. Blackburn"
-```
+That's it. If it fails again (bad WiFi), just run the same command again.
 
-Or run the script which handles both automatically:
-
-```bash
-curl -sL https://raw.githubusercontent.com/Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-/main/termux_zip_upload.sh -o ~/upload.sh && bash ~/upload.sh
-```
-
-Once done, download at: [**Releases**](https://github.com/Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-/releases)
+Download at: [**Releases**](https://github.com/Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-/releases)
 
 ---
 
