@@ -8,13 +8,19 @@
 
 ## Upload from Termux
 
-Since your first upload got a TLS error, the release v1.0.0 already exists (empty). Just run this:
+Run this one command:
 
 ```
-gh release upload v1.0.0 /storage/emulated/0/Download/quantum_mcagi_full.zip --repo Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI- --clobber
+gh release create v1.0.0 /storage/emulated/0/Download/quantum_mcagi_full.zip --repo Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI- --title "Quantum MCAGI Full Release" --notes "By Cory N.B. Blackburn"
 ```
 
-That's it. If it fails again (bad WiFi), just run the same command again.
+If it fails with a TLS/network error, run the exact same command again. The tag already exists so it will reuse it.
+
+Or run the script (handles everything):
+
+```
+bash termux_zip_upload.sh
+```
 
 Download at: [**Releases**](https://github.com/Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-/releases)
 
