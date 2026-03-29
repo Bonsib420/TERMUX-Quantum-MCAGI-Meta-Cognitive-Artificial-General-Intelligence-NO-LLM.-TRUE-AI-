@@ -1035,6 +1035,24 @@ class QuantumLanguageEngine:
         }
         with open(os.path.join(directory, 'corpus_stats.json'), 'w') as f:
             json.dump(stats, f)
+        # Save engine metadata
+        from datetime import datetime, timezone
+        engine_meta = {
+            'saved_at': datetime.now(timezone.utc).isoformat(),
+            'version': '3.0',
+            'markov_states': len(self.markov.chain),
+            'markov_transitions': self.markov.total_tokens,
+            'markov_order': self.markov.order,
+            'vocabulary_size': len(self.extractor.document_frequencies),
+            'total_documents': self.extractor.total_documents,
+            'total_words': self.extractor.total_words,
+            'coherence_pairs': len(self.coherence.cooccurrence) if hasattr(self.coherence, 'cooccurrence') else 0,
+            'has_orch_or': self._has_orch_or,
+            'orch_or_moments': getattr(self.orch_or, 'total_moments', 0) if self.orch_or else 0,
+            'has_pennylane': self._has_pennylane,
+        }
+        with open(os.path.join(directory, 'engine_state.json'), 'w') as f:
+            json.dump(engine_meta, f, indent=2)
     
     def load_state(self, directory: str) -> bool:
         """Load persisted state."""
@@ -1053,6 +1071,16 @@ class QuantumLanguageEngine:
             self.extractor.total_documents = stats.get('total_docs', 0)
             self.extractor.total_words = stats.get('total_words', 0)
             loaded = True
+        
+        # Load engine metadata (informational — used for status display)
+        meta_path = os.path.join(directory, 'engine_state.json')
+        if os.path.exists(meta_path):
+            try:
+                with open(meta_path, 'r') as f:
+                    self._saved_meta = json.load(f)
+                loaded = True
+            except Exception:
+                self._saved_meta = {}
         
         return loaded
 

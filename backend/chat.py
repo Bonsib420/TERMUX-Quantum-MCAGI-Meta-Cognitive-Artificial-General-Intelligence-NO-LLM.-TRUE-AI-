@@ -568,6 +568,8 @@ def run_chat(verbose=False):
     print(f"  Hybrid gen: {'ACTIVE' if hybrid_gen else 'OFF'}")
     print()
 
+    _last_auto_save = time.time()
+
     while True:
         try:
             user_input = input("You: ").strip()
@@ -1146,9 +1148,12 @@ def run_chat(verbose=False):
         # Store the exchange
         memory.add_exchange(user_input, response, concepts, questions)
 
-        # Auto-save every 10 interactions
+        # Auto-save every 10 interactions or every 5 minutes
         if memory.growth["total_interactions"] % 10 == 0:
             save_everything(memory, engine, state_dir)
+        elif time.time() - _last_auto_save >= 300:  # 5 minutes
+            save_everything(memory, engine, state_dir)
+            _last_auto_save = time.time()
 
         # Display
         print()
