@@ -1,0 +1,29 @@
+name: Release Full Zip
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create full zip
+        run: |
+          zip -r quantum_mcagi_full.zip . \
+            --exclude "*.git*" \
+            --exclude "*__pycache__*"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: quantum_mcagi_full.zip
+          name: "Release Full Zip"
+          body: |
+            Full Quantum MCAGI release by Cory N.B. Blackburn
+            Architecture: RQR³ · Orch-OR · Self-Evolving · No-LLM
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
