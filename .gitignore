@@ -1,10 +1,88 @@
+# Python venv (recreate with: pip install -r requirements.txt)
+venv/
+env/
+.venv/
+ENV/
+
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+*$py.class
 *.so
-*.egg-info/
-dist/
+.Python
+
+# Distribution / packaging
 build/
-.env
-*.log
+dist/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
 .DS_Store
 Thumbs.db
+
+# Environment / secrets (NEVER commit)
+.env
+*.env
+
+# Logs and runtime artifacts
+*.log
+logs/
+nohup.out
+*.pid
+*.pkl
+server.pid
+server_pid
+
+# Local config
+config.local.json
+secrets.json
+
+# Backup / archive
+archive/
+backups/
+
+# Project specific
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/android/
+
+# NLTK data
+nltk_data/
+
+# Temporary files
+tmp/
+temp/
+.cache/
+
+# Memory / user data (local only)
+.quantum-mcagi/
+.quantum-mcagi-backend/
+storage/
+
+# Uploads
+uploads/
+backend/uploads/
+
+# Database
+data/db/
+
+# Android build
+*.apk
+*.aab
+
+# Termux
+.termux/
+
+# Session logs
+docs/pi_session_*.jsonl
+
+# Copilot
+.claude/
+.pi/
