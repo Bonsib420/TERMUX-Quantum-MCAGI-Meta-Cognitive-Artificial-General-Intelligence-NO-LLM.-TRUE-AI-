@@ -53,7 +53,7 @@ Once `python chat.py` is running, just type naturally to talk to the AI. It will
 |---------|-------------|
 | `/status` | Full system status — growth stage, brain metrics, personality |
 | `/learn FILE` | Feed a text file to the Markov chain to teach it |
-| `/feed` | Batch-fetch 122 research URLs to grow the knowledge base |
+| `/feed` | Batch-fetch 139 research URLs to grow the knowledge base |
 | `/feed all` | Fetch all research feed categories |
 | `/hybrid TEXT` | Direct hybrid quantum text generation |
 | `/unified TEXT` | Word-by-word quantum generation |

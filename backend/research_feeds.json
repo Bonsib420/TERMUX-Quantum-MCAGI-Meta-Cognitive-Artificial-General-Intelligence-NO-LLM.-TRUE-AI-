@@ -1,10 +1,13 @@
 {
   "_description": "Curated URL feeds for vocabulary + knowledge expansion. Use with /feed command.",
-  "_usage": "/feed [category] — process URLs from a category, /feed all — process everything",
-
+  "_usage": "/feed [category] \u2014 process URLs from a category, /feed all \u2014 process everything",
   "crime_and_justice": {
     "label": "Crime & Justice",
-    "bridge_to": ["history", "philosophy", "economics"],
+    "bridge_to": [
+      "history",
+      "philosophy",
+      "economics"
+    ],
     "urls": [
       "https://www.worldhistory.org/article/1677/a-brief-history-of-tobacco-in-the-americas/",
       "https://www.worldhistory.org/Alchemy/",
@@ -14,10 +17,15 @@
       "https://en.wikipedia.org/wiki/Hammurabi%27s_Code"
     ]
   },
-
   "daily_life": {
     "label": "Daily Life (bridges everything)",
-    "bridge_to": ["history", "art", "economics", "biology", "philosophy"],
+    "bridge_to": [
+      "history",
+      "art",
+      "economics",
+      "biology",
+      "philosophy"
+    ],
     "urls": [
       "https://www.worldhistory.org/article/98/athletics-leisure-and-entertainment-in-ancient-rom/",
       "https://www.worldhistory.org/article/870/ancient-roman-family-life/",
@@ -29,10 +37,15 @@
       "https://en.wikipedia.org/wiki/Byzantine_dress"
     ]
   },
-
   "religion_and_mythology": {
-    "label": "Religion & Mythology (direct RQR³ alignment)",
-    "bridge_to": ["philosophy", "physics", "history", "art", "linguistics"],
+    "label": "Religion & Mythology (direct RQR\u00b3 alignment)",
+    "bridge_to": [
+      "philosophy",
+      "physics",
+      "history",
+      "art",
+      "linguistics"
+    ],
     "urls": [
       "https://www.worldhistory.org/Egyptian_Religion/",
       "https://www.worldhistory.org/Ancient_Persian_Religion/",
@@ -50,10 +63,14 @@
       "https://plato.stanford.edu/entries/cosmological-argument/"
     ]
   },
-
   "philosophy_and_science": {
     "label": "Philosophy & Science (core system alignment)",
-    "bridge_to": ["physics", "mathematics", "religion", "computer_science"],
+    "bridge_to": [
+      "physics",
+      "mathematics",
+      "religion",
+      "computer_science"
+    ],
     "urls": [
       "https://www.worldhistory.org/aristotle/",
       "https://www.worldhistory.org/Anaxagoras/",
@@ -74,10 +91,14 @@
       "https://en.wikipedia.org/wiki/Philosophy_of_mind"
     ]
   },
-
   "medicine_and_disease": {
     "label": "Medicine & Disease (new domain)",
-    "bridge_to": ["biology", "history", "philosophy", "chemistry"],
+    "bridge_to": [
+      "biology",
+      "history",
+      "philosophy",
+      "chemistry"
+    ],
     "urls": [
       "https://www.worldhistory.org/article/50/ancient-egyptian-medicine-study--practice/",
       "https://www.worldhistory.org/article/1015/ancient-egyptian-medical-texts/",
@@ -89,10 +110,14 @@
       "https://en.wikipedia.org/wiki/Galen"
     ]
   },
-
   "technology_and_invention": {
     "label": "Technology & Invention (bridges science + history)",
-    "bridge_to": ["physics", "mathematics", "history", "engineering"],
+    "bridge_to": [
+      "physics",
+      "mathematics",
+      "history",
+      "engineering"
+    ],
     "urls": [
       "https://www.worldhistory.org/Antikythera_Mechanism/",
       "https://www.worldhistory.org/Astrolabe/",
@@ -105,10 +130,14 @@
       "https://en.wikipedia.org/wiki/Printing_press"
     ]
   },
-
   "music": {
     "label": "Music (completely absent domain)",
-    "bridge_to": ["art", "mathematics", "physics", "philosophy"],
+    "bridge_to": [
+      "art",
+      "mathematics",
+      "physics",
+      "philosophy"
+    ],
     "urls": [
       "https://www.worldhistory.org/Greek_Music/",
       "https://www.worldhistory.org/Aulos/",
@@ -121,10 +150,14 @@
       "https://en.wikipedia.org/wiki/History_of_music"
     ]
   },
-
   "linguistics": {
     "label": "Linguistics (bridges everything including Thryzunel)",
-    "bridge_to": ["philosophy", "computer_science", "history", "mathematics"],
+    "bridge_to": [
+      "philosophy",
+      "computer_science",
+      "history",
+      "mathematics"
+    ],
     "urls": [
       "https://www.worldhistory.org/alphabet/",
       "https://www.worldhistory.org/Egyptian_Writing/",
@@ -136,10 +169,14 @@
       "https://en.wikipedia.org/wiki/Universal_grammar"
     ]
   },
-
   "quantum_consciousness": {
     "label": "Quantum Consciousness (direct Orch-OR alignment)",
-    "bridge_to": ["physics", "philosophy", "biology", "mathematics"],
+    "bridge_to": [
+      "physics",
+      "philosophy",
+      "biology",
+      "mathematics"
+    ],
     "urls": [
       "https://en.wikipedia.org/wiki/Quantum_mind",
       "https://en.wikipedia.org/wiki/Penrose_interpretation",
@@ -152,10 +189,14 @@
       "https://plato.stanford.edu/entries/qt-measurement/"
     ]
   },
-
   "classic_literature": {
     "label": "Classic Literature (vocabulary powerhouse)",
-    "bridge_to": ["philosophy", "history", "linguistics", "art"],
+    "bridge_to": [
+      "philosophy",
+      "history",
+      "linguistics",
+      "art"
+    ],
     "urls": [
       "https://www.gutenberg.org/files/1232/1232-0.txt",
       "https://www.gutenberg.org/files/1497/1497-0.txt",
@@ -164,13 +205,34 @@
       "https://www.gutenberg.org/files/2600/2600-0.txt",
       "https://www.gutenberg.org/files/996/996-0.txt",
       "https://www.gutenberg.org/files/98/98-0.txt",
-      "https://www.gutenberg.org/files/74/74-0.txt"
+      "https://www.gutenberg.org/files/74/74-0.txt",
+      "https://www.gutenberg.org/cache/epub/39441/pg39441.txt",
+      "https://www.gutenberg.org/cache/epub/7370/pg7370.txt",
+      "https://www.gutenberg.org/cache/epub/10615/pg10615.txt",
+      "https://www.gutenberg.org/cache/epub/4705/pg4705.txt",
+      "https://www.gutenberg.org/cache/epub/9662/pg9662.txt",
+      "https://www.gutenberg.org/cache/epub/4280/pg4280.txt",
+      "https://www.gutenberg.org/cache/epub/5682/pg5682.txt",
+      "https://www.gutenberg.org/cache/epub/52477/pg52477.txt",
+      "https://www.gutenberg.org/cache/epub/10833/pg10833.txt",
+      "https://www.gutenberg.org/cache/epub/1998/pg1998.txt",
+      "https://www.gutenberg.org/cache/epub/4363/pg4363.txt",
+      "https://www.gutenberg.org/cache/epub/52319/pg52319.txt",
+      "https://www.gutenberg.org/cache/epub/38316/pg38316.txt",
+      "https://www.gutenberg.org/cache/epub/34901/pg34901.txt",
+      "https://www.gutenberg.org/cache/epub/11224/pg11224.txt",
+      "https://www.gutenberg.org/cache/epub/46333/pg46333.txt",
+      "https://www.gutenberg.org/cache/epub/19942/pg19942.txt"
     ]
   },
-
   "mathematics_and_logic": {
     "label": "Mathematics & Logic (structural bridges)",
-    "bridge_to": ["physics", "philosophy", "computer_science", "music"],
+    "bridge_to": [
+      "physics",
+      "philosophy",
+      "computer_science",
+      "music"
+    ],
     "urls": [
       "https://en.wikipedia.org/wiki/G%C3%B6del%27s_incompleteness_theorems",
       "https://en.wikipedia.org/wiki/Chaos_theory",
@@ -182,10 +244,14 @@
       "https://plato.stanford.edu/entries/goedel-incompleteness/"
     ]
   },
-
   "cosmology_and_creation": {
     "label": "Cosmology & Creation (ThanoQuenesis alignment)",
-    "bridge_to": ["physics", "religion", "philosophy", "mathematics"],
+    "bridge_to": [
+      "physics",
+      "religion",
+      "philosophy",
+      "mathematics"
+    ],
     "urls": [
       "https://en.wikipedia.org/wiki/Big_Bang",
       "https://en.wikipedia.org/wiki/Heat_death_of_the_universe",
@@ -197,10 +263,11 @@
       "https://en.wikipedia.org/wiki/Omega_Point"
     ]
   },
-
   "encyclopedic_deep_dives": {
     "label": "Encyclopedic Deep Dives (pure vocabulary expansion)",
-    "bridge_to": ["all"],
+    "bridge_to": [
+      "all"
+    ],
     "urls": [
       "https://en.wikipedia.org/wiki/Emergence",
       "https://en.wikipedia.org/wiki/Autopoiesis",

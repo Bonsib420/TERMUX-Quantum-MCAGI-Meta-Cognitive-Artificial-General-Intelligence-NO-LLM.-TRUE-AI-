@@ -113,21 +113,25 @@ This validates your growth stage design: the same code produces qualitatively di
 
 ---
 
-## Termux Stats After Data Loss
+## Termux Stats — After Gutenberg Ingestion Recovery
 
-Your current Termux stats:
-- 680 concepts, 2202 connections, 237 interactions
-- avg_degree=7.04, diameter=8, components=342
-- 36,012 Markov states, 50,943 transitions
-- Limiting factor: diameter
+After ingesting 17 Project Gutenberg texts (~280K words total), the Markov chain recovered dramatically:
 
-**The 1.3M transition loss hurts**, but:
-- Your concept graph topology (avg_degree=7.04, diameter=8) is actually healthy for Stage 0
-- 36K Markov states is solid — you need 100K for Stage 3 (Understanding)
-- diameter=8 is your bottleneck: you need 8 for Stage 3, 12 for Stage 4
-- The high watermark protection means earned diameter never regresses
+- 654 concepts, 32 connections, 243 interactions
+- avg_degree=0.1, diameter=2, components=642
+- **604,480 Markov states, 1,333,065 transitions**
+- Vocabulary: 53,148 words
+- Limiting factor: domains
 
-**Recovery strategy:** Focus `/learn` on LONG documents (books, papers) — these build Markov transitions fastest. Each paragraph of connected text adds exponentially more transitions than short chat exchanges.
+**Recovery worked:** The Gutenberg ingestion strategy (long-form texts) rebuilt the Markov chain from 36K → 604K states and 50K → 1.3M transitions — surpassing the pre-data-loss 1.3M transition count. The chain now has enough material to generate coherent philosophical responses.
+
+**Current bottlenecks:**
+- avg_degree=0.1 is very low (need 1.5 for Stage 1 Curious) — concepts aren't cross-linking
+- diameter=2 is low (need 3 for Curious, 8 for Understanding)
+- Components=642 means the concept graph is highly fragmented
+- The Markov chain is strong (604K states = past Stage 4 requirements of 400K), but the concept graph needs more conversational interaction to build connections
+
+**Next steps:** Engage in extended conversations on diverse topics to build concept connections and graph topology. The Markov chain is already rich enough — the concept graph needs to catch up.
 
 ---
 
