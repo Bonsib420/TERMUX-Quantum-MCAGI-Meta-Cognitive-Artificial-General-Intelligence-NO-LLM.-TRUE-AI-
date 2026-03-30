@@ -12,7 +12,7 @@
 It runs on **Termux (Android)** — the developer works exclusively from a **Motorola Razr Ultra 2025** with no computer.
 
 ### Core Architecture
-- **Backend:** FastAPI server with 83 Python modules
+- **Backend:** FastAPI server with 85 Python modules
 - **Frontend:** React/Vite SPA with Capacitor for Android APK
 - **Quantum:** PennyLane quantum computing (via venv on Termux)
 - **Consciousness:** Penrose Orch-OR model (`orch_or_core.py`)
@@ -64,7 +64,7 @@ Defined in: `backend/quantum_cognitive_core.py` (GrowthTracker.GROWTH_STAGES) an
 
 ---
 
-## Backend Modules (83 files)
+## Backend Modules (85 files)
 
 ### Core Cognitive
 - `quantum_cognitive_core.py` — GrowthTracker + QuantumCognitiveCore (main integration)

@@ -115,9 +115,13 @@ Once running on a proper environment:
 }
 ```
 
+## ✅ Also Implemented
+
+- **Wolfram Cloud sync**: `wolfram_cloud.py` provides `cloud_save()`, `cloud_load()`, `cloud_save_brain()`, `cloud_load_brain()`. Chat commands: `/cloud-save`, `/cloud-load`, `/cloud-pull`, `/cloud-status`.
+- **Cloud Provider Registry**: `cloud_provider.py` with WolframCloudProvider and LocalProvider. Multi-provider write-all/read-first-success.
+
 ## ❌ Not Implemented (Out of Scope)
 
-- **Wolfram Cloud DataDrop**: Memory upload/download to cloud storage
 - **Real quantum hardware**: Uses simulator `default.qubit` (PennyLane feature)
 
 ---

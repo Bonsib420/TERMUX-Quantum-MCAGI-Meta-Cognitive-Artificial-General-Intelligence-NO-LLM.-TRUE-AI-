@@ -50,13 +50,10 @@ EOF
 ## Integration Points in Code
 
 - `backend/quantum_brain.py`:
-  - Line 50: `self.pennylane = get_pennylane_quantum()`
-  - Line 99-127: `_get_quantum_random()`
-  - Line 114-127: `_quantum_choice()`
-  - Line 163-170: Quantum randomness applied to thinking
-  - Line 375-389: Semantic quantum enhancement of concepts
-  - Line 455, 462, 483: Quantum choice for UI elements
-  - Line 390: `explanation["engines_used"].append("PennyLaneQuantum")`
+  - Line 55: `self.pennylane = get_pennylane_quantum()` (inside try block)
+  - Line 423: `engines.append("PennyLaneQuantum")` for philosophical/topic/quantum methods
+  - Line 434: Quantum superposition step inserted into explanation trace
+  - Line 117: `think()` — main entry point that routes to method-specific generators
 
 ## Fallback Behavior
 

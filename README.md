@@ -70,6 +70,9 @@ Once `python chat.py` is running, just type naturally to talk to the AI. It will
 | `/save` | Save all state to disk |
 | `/load` | Load saved state from disk |
 | `/reset` | Reset the engine |
+| `/research TOPIC` | Run autonomous web research on a topic |
+| `/evolve` | Trigger self-evolution cycle |
+| `/ingest URL` | Ingest a document from URL |
 | `/quit` | Save and exit |
 
 ### Testing the AI
