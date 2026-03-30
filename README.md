@@ -14,6 +14,7 @@
 pkg update && pkg upgrade -y
 pkg install python nodejs git
 pip install -r requirements.txt
+pip install --no-deps PennyLane   # optional: quantum features (skip pennylane-lightning on Termux)
 cd frontend && npm install && cd ..
 ```
 
