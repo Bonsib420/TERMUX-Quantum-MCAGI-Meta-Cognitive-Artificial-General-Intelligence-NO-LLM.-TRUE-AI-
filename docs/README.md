@@ -2,17 +2,18 @@
 
 ## Quick Start
 ```bash
-# Kill any existing server first
-pkill -f "python server.py" 2>/dev/null
-pkill -f uvicorn 2>/dev/null
-
-# Install and run
-cd backend
+# From the project root:
 pip install -r requirements.txt
-python server.py
+pip install --no-deps PennyLane   # optional: quantum features
+
+# Terminal chat:
+cd backend && python chat.py
+
+# Or web server:
+bash start.sh
 ```
 
-Open: http://localhost:8001
+Open: http://localhost:8000/app/
 
 ## MongoDB (Optional)
 Works without it! To enable:

@@ -55,19 +55,19 @@ All files are syntactically correct:
 
 ## ⚠️ Runtime Environment Notes
 
-### Termux Limitations
-- SciPy cannot compile (no Fortran toolchain)
-- PennyLane requires SciPy
-- Even with `python-scipy` from pkg, binary compatibility issues
-- Result: PennyLane module fails to import properly
+### Termux (Android)
+- PennyLane-Lightning cannot install (depends on scipy-openblas32, no Android wheel)
+- Install PennyLane with `pip install --no-deps PennyLane>=0.44.1`
+- cryptography cannot build (maturin ANDROID_API_LEVEL issue) — not required by the app
+- The app works fully without PennyLane — all imports are guarded with try/except
 
 ### Standard Python Environment (Works)
 ```bash
 # Ubuntu/Debian/macOS/Windows
 python -m venv venv
 source venv/bin/activate  # or venv\Scripts\activate
-pip install pennylane  # pulls correct numpy/scipy/autoray
-pip install -r backend/requirements.txt
+pip install -r requirements.txt
+pip install PennyLane      # full install works on desktop
 cd backend
 uvicorn server:app --host 0.0.0.0 --port 8001
 ```
@@ -77,7 +77,7 @@ Or with conda:
 conda create -n quantum python=3.11
 conda activate quantum
 conda install -c conda-forge pennylane
-pip install -r backend/requirements.txt
+pip install -r requirements.txt
 cd backend
 uvicorn server:app --host 0.0.0.0 --port 8001
 ```

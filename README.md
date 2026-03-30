@@ -21,9 +21,10 @@ cd frontend && npm install && cd ..
 ### 2. Run the Terminal Chat (fastest way to interact)
 
 ```bash
-cd backend
-python chat.py
+cd backend && python chat.py
 ```
+
+> Already inside `backend/`? Just run `python chat.py`.
 
 This launches the **standalone chat interface** — no server, no database needed. Just you and the AI in your terminal.
 
@@ -151,6 +152,15 @@ python -m quantum_image_generator --all --width 1024 --height 1024
 Presets: `cosmic_vortex`, `nebula`, `galaxy`, `quantum_field`
 
 ---
+
+## Troubleshooting (Termux)
+
+| Error | Fix |
+|-------|-----|
+| `error: resolution-too-deep` | Already fixed — the current `requirements.txt` lists only direct deps with `>=` bounds. If you see this, pull the latest code. |
+| `cryptography` / `maturin failed` / `ANDROID_API_LEVEL` | cryptography is **not required**. If pip tries to build it, run: `pip install -r requirements.txt --no-deps cryptography` or simply ignore the error — the app works without it. |
+| `cd: backend: No such file or directory` | You're already inside `backend/`. Just run `python chat.py`. |
+| `scipy-openblas32` / `pennylane-lightning` | Use `pip install --no-deps PennyLane` (already in Quick Start). PennyLane-Lightning can't install on Termux; the app falls back to `default.qubit` automatically. |
 
 ## Download Release
 

@@ -1,18 +1,15 @@
 # Working PennyLane Setup in Termux
 
-## Versions That Work Together
+## Install
 
 ```bash
-# System packages (Termux)
-pkg install python-scipy  # provides scipy 1.17.1
-
-# Python packages (pip) - install in this exact order:
-pip install --no-deps pennylane==0.36.0
-pip install --no-deps pennylane-lightning==0.36.0
-pip install "autoray==0.6.11" appdirs cachetools "gast==0.5.4" networkx tomlkit
+# PennyLane hard-depends on pennylane-lightning which requires scipy-openblas32
+# (no Android wheel). Use --no-deps to skip the uninstallable sub-dependency:
+pip install --no-deps PennyLane>=0.44.1
 ```
 
-**Important**: Use `--no-deps` for PennyLane to avoid SciPy rebuild attempt.
+**Important**: Use `--no-deps` to prevent the pennylane-lightning → scipy-openblas32 build failure on Termux.
+PennyLane works without Lightning — it falls back to the `default.qubit` simulator.
 
 ## Verified Working
 
@@ -73,4 +70,4 @@ Thus the code is robust whether PennyLane works or not.
 
 ---
 
-**CRITICAL**: Install order matters. Use `--no-deps` on PennyLane to prevent SciPy rebuild. The prebuilt SciPy from Termux (`python-scipy`) is used at runtime.
+**CRITICAL**: Use `--no-deps` on PennyLane to prevent the pennylane-lightning build failure on Termux. The `default.qubit` simulator is used at runtime.
