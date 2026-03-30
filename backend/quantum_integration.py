@@ -5,7 +5,12 @@ Provides quantum random number generation, quantum noise patterns, and hybrid qu
 """
 
 import numpy as np
-import pennylane as qml
+try:
+    import pennylane as qml
+    PENNYLANE_AVAILABLE = True
+except ImportError:
+    qml = None
+    PENNYLANE_AVAILABLE = False
 from typing import Optional, Tuple, List, Callable
 import hashlib
 import math
