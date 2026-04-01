@@ -20,6 +20,7 @@ from .renderer import (
     create_nebula,
     create_galaxy,
     create_quantum_field,
+    create_deep_space,
     PRESETS,
     render_starfield,
     render_nebula_layer,
@@ -27,14 +28,17 @@ from .renderer import (
     render_accretion_glow,
     render_black_hole_center,
     render_light_streaks,
+    render_jet_streams,
     apply_bloom,
     apply_vignette,
     apply_tone_mapping,
     apply_color_grade,
     apply_gravitational_lensing,
+    apply_chromatic_aberration,
+    apply_film_grain,
 )
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __all__ = [
     "PixelBuffer",
     "PerlinNoise",
@@ -43,6 +47,7 @@ __all__ = [
     "create_nebula",
     "create_galaxy",
     "create_quantum_field",
+    "create_deep_space",
     "PRESETS",
     "render_starfield",
     "render_nebula_layer",
@@ -50,12 +55,16 @@ __all__ = [
     "render_accretion_glow",
     "render_black_hole_center",
     "render_light_streaks",
+    "render_jet_streams",
     "apply_bloom",
     "apply_vignette",
     "apply_tone_mapping",
     "apply_color_grade",
     "apply_gravitational_lensing",
+    "apply_chromatic_aberration",
+    "apply_film_grain",
     "blackbody_color",
     "gradient_sample",
     "hsv_to_rgb",
+    "soft_light_blend",
 ]

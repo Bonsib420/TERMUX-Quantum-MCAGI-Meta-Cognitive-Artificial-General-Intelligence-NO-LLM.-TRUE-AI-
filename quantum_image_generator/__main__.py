@@ -26,6 +26,7 @@ presets
   nebula          Colorful interstellar nebula cloud
   galaxy          Spiral galaxy with central bulge
   quantum_field   Abstract quantum energy-field visualisation
+  deep_space      Rich deep-field with overlapping nebulae & dust
 
 examples
 --------

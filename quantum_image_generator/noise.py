@@ -127,6 +127,24 @@ class PerlinNoise:
         ry = fbm(x + strength * qx + 8.3, y + strength * qy + 2.8, detail)
         return x + strength * rx, y + strength * ry
 
+    def warp_fbm(self, x, y, strength=1.0, detail=4):
+        """Three-level domain warping for highly organic flow."""
+        fbm = self.fbm
+        qx = fbm(x, y, detail)
+        qy = fbm(x + 5.2, y + 1.3, detail)
+        rx = fbm(x + strength * qx + 1.7, y + strength * qy + 9.2, detail)
+        ry = fbm(x + strength * qx + 8.3, y + strength * qy + 2.8, detail)
+        sx = fbm(x + strength * rx + 3.1, y + strength * ry + 7.4, detail)
+        sy = fbm(x + strength * rx + 6.7, y + strength * ry + 4.9, detail)
+        wx = x + strength * sx
+        wy = y + strength * sy
+        return fbm(wx, wy, detail + 2)
+
+    def billowy(self, x, y, octaves=6, lacunarity=2.0, gain=0.5):
+        """Billowy noise — squared fBm for soft cloud-like shapes."""
+        v = self.fbm(x, y, octaves, lacunarity, gain)
+        return v * v
+
 
 # ------------------------------------------------------------------ #
 #  Voronoi / Worley Cellular Noise                                    #

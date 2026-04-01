@@ -19,7 +19,16 @@ No PIL, no NumPy, no ML models — every pixel is computed from pure mathematics
 | **Logarithmic Spirals** | Keplerian-inspired spiral arm rendering |
 | **Separable Gaussian Bloom** | Efficient two-pass glow around bright regions |
 | **ACES Tone Mapping** | Filmic HDR-to-SDR conversion |
-| **Cinematic Color Grading** | Tint, contrast, saturation, shadow-color adjustments |
+| **Chromatic Aberration** | Cinematic RGB channel separation lens effect |
+| **Relativistic Jets** | Bipolar jet streams from black hole poles |
+| **Film Grain** | Subtle organic noise overlay for cinematic feel |
+| **Billowy Noise** | Squared fBm for soft cloud-like volumetric shapes |
+| **3-Level Domain Warping** | Deep organic flow distortion via warp_fbm |
+| **Multi-ring Accretion** | Inner hot + outer cool rings with Doppler beaming |
+| **Einstein Ring** | Bright ring at gravitational lensing critical radius |
+| **Star Clusters** | Grouped stars for realistic field density |
+| **Emission Highlights** | Bright spots in dense nebula regions |
+| **Dust Lanes** | Dark absorption lanes between spiral arms |
 
 ## Quick Start
 
@@ -48,6 +57,7 @@ python -m quantum_image_generator --preset quantum_field --format bmp
 | `nebula` | Colorful interstellar gas cloud with emission layers |
 | `galaxy` | Spiral galaxy with central bulge |
 | `quantum_field` | Abstract quantum energy-field with Voronoi cells and ridges |
+| `deep_space` | Rich deep-field with overlapping nebulae, dense stars & volumetric dust |
 
 ## CLI Options
 

@@ -98,6 +98,44 @@ class PixelBuffer:
             for i in range(len(d)):
                 d[i] += od[i] * intensity
 
+    def chromatic_aberration(self, strength=0.003):
+        """Shift R channel outward and B channel inward from centre."""
+        w, h = self.width, self.height
+        cx, cy = w * 0.5, h * 0.5
+        src = self.copy()
+        data = self.data
+        _floor = math.floor
+        for y in range(h):
+            for x in range(w):
+                dx = x - cx
+                dy = y - cy
+                # red channel — shifted outward
+                rx = x + dx * strength
+                ry = y + dy * strength
+                rxi = int(_floor(rx)); ryi = int(_floor(ry))
+                rfx = rx - rxi; rfy = ry - ryi
+                c00 = src.get_pixel(rxi, ryi)
+                c10 = src.get_pixel(rxi + 1, ryi)
+                c01 = src.get_pixel(rxi, ryi + 1)
+                c11 = src.get_pixel(rxi + 1, ryi + 1)
+                r_val = (c00[0]*(1-rfx)*(1-rfy) + c10[0]*rfx*(1-rfy)
+                         + c01[0]*(1-rfx)*rfy + c11[0]*rfx*rfy)
+                # blue channel — shifted inward
+                bx = x - dx * strength
+                by = y - dy * strength
+                bxi = int(_floor(bx)); byi = int(_floor(by))
+                bfx = bx - bxi; bfy = by - byi
+                c00 = src.get_pixel(bxi, byi)
+                c10 = src.get_pixel(bxi + 1, byi)
+                c01 = src.get_pixel(bxi, byi + 1)
+                c11 = src.get_pixel(bxi + 1, byi + 1)
+                b_val = (c00[2]*(1-bfx)*(1-bfy) + c10[2]*bfx*(1-bfy)
+                         + c01[2]*(1-bfx)*bfy + c11[2]*bfx*bfy)
+                i = (y * w + x) * 3
+                data[i] = r_val
+                # green stays
+                data[i + 2] = b_val
+
     def multiply_scalar(self, s):
         d = self.data
         for i in range(len(d)):
@@ -271,4 +309,22 @@ def gamma_correct(r, g, b, gamma=2.2):
         r ** inv if r > 0 else 0.0,
         g ** inv if g > 0 else 0.0,
         b ** inv if b > 0 else 0.0,
+    )
+
+
+def soft_light_blend(base, blend):
+    """Soft-light blend two (r, g, b) tuples. Returns (r, g, b)."""
+    def _sl(b, s):
+        if s <= 0.5:
+            return b - (1.0 - 2.0 * s) * b * (1.0 - b)
+        else:
+            if b <= 0.25:
+                d = ((16.0 * b - 12.0) * b + 4.0) * b
+            else:
+                d = math.sqrt(max(b, 0.0))
+            return b + (2.0 * s - 1.0) * (d - b)
+    return (
+        clamp(_sl(base[0], blend[0])),
+        clamp(_sl(base[1], blend[1])),
+        clamp(_sl(base[2], blend[2])),
     )
