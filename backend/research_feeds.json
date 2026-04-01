@@ -280,5 +280,30 @@
       "https://en.wikipedia.org/wiki/Complexity",
       "https://en.wikipedia.org/wiki/Holism"
     ]
+  },
+  "political_theory": {
+    "label": "Political Theory (governance + power + justice)",
+    "bridge_to": [
+      "philosophy",
+      "history",
+      "economics",
+      "law"
+    ],
+    "urls": [
+      "https://en.wikipedia.org/wiki/Social_contract",
+      "https://en.wikipedia.org/wiki/Democracy",
+      "https://en.wikipedia.org/wiki/Sovereignty",
+      "https://en.wikipedia.org/wiki/Separation_of_powers",
+      "https://en.wikipedia.org/wiki/Republicanism",
+      "https://en.wikipedia.org/wiki/Liberalism",
+      "https://en.wikipedia.org/wiki/Political_philosophy",
+      "https://en.wikipedia.org/wiki/Constitutionalism",
+      "https://plato.stanford.edu/entries/justice-distributive/",
+      "https://plato.stanford.edu/entries/liberty-positive-negative/",
+      "https://plato.stanford.edu/entries/authority/",
+      "https://plato.stanford.edu/entries/social-contract/",
+      "https://www.gutenberg.org/files/815/815-0.txt",
+      "https://www.gutenberg.org/cache/epub/3207/pg3207.txt"
+    ]
   }
 }

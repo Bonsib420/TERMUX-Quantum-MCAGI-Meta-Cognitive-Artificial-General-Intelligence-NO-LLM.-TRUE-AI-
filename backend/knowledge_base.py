@@ -117,6 +117,8 @@ class KnowledgeBase:
             'truth': "Truth is correspondence between statements and reality—or is it? Correspondence theory says truth matches facts. Coherence theory says truth is consistency within a belief system. Pragmatic theory says truth is what works. Post-modernists question whether objective truth exists. In quantum mechanics, truth seems observer-dependent until measured.",
             
             'information': "Information, in physics, is fundamental—perhaps more fundamental than matter or energy. The universe may be computational at its core. Information cannot be destroyed (conservation of information), which creates paradoxes with black holes. Shannon's information theory quantifies information as reduction of uncertainty. Every interaction is information exchange.",
+
+            'politics': "Political theory studies power, governance, and collective organization. Central questions include who should rule, what legitimizes authority, and how to balance individual liberty with the common good. Key traditions include social contract theory (Hobbes, Locke, Rousseau), republicanism, liberalism, and socialism. Democracy, justice, sovereignty, and rights remain contested concepts shaped by centuries of philosophical debate from Plato's Republic to Rawls's Theory of Justice.",
         }
     
     def is_greeting(self, text: str) -> bool:

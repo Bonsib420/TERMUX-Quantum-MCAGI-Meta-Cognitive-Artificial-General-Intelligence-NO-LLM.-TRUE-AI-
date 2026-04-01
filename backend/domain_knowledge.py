@@ -84,6 +84,7 @@ class MultiDomainKnowledge:
     - Mathematics: logic, proof, sets, infinity
     - Psychology: mind, behavior, cognition, emotion
     - Language: semantics, syntax, communication, meaning
+    - Political Theory: governance, power, democracy, ideology
     """
     
     def __init__(self):
@@ -304,6 +305,49 @@ class MultiDomainKnowledge:
             Weak versions are well-supported. Strong versions claiming language determines thought are controversial.
         """)
         self.domains["language"] = lang
+
+        # ===== POLITICAL THEORY =====
+        polit = KnowledgeDomain("political_theory", "Study of governance, power, justice, and political organization")
+        polit.add_keywords(['politics', 'government', 'power', 'state', 'democracy', 'authority',
+                           'law', 'justice', 'rights', 'liberty', 'equality', 'ideology',
+                           'sovereignty', 'constitution', 'revolution', 'republic', 'monarchy',
+                           'tyranny', 'oligarchy', 'citizenship', 'legitimacy', 'consent',
+                           'freedom', 'oppression', 'regime', 'political', 'governance',
+                           'totalitarian', 'parliament', 'legislation', 'civil', 'social contract'])
+        polit.add_corpus("""
+            Political theory examines the nature of power, authority, and governance. It asks who should rule, 
+            by what right, and toward what ends. The social contract tradition argues that legitimate authority 
+            arises from the consent of the governed rather than divine right or brute force.
+
+            Democracy means rule by the people. Direct democracy lets citizens vote on laws themselves. 
+            Representative democracy delegates decisions to elected officials. Liberal democracy combines 
+            majority rule with individual rights protections. Deliberative democracy emphasizes reasoned 
+            public discourse as the basis for legitimate collective decisions.
+
+            Sovereignty is the supreme authority within a territory. Hobbes argued sovereign power must be 
+            absolute to prevent the war of all against all. Locke countered that sovereignty is held in 
+            trust and can be revoked if the government violates natural rights to life, liberty, and property.
+
+            Justice concerns the fair distribution of benefits and burdens in society. Rawls proposed the 
+            veil of ignorance as a thought experiment for designing fair institutions. Nozick defended 
+            minimal state libertarianism based on individual entitlements. Communitarians argue justice 
+            depends on shared values and traditions within particular communities.
+
+            Liberty distinguishes negative freedom, the absence of external constraints, from positive freedom, 
+            the capacity to realize ones potential. Berlin warned that positive liberty can justify paternalism. 
+            Mill defended individual liberty unless actions harm others. Republican freedom emphasizes 
+            non-domination rather than mere non-interference.
+
+            Revolution occurs when existing political order is overthrown. Marx theorized that class conflict 
+            drives revolutionary change as material conditions shift. Burke argued for gradual reform over 
+            violent revolution to preserve social stability. Arendt distinguished revolution as founding new 
+            political orders from mere rebellion or coup.
+
+            Constitutionalism limits government power through fundamental law. Separation of powers divides 
+            authority among legislative, executive, and judicial branches. Federalism distributes sovereignty 
+            between central and regional governments. Rights declarations protect individuals against state power.
+        """)
+        self.domains["political_theory"] = polit
 
     
     def detect_domain(self, text: str) -> Tuple[str, float]:
