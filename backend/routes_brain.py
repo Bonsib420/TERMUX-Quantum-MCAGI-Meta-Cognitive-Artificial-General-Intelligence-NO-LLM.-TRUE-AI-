@@ -387,3 +387,56 @@ async def analyze_all_code():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ============================================================================
+# KNOWLEDGE TEST ENDPOINTS
+# ============================================================================
+
+class KnowledgeTestRequest(BaseModel):
+    """Request model for knowledge retention tests."""
+    domain: Optional[str] = None
+
+
+@router.post("/brain/knowledge-test")
+async def run_knowledge_test(request: KnowledgeTestRequest = None):
+    """Run a knowledge retention test across all consumed knowledge."""
+    try:
+        from knowledge_test import KnowledgeTestEngine
+        from chat import LocalMemory
+
+        memory = LocalMemory()
+        # Try to load engine for Markov tests
+        engine = None
+        try:
+            from quantum_language_engine import QuantumLanguageEngine
+            engine = QuantumLanguageEngine()
+            state_dir = str(memory.data_dir / "engine_state")
+            engine.load_state(state_dir)
+        except Exception:
+            pass
+
+        tester = KnowledgeTestEngine(memory, engine)
+        domain_filter = request.domain if request else None
+        results = tester.run_full_test(domain_filter=domain_filter)
+        tester.save_results()
+        return results
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/brain/knowledge-test/summary")
+async def get_knowledge_test_summary():
+    """Get the summary of the last knowledge retention test."""
+    try:
+        from knowledge_test import KnowledgeTestEngine
+        from chat import LocalMemory
+
+        memory = LocalMemory()
+        tester = KnowledgeTestEngine(memory)
+        last = tester.load_last_results()
+        if last:
+            return last
+        return {"message": "No test results available. Run a test first."}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

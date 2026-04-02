@@ -21,6 +21,9 @@ Commands:
     /knowledge X  - Look up a topic
     /collapse X   - Show semantic collapse
     /feed [CAT]   - Batch-fetch URLs from research_feeds.json (or /feed all)
+    /test         - Run full knowledge retention test
+    /test DOMAIN  - Test specific domain (e.g. /test physics)
+    /test summary - Show last test results
     /export       - Export full conversation as markdown (file + terminal)
     /copy-last    - Print last AI response in a bordered box for easy copy
     /cloud-save   - Save state to Wolfram Cloud
@@ -119,6 +122,12 @@ try:
     HAS_LIBRARY = True
 except ImportError:
     HAS_LIBRARY = False
+
+try:
+    from knowledge_test import get_knowledge_test
+    HAS_KNOWLEDGE_TEST = True
+except ImportError:
+    HAS_KNOWLEDGE_TEST = False
 
 
 class LocalMemory:
@@ -852,6 +861,33 @@ def run_chat(verbose=False):
                 for kw, paths in ctx['semantic_paths'].items():
                     print(f"  {kw} -> {paths}")
                 print()
+                continue
+
+            elif cmd[0] == '/test':
+                if not HAS_KNOWLEDGE_TEST:
+                    print("  Knowledge test module not available.")
+                    continue
+                tester = get_knowledge_test(memory, engine)
+                if len(cmd) >= 2 and cmd[1].lower() == 'summary':
+                    # Show last test summary
+                    last = tester.load_last_results()
+                    if last:
+                        print(tester.format_summary(last))
+                    else:
+                        print("  No previous test results. Run /test first.")
+                elif len(cmd) >= 2:
+                    # Test specific domain
+                    domain = cmd[1].lower()
+                    print(f"\n  Running knowledge test for domain: {domain}...")
+                    results = tester.run_full_test(domain_filter=domain)
+                    print(tester.format_results(results))
+                    tester.save_results()
+                else:
+                    # Full test
+                    print("\n  Running full knowledge retention test...")
+                    results = tester.run_full_test()
+                    print(tester.format_results(results))
+                    tester.save_results()
                 continue
 
             elif cmd[0] == "/library":
