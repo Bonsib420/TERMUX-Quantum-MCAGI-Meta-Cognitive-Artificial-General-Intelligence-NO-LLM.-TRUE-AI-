@@ -1,0 +1,22 @@
+{
+  "name": "quantum-cistercian-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@capacitor/android": "^8.2.0",
+    "@capacitor/clipboard": "^8.0.1",
+    "@capacitor/core": "^8.2.0",
+    "axios": "^1.8.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && bash postbuild.sh",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^6.0.6"
+  }
+}

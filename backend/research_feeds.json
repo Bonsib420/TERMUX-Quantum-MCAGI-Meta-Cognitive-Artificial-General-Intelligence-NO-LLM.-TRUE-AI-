@@ -1,0 +1,217 @@
+{
+  "_description": "Curated URL feeds for vocabulary + knowledge expansion. Use with /feed command.",
+  "_usage": "/feed [category] — process URLs from a category, /feed all — process everything",
+
+  "crime_and_justice": {
+    "label": "Crime & Justice",
+    "bridge_to": ["history", "philosophy", "economics"],
+    "urls": [
+      "https://www.worldhistory.org/article/1677/a-brief-history-of-tobacco-in-the-americas/",
+      "https://www.worldhistory.org/Alchemy/",
+      "https://www.worldhistory.org/article/1823/an-a-to-z-of-pirate--seafaring-expressions/",
+      "https://www.worldhistory.org/Anne_Bonny/",
+      "https://en.wikipedia.org/wiki/History_of_criminal_justice",
+      "https://en.wikipedia.org/wiki/Hammurabi%27s_Code"
+    ]
+  },
+
+  "daily_life": {
+    "label": "Daily Life (bridges everything)",
+    "bridge_to": ["history", "art", "economics", "biology", "philosophy"],
+    "urls": [
+      "https://www.worldhistory.org/article/98/athletics-leisure-and-entertainment-in-ancient-rom/",
+      "https://www.worldhistory.org/article/870/ancient-roman-family-life/",
+      "https://www.worldhistory.org/article/20/ancient-greek-clothing/",
+      "https://www.worldhistory.org/article/723/aztec-food--agriculture/",
+      "https://www.worldhistory.org/article/1426/a-traditional-japanese-house/",
+      "https://en.wikipedia.org/wiki/Daily_life_in_ancient_Egypt",
+      "https://en.wikipedia.org/wiki/Food_and_drink_in_medieval_England",
+      "https://en.wikipedia.org/wiki/Byzantine_dress"
+    ]
+  },
+
+  "religion_and_mythology": {
+    "label": "Religion & Mythology (direct RQR³ alignment)",
+    "bridge_to": ["philosophy", "physics", "history", "art", "linguistics"],
+    "urls": [
+      "https://www.worldhistory.org/Egyptian_Religion/",
+      "https://www.worldhistory.org/Ancient_Persian_Religion/",
+      "https://www.worldhistory.org/Ancient_Persian_Mythology/",
+      "https://www.worldhistory.org/Armenian_Mythology/",
+      "https://www.worldhistory.org/Ahura_Mazda/",
+      "https://www.worldhistory.org/Ahriman/",
+      "https://www.worldhistory.org/article/2538/angels-in-ancient-judaism/",
+      "https://www.worldhistory.org/article/2541/angels-in-christianity/",
+      "https://www.worldhistory.org/Amaterasu/",
+      "https://en.wikipedia.org/wiki/Cosmogony",
+      "https://en.wikipedia.org/wiki/Theosophy_(Blavatsky)",
+      "https://en.wikipedia.org/wiki/Gnosticism",
+      "https://en.wikipedia.org/wiki/Hermeticism",
+      "https://plato.stanford.edu/entries/cosmological-argument/"
+    ]
+  },
+
+  "philosophy_and_science": {
+    "label": "Philosophy & Science (core system alignment)",
+    "bridge_to": ["physics", "mathematics", "religion", "computer_science"],
+    "urls": [
+      "https://www.worldhistory.org/aristotle/",
+      "https://www.worldhistory.org/Anaxagoras/",
+      "https://www.worldhistory.org/Anaximander/",
+      "https://www.worldhistory.org/Anaximenes/",
+      "https://www.worldhistory.org/Archimedes/",
+      "https://www.worldhistory.org/article/959/aristotles-on-the-heavens/",
+      "https://www.worldhistory.org/article/2306/astronomy-in-the-scientific-revolution/",
+      "https://www.worldhistory.org/article/2068/anselms-proslogion/",
+      "https://www.worldhistory.org/Antisthenes_of_Athens/",
+      "https://plato.stanford.edu/entries/consciousness/",
+      "https://plato.stanford.edu/entries/qt-consciousness/",
+      "https://plato.stanford.edu/entries/qualia/",
+      "https://plato.stanford.edu/entries/free-will/",
+      "https://plato.stanford.edu/entries/panpsychism/",
+      "https://en.wikipedia.org/wiki/Orchestrated_objective_reduction",
+      "https://en.wikipedia.org/wiki/Roger_Penrose",
+      "https://en.wikipedia.org/wiki/Philosophy_of_mind"
+    ]
+  },
+
+  "medicine_and_disease": {
+    "label": "Medicine & Disease (new domain)",
+    "bridge_to": ["biology", "history", "philosophy", "chemistry"],
+    "urls": [
+      "https://www.worldhistory.org/article/50/ancient-egyptian-medicine-study--practice/",
+      "https://www.worldhistory.org/article/1015/ancient-egyptian-medical-texts/",
+      "https://www.worldhistory.org/Greek_Medicine/",
+      "https://www.worldhistory.org/Antonine_Plague/",
+      "https://www.worldhistory.org/Andreas_Vesalius/",
+      "https://en.wikipedia.org/wiki/History_of_medicine",
+      "https://en.wikipedia.org/wiki/Humorism",
+      "https://en.wikipedia.org/wiki/Galen"
+    ]
+  },
+
+  "technology_and_invention": {
+    "label": "Technology & Invention (bridges science + history)",
+    "bridge_to": ["physics", "mathematics", "history", "engineering"],
+    "urls": [
+      "https://www.worldhistory.org/Antikythera_Mechanism/",
+      "https://www.worldhistory.org/Astrolabe/",
+      "https://www.worldhistory.org/aqueduct/",
+      "https://www.worldhistory.org/article/967/ancient-egyptian-science--technology/",
+      "https://www.worldhistory.org/article/1165/ancient-greek-inventions/",
+      "https://www.worldhistory.org/Timekeeping/",
+      "https://en.wikipedia.org/wiki/History_of_computing",
+      "https://en.wikipedia.org/wiki/History_of_the_telescope",
+      "https://en.wikipedia.org/wiki/Printing_press"
+    ]
+  },
+
+  "music": {
+    "label": "Music (completely absent domain)",
+    "bridge_to": ["art", "mathematics", "physics", "philosophy"],
+    "urls": [
+      "https://www.worldhistory.org/Greek_Music/",
+      "https://www.worldhistory.org/Aulos/",
+      "https://www.worldhistory.org/Anton_Bruckner/",
+      "https://www.worldhistory.org/Antonio_Vivaldi/",
+      "https://www.worldhistory.org/Antonin_Dvorak/",
+      "https://en.wikipedia.org/wiki/Music_theory",
+      "https://en.wikipedia.org/wiki/Pythagorean_tuning",
+      "https://en.wikipedia.org/wiki/Harmonic_series_(music)",
+      "https://en.wikipedia.org/wiki/History_of_music"
+    ]
+  },
+
+  "linguistics": {
+    "label": "Linguistics (bridges everything including Thryzunel)",
+    "bridge_to": ["philosophy", "computer_science", "history", "mathematics"],
+    "urls": [
+      "https://www.worldhistory.org/alphabet/",
+      "https://www.worldhistory.org/Egyptian_Writing/",
+      "https://www.worldhistory.org/article/2019/a-linguistical-analysis-of-ancient-celtic-languages/",
+      "https://en.wikipedia.org/wiki/History_of_writing",
+      "https://en.wikipedia.org/wiki/Constructed_language",
+      "https://en.wikipedia.org/wiki/Proto-Indo-European_language",
+      "https://en.wikipedia.org/wiki/Rosetta_Stone",
+      "https://en.wikipedia.org/wiki/Universal_grammar"
+    ]
+  },
+
+  "quantum_consciousness": {
+    "label": "Quantum Consciousness (direct Orch-OR alignment)",
+    "bridge_to": ["physics", "philosophy", "biology", "mathematics"],
+    "urls": [
+      "https://en.wikipedia.org/wiki/Quantum_mind",
+      "https://en.wikipedia.org/wiki/Penrose_interpretation",
+      "https://en.wikipedia.org/wiki/Measurement_problem",
+      "https://en.wikipedia.org/wiki/Quantum_decoherence",
+      "https://en.wikipedia.org/wiki/Many-worlds_interpretation",
+      "https://en.wikipedia.org/wiki/Copenhagen_interpretation",
+      "https://en.wikipedia.org/wiki/Observer_(quantum_physics)",
+      "https://plato.stanford.edu/entries/qm-collapse/",
+      "https://plato.stanford.edu/entries/qt-measurement/"
+    ]
+  },
+
+  "classic_literature": {
+    "label": "Classic Literature (vocabulary powerhouse)",
+    "bridge_to": ["philosophy", "history", "linguistics", "art"],
+    "urls": [
+      "https://www.gutenberg.org/files/1232/1232-0.txt",
+      "https://www.gutenberg.org/files/1497/1497-0.txt",
+      "https://www.gutenberg.org/files/1080/1080-0.txt",
+      "https://www.gutenberg.org/files/84/84-0.txt",
+      "https://www.gutenberg.org/files/2600/2600-0.txt",
+      "https://www.gutenberg.org/files/996/996-0.txt",
+      "https://www.gutenberg.org/files/98/98-0.txt",
+      "https://www.gutenberg.org/files/74/74-0.txt"
+    ]
+  },
+
+  "mathematics_and_logic": {
+    "label": "Mathematics & Logic (structural bridges)",
+    "bridge_to": ["physics", "philosophy", "computer_science", "music"],
+    "urls": [
+      "https://en.wikipedia.org/wiki/G%C3%B6del%27s_incompleteness_theorems",
+      "https://en.wikipedia.org/wiki/Chaos_theory",
+      "https://en.wikipedia.org/wiki/Fractal",
+      "https://en.wikipedia.org/wiki/Fibonacci_sequence",
+      "https://en.wikipedia.org/wiki/Hilbert%27s_problems",
+      "https://en.wikipedia.org/wiki/Turing_machine",
+      "https://en.wikipedia.org/wiki/Lambda_calculus",
+      "https://plato.stanford.edu/entries/goedel-incompleteness/"
+    ]
+  },
+
+  "cosmology_and_creation": {
+    "label": "Cosmology & Creation (ThanoQuenesis alignment)",
+    "bridge_to": ["physics", "religion", "philosophy", "mathematics"],
+    "urls": [
+      "https://en.wikipedia.org/wiki/Big_Bang",
+      "https://en.wikipedia.org/wiki/Heat_death_of_the_universe",
+      "https://en.wikipedia.org/wiki/Anthropic_principle",
+      "https://en.wikipedia.org/wiki/Fine-tuned_universe",
+      "https://en.wikipedia.org/wiki/Boltzmann_brain",
+      "https://en.wikipedia.org/wiki/Simulation_hypothesis",
+      "https://en.wikipedia.org/wiki/Multiverse",
+      "https://en.wikipedia.org/wiki/Omega_Point"
+    ]
+  },
+
+  "encyclopedic_deep_dives": {
+    "label": "Encyclopedic Deep Dives (pure vocabulary expansion)",
+    "bridge_to": ["all"],
+    "urls": [
+      "https://en.wikipedia.org/wiki/Emergence",
+      "https://en.wikipedia.org/wiki/Autopoiesis",
+      "https://en.wikipedia.org/wiki/Cybernetics",
+      "https://en.wikipedia.org/wiki/Systems_theory",
+      "https://en.wikipedia.org/wiki/Information_theory",
+      "https://en.wikipedia.org/wiki/Entropy_(information_theory)",
+      "https://en.wikipedia.org/wiki/Strange_loop",
+      "https://en.wikipedia.org/wiki/Self-organization",
+      "https://en.wikipedia.org/wiki/Complexity",
+      "https://en.wikipedia.org/wiki/Holism"
+    ]
+  }
+}
