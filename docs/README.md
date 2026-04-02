@@ -9,7 +9,16 @@ pkill -f uvicorn 2>/dev/null
 # Install and run
 cd backend
 pip install -r requirements.txt
+
+# Optional: PennyLane quantum computing (requires --no-deps on Termux)
+pip install --no-deps PennyLane
+
 python server.py
+```
+
+Terminal chat (no server needed):
+```bash
+cd backend && python chat.py
 ```
 
 Open: http://localhost:8001
