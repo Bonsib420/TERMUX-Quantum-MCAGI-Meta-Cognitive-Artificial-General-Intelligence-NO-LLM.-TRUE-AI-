@@ -624,6 +624,27 @@ def run_chat(verbose=False):
     if getattr(engine, "_has_orch_or", False):
         memory.load_orch_or(engine.orch_or)
 
+    # Auto-ingest documents/ directory if engine has < 1000 Markov states
+    # This bootstraps the knowledge base from the training corpus on first run
+    docs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'documents')
+    if os.path.isdir(docs_dir) and len(engine.markov.chain) < 1000:
+        doc_files = sorted(f for f in os.listdir(docs_dir) if f.endswith('.txt'))
+        loaded = 0
+        total_words = 0
+        for fname in doc_files:
+            fpath = os.path.join(docs_dir, fname)
+            try:
+                with open(fpath, 'r', encoding='utf-8', errors='replace') as f:
+                    text = f.read().strip()
+                if len(text) > 100:  # Skip empty/trivial files
+                    engine.learn_from_text(text)
+                    total_words += len(text.split())
+                    loaded += 1
+            except Exception:
+                pass
+        if loaded > 0:
+            print(f"  Bootstrapped: {loaded} documents, ~{total_words:,} words → {len(engine.markov.chain):,} Markov states")
+
     # Compute current stage with full metrics
     stage_info = memory.get_current_stage()
     topo = stage_info["metrics"]["topology"]
@@ -1274,7 +1295,8 @@ def run_chat(verbose=False):
         # Generate response based on register
         if tone['register'] in ('analytical', 'philosophical') and hybrid_gen:
             # Deep: hybrid quantum generation
-            concept_scores = engine.extract_concepts(user_input)
+            # extract_concepts_scored returns List[Dict] with 'concept' and 'score' keys
+            concept_scores = engine.extract_concepts_scored(user_input)
             response = hybrid_gen.generate(
                 user_input, concepts, concept_scores,
                 min_words=10, max_words=25
