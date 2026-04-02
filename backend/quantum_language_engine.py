@@ -991,24 +991,6 @@ class QuantumLanguageEngine:
             self.pennylane = None
             self._has_pennylane = False
 
-        # PennyLane real quantum circuits
-        try:
-            from pennylane_quantum import get_pennylane_quantum
-            self.pennylane = get_pennylane_quantum()
-            self._has_pennylane = True
-        except Exception:
-            self.pennylane = None
-            self._has_pennylane = False
-
-        # PennyLane real quantum circuits
-        try:
-            from pennylane_quantum import get_pennylane_quantum
-            self.pennylane = get_pennylane_quantum()
-            self._has_pennylane = True
-        except Exception:
-            self.pennylane = None
-            self._has_pennylane = False
-
         logger.info("QuantumLanguageEngine initialized with real algorithms")
     
     def extract_concepts(self, text: str, max_concepts: int = 5) -> List[str]:
@@ -1016,6 +998,11 @@ class QuantumLanguageEngine:
         self.extractor.update_corpus_stats(text)
         results = self.extractor.extract_concepts(text, max_concepts)
         return [r['concept'] for r in results]
+
+    def extract_concepts_scored(self, text: str, max_concepts: int = 5) -> List[Dict]:
+        """Extract concepts with TF-IDF scores. Returns List[Dict] with 'concept' and 'score' keys."""
+        self.extractor.update_corpus_stats(text)
+        return self.extractor.extract_concepts(text, max_concepts)
     
     def generate_questions(self, text: str, growth_stage: int = 0,
                           known_concepts: List[str] = None) -> List[str]:
