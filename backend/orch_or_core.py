@@ -187,7 +187,7 @@ class Microtubule:
     Collapse of the microtubule = resolution of the concept.
     """
 
-    def __init__(self, n_tubulins: int = 13, label: str = ""):
+    def __init__(self, n_tubulins: int = 26, label: str = ""):
         self.n = n_tubulins
         self.label = label
         self.tubulins = [TubulinQubit() for _ in range(n_tubulins)]
@@ -333,7 +333,7 @@ class OrchestratedConsciousness:
     where the AI produces its response.
     """
 
-    def __init__(self, n_tubulins_per_mt: int = 13):
+    def __init__(self, n_tubulins_per_mt: int = 26):
         self.n_tubulins = n_tubulins_per_mt
 
         # Core microtubules (one per cognitive function)

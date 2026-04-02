@@ -26,7 +26,7 @@ from domain_knowledge import get_domain_knowledge
 
 class OrchOREngine:
     """Penrose-Hameroff Orchestrated Objective Reduction"""
-    def __init__(self, num_microtubules: int = 4, tubulins_per_microtubule: int = 13):
+    def __init__(self, num_microtubules: int = 4, tubulins_per_microtubule: int = 26):
         self.num_microtubules = num_microtubules
         self.total_tubulins = num_microtubules * tubulins_per_microtubule
         self.tubulin_states = np.random.random(self.total_tubulins)
