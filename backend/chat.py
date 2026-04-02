@@ -124,6 +124,72 @@ except ImportError:
 class LocalMemory:
     """JSON-file backed memory for local chat."""
 
+    # Lightweight domain classifier — maps keywords to knowledge domains.
+    # Used to populate concept metadata so distinct_domains count works
+    # and growth stages can advance.
+    DOMAIN_KEYWORDS = {
+        'philosophy': {
+            'consciousness', 'existence', 'reality', 'being', 'truth', 'meaning',
+            'ethics', 'morality', 'epistemology', 'ontology', 'metaphysics',
+            'philosophy', 'wisdom', 'virtue', 'existential', 'phenomenology',
+            'dialectic', 'dualism', 'determinism', 'nihilism', 'stoicism',
+            'mind', 'soul', 'free', 'will', 'perception', 'reason',
+        },
+        'physics': {
+            'quantum', 'particle', 'wave', 'energy', 'mass', 'gravity',
+            'spacetime', 'relativity', 'photon', 'electron', 'proton',
+            'entropy', 'thermodynamics', 'superposition', 'entanglement',
+            'collapse', 'wavefunction', 'momentum', 'force', 'field',
+            'atom', 'nuclear', 'cosmology', 'universe', 'dimension',
+            'electromagnetic', 'radiation', 'frequency', 'wavelength',
+        },
+        'computer_science': {
+            'algorithm', 'computer', 'programming', 'software', 'code',
+            'data', 'network', 'artificial', 'intelligence', 'machine',
+            'learning', 'neural', 'computation', 'binary', 'digital',
+            'encryption', 'database', 'internet', 'processor', 'memory',
+        },
+        'biology': {
+            'cell', 'dna', 'gene', 'protein', 'evolution', 'organism',
+            'species', 'ecology', 'neuron', 'brain', 'mitochondria',
+            'biological', 'genome', 'mutation', 'adaptation', 'life',
+            'microtubule', 'tubulin', 'synapse', 'enzyme', 'metabolism',
+        },
+        'mathematics': {
+            'number', 'equation', 'theorem', 'proof', 'geometry', 'algebra',
+            'calculus', 'infinity', 'set', 'function', 'variable',
+            'probability', 'statistics', 'matrix', 'vector', 'topology',
+            'prime', 'factorial', 'logarithm', 'integral', 'derivative',
+        },
+        'psychology': {
+            'emotion', 'behavior', 'cognition', 'personality', 'motivation',
+            'anxiety', 'depression', 'therapy', 'unconscious', 'trauma',
+            'empathy', 'attachment', 'identity', 'perception', 'memory',
+            'habit', 'stress', 'dream', 'instinct', 'desire',
+        },
+        'language': {
+            'word', 'language', 'grammar', 'syntax', 'semantics', 'meaning',
+            'communication', 'expression', 'metaphor', 'narrative', 'symbol',
+            'translation', 'dialect', 'vocabulary', 'discourse', 'rhetoric',
+        },
+    }
+
+    @classmethod
+    def _classify_domain(cls, concept: str) -> str:
+        """Classify a concept into a knowledge domain via keyword matching."""
+        c = concept.lower()
+        best_domain = ''
+        best_score = 0
+        for domain, keywords in cls.DOMAIN_KEYWORDS.items():
+            if c in keywords:
+                return domain
+            # Partial match: concept is substring of keyword or vice versa
+            score = sum(1 for kw in keywords if kw in c or c in kw)
+            if score > best_score:
+                best_score = score
+                best_domain = domain
+        return best_domain if best_score > 0 else 'general'
+
     # All 12 tracks must be met simultaneously to advance.
     # High watermark protection on diameter and avg_degree — earned progress never regresses.
     GROWTH_STAGES = [
@@ -238,18 +304,25 @@ class LocalMemory:
         self.session_state["total_lifetime_interactions"] = self.session_state.get(
             "total_lifetime_interactions", 0) + 1
 
-        # Track new concepts and ensure relationships field
+        # Track new concepts and ensure relationships field + domain metadata
         for c in concepts:
             c_lower = c.lower()
             if c_lower in self.concepts:
                 self.concepts[c_lower]["count"] += 1
                 self.concepts[c_lower]["strength"] = min(10.0, self.concepts[c_lower]["strength"] + 0.1)
+                # Back-fill domain metadata for concepts that predate this fix
+                if "metadata" not in self.concepts[c_lower]:
+                    self.concepts[c_lower]["metadata"] = {
+                        "domain": self._classify_domain(c_lower)
+                    }
             else:
+                domain = self._classify_domain(c_lower)
                 self.concepts[c_lower] = {
                     "count": 1,
                     "strength": 1.0,
                     "first_seen": datetime.now().isoformat(),
-                    "relationships": []  # initialize relationships
+                    "relationships": [],
+                    "metadata": {"domain": domain}
                 }
                 self.growth["total_concepts"] += 1
 

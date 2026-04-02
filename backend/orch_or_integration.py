@@ -44,12 +44,12 @@ class OrchORLanguageBridge:
     collapse pattern to drive every linguistic decision.
     """
 
-    def __init__(self, n_tubulins: int = 13):
+    def __init__(self, n_tubulins: int = 26):
         self.consciousness = OrchestratedConsciousness(n_tubulins)
         self.n_tubulins = n_tubulins
 
     def concept_weights_from_scores(self, concept_scores: List[Dict],
-                                    n_slots: int = 13) -> List[float]:
+                                    n_slots: int = 26) -> List[float]:
         """
         Convert TF-IDF concept scores into tubulin weights.
         Higher score = stronger superposition bias toward |1>.
@@ -187,7 +187,7 @@ class OrchORProcessor:
     - response COMPOSITION uses language+insight MT interaction
     """
 
-    def __init__(self, n_tubulins: int = 13):
+    def __init__(self, n_tubulins: int = 26):
         self.bridge = OrchORLanguageBridge(n_tubulins)
         self.last_collapse = None
         self.total_moments = 0
@@ -320,6 +320,6 @@ def get_orch_or_processor() -> OrchORProcessor:
     """Get or create the Orch OR processor singleton."""
     global _orch_or
     if _orch_or is None:
-        _orch_or = OrchORProcessor(n_tubulins=13)
-        logger.info("Orch OR processor initialized: 4 microtubules x 13 tubulins")
+        _orch_or = OrchORProcessor(n_tubulins=26)
+        logger.info("Orch OR processor initialized: 4 microtubules x 26 tubulins")
     return _orch_or

@@ -557,24 +557,42 @@ class QuestionGenerator:
         }
     
     def _question_from_relation(self, concepts: List[str], bloom: int) -> Optional[Dict]:
-        """Generate a question about the relationship between concepts."""
+        """Generate a question about the relationship between concepts.
+        Independence-test style questions probe whether connections are
+        necessary or contingent — mimicking quantum duality analysis."""
         if len(concepts) < 2:
             return None
         
         c1, c2 = random.sample(concepts[:4], 2)
         
         if bloom <= 2:
-            question = f"Is the connection between {c1} and {c2} necessary, or could they exist independently?"
+            # Independence-test questions: probe necessity of connections
+            templates = [
+                f"Is the connection between {c1} and {c2} necessary, or could they exist independently?",
+                f"Could {c1} exist without {c2}, or are they fundamentally entangled?",
+                f"Does {c1} depend on {c2}, or is their association contingent?",
+                f"If we removed {c2} from the picture, would {c1} still hold its meaning?",
+            ]
+            question = random.choice(templates)
         elif bloom <= 4:
-            question = f"What would break if the relationship between {c1} and {c2} were reversed?"
+            templates = [
+                f"What would break if the relationship between {c1} and {c2} were reversed?",
+                f"Are {c1} and {c2} in superposition — complementary rather than contradictory?",
+                f"What hidden variable connects {c1} and {c2} that we haven't observed yet?",
+            ]
+            question = random.choice(templates)
         else:
-            question = f"What third concept could bridge {c1} and {c2} in a way nobody has considered?"
+            templates = [
+                f"What third concept could bridge {c1} and {c2} in a way nobody has considered?",
+                f"If {c1} and {c2} collapsed into a single idea, what would that look like?",
+            ]
+            question = random.choice(templates)
         
         return {
             'question': question,
             'bloom_level': self.BLOOM_LEVELS[bloom],
             'target_concept': f"{c1}+{c2}",
-            'reasoning': f"Exploring relationship between '{c1}' and '{c2}'"
+            'reasoning': f"Independence test between '{c1}' and '{c2}'"
         }
 
 
@@ -737,25 +755,32 @@ class ResponseComposer:
     
     def _compose_insight(self, concepts: List[str], score: float,
                         stage: int) -> str:
-        """Generate an insight about the concepts — not a template fill."""
+        """Generate an insight about the concepts — not a template fill.
+        Prioritizes resonance-framed insights over tension-framed ones,
+        which produces more natural casual/conversational output."""
         if len(concepts) < 2:
             concept = concepts[0] if concepts else 'this'
             insights = [
                 f"What strikes me is that {concept} may be more fundamental than it first appears.",
                 f"The edges of {concept} seem to blur into something larger when examined closely.",
                 f"Perhaps {concept} is better understood as a process rather than a thing.",
+                f"There's a resonance in {concept} that echoes across several domains I've encountered.",
             ]
         else:
             c1, c2 = concepts[0], concepts[1]
+            # Resonance-first ordering: resonance/harmony templates come before
+            # tension/boundary templates — produces more natural casual responses
             insights = [
-                f"The tension between {c1} and {c2} might be productive rather than contradictory.",
+                f"I sense a resonance between {c1} and {c2} that suggests a deeper shared structure.",
                 f"What if {c1} and {c2} are two expressions of the same underlying principle?",
-                f"The boundary between {c1} and {c2} may be where the most interesting dynamics occur.",
                 f"Examining {c1} through the lens of {c2} transforms both of them.",
+                f"The interplay between {c1} and {c2} creates a standing wave of meaning worth exploring.",
+                f"The boundary between {c1} and {c2} may be where the most interesting dynamics occur.",
+                f"The tension between {c1} and {c2} might be productive rather than contradictory.",
             ]
         
         if stage >= 4:
-            insights = insights[-2:]  # Higher stages get more sophisticated insights
+            insights = insights[-3:]  # Higher stages get more sophisticated insights
         
         return random.choice(insights)
     

@@ -8,7 +8,10 @@ collapses the infinite semantic possibilities into focused responses.
 
 import re
 import random
+import logging
 from typing import Dict, List, Tuple, Set, Optional
+
+logger = logging.getLogger("quantum_ai")
 
 
 class SemanticCollapseEngine:
@@ -111,6 +114,23 @@ class SemanticCollapseEngine:
             # No observation possible, return original
             return self.co_occurrence
         
+        # Log pre-collapse state for debugging
+        pre_collapse_snapshot = {
+            'keywords': list(keyword_set),
+            'pre_weights': {
+                word: dict(relations)
+                for word, relations in self.co_occurrence.items()
+                if word in keyword_set or any(kw in relations for kw in keyword_set)
+            },
+        }
+        self.observation_history.append({
+            'phase': 'pre_collapse',
+            'input': input_text[:200],
+            'snapshot': pre_collapse_snapshot,
+        })
+        logger.debug("Pre-collapse state: %d keywords, %d relevant weight groups",
+                      len(keyword_set), len(pre_collapse_snapshot['pre_weights']))
+
         # Collapse: Create new weights focused on keywords
         collapsed = {}
         
@@ -222,7 +242,7 @@ class SemanticCollapseEngine:
             'keywords': self.extract_keywords(input_text)
         })
         # Keep history manageable
-        if len(self.observation_history) > 100:
+        if len(self.observation_history) > 200:
             self.observation_history.pop(0)
     
     def reset(self):
