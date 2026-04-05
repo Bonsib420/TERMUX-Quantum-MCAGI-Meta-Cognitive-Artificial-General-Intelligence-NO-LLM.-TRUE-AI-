@@ -5,8 +5,10 @@
 # Complete installation of Quantum MCAGI on Termux (Android).
 #
 # USAGE:
-#   Method 1 — Clone from GitHub:
-#     curl -sL https://raw.githubusercontent.com/Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-/main/termux_setup.sh | bash
+#   Method 1 — Clone from GitHub (review first):
+#     curl -sL https://raw.githubusercontent.com/Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-/main/termux_setup.sh -o termux_setup.sh
+#     less termux_setup.sh   # Review before running
+#     bash termux_setup.sh
 #
 #   Method 2 — Run locally after cloning:
 #     cd ~/Quantum_MCAGI_NO_LLM
