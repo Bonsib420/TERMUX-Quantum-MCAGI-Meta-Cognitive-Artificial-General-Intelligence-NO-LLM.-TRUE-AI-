@@ -10,6 +10,7 @@ from typing import List, Dict, Any, Optional
 import os
 import logging
 import random
+import re
 from datetime import datetime, timezone
 import json
 
@@ -688,6 +689,91 @@ async def download_cistercian_font(
     """
     # This will generate the full set - careful with memory!
     return await batch_cistercian_svgs(start=0, end=9999, size=size, color=color)
+
+
+class CistercianMathRequest(BaseModel):
+    """Request for Cistercian numeral math."""
+    expression: str  # e.g. "42 + 73" or just Cistercian number references
+    color: str = "#FFFFFF"
+    size: int = 80
+
+
+@router.post("/cistercian/math")
+async def cistercian_math(req: CistercianMathRequest):
+    """
+    Evaluate a math expression and return operands + result as Cistercian numerals.
+
+    Accepts expressions like "42 + 73", "1000 - 250", "12 * 8", "100 / 4".
+    Numbers can be 0-9999 (Cistercian range). Results are clamped to 0-9999.
+
+    Returns JSON with:
+    - operands: list of {value, svg} for each number in the expression
+    - operator: the math operator used
+    - result: {value, svg} for the computed answer
+    - expression: the original expression
+    - cistercian_expression: human-readable "cistercian(42) + cistercian(73) = cistercian(115)"
+    """
+    try:
+        from cistercian_numerals import render_cistercian_svg
+
+        expr = req.expression.strip()
+
+        # Parse: number operator number (supports +, -, *, /)
+        match = re.match(r'^\s*(\d+)\s*([+\-*/])\s*(\d+)\s*$', expr)
+        if not match:
+            raise HTTPException(status_code=400, detail="Expression must be: NUMBER OP NUMBER (e.g. '42 + 73'). Supported operators: + - * /")
+
+        a_val = int(match.group(1))
+        op = match.group(2)
+        b_val = int(match.group(3))
+
+        # Validate Cistercian range
+        if not (0 <= a_val <= 9999) or not (0 <= b_val <= 9999):
+            raise HTTPException(status_code=400, detail="Numbers must be 0-9999 (Cistercian range)")
+
+        # Compute
+        if op == '+':
+            result_val = a_val + b_val
+        elif op == '-':
+            result_val = a_val - b_val
+        elif op == '*':
+            result_val = a_val * b_val
+        elif op == '/':
+            if b_val == 0:
+                raise HTTPException(status_code=400, detail="Division by zero")
+            result_val = int(a_val / b_val)
+        else:
+            raise HTTPException(status_code=400, detail=f"Unsupported operator: {op}")
+
+        # Clamp result to Cistercian range
+        clamped_result = max(0, min(9999, result_val))
+
+        # Generate SVGs for all three numbers
+        a_svg = render_cistercian_svg(a_val, size=req.size, color=req.color)
+        b_svg = render_cistercian_svg(b_val, size=req.size, color=req.color)
+        result_svg = render_cistercian_svg(clamped_result, size=req.size, color=req.color)
+
+        return {
+            "expression": expr,
+            "operands": [
+                {"value": a_val, "svg": a_svg},
+                {"value": b_val, "svg": b_svg}
+            ],
+            "operator": op,
+            "result": {
+                "value": clamped_result,
+                "overflow": result_val != clamped_result,
+                "raw_value": result_val,
+                "svg": result_svg
+            },
+            "cistercian_expression": f"𝕮({a_val}) {op} 𝕮({b_val}) = 𝕮({clamped_result})"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Cistercian math error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================

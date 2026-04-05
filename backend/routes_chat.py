@@ -10,6 +10,7 @@ from typing import List, Dict, Optional, Any
 import uuid
 import os
 import logging
+import re
 import time
 from datetime import datetime, timezone
 
@@ -162,8 +163,41 @@ async def _handle_command(content: str, explain_mode: bool = False) -> Optional[
                         explanation = result.get("explanation")
                 except Exception as e:
                     response_text = f"Research error: {e}"
+        elif cmd == '/cistercian-math':
+            if not args:
+                response_text = "Usage: /cistercian-math <expression>\nExample: /cistercian-math 42 + 73\nSupported: + - * /  (numbers 0-9999)"
+            else:
+                expr = ' '.join(args)
+                import re
+                match = re.match(r'^\s*(\d+)\s*([+\-*/])\s*(\d+)\s*$', expr)
+                if not match:
+                    response_text = "Invalid expression. Use: NUMBER OP NUMBER\nExample: /cistercian-math 42 + 73"
+                else:
+                    a_val = int(match.group(1))
+                    op = match.group(2)
+                    b_val = int(match.group(3))
+                    if not (0 <= a_val <= 9999) or not (0 <= b_val <= 9999):
+                        response_text = "Numbers must be 0-9999 (Cistercian range)"
+                    elif op == '/' and b_val == 0:
+                        response_text = "Division by zero"
+                    else:
+                        if op == '+': result_val = a_val + b_val
+                        elif op == '-': result_val = a_val - b_val
+                        elif op == '*': result_val = a_val * b_val
+                        else: result_val = int(a_val / b_val)
+                        clamped = max(0, min(9999, result_val))
+                        overflow = " (clamped to Cistercian range)" if result_val != clamped else ""
+                        response_text = (
+                            f"🖋️ Cistercian Math:\n"
+                            f"  𝕮({a_val}) {op} 𝕮({b_val}) = 𝕮({clamped}){overflow}\n"
+                            f"  Arabic: {a_val} {op} {b_val} = {result_val}\n\n"
+                            f"View the Cistercian numerals at:\n"
+                            f"  /api/cistercian/numeral?number={a_val}\n"
+                            f"  /api/cistercian/numeral?number={b_val}\n"
+                            f"  /api/cistercian/numeral?number={clamped}"
+                        )
         else:
-            response_text = f"Unknown command: {cmd}. Supported: /explain, /status, /save, /cloud-save, /cloud-status, /cloud-load, /knowledge <topic>, /analyze <text>, /personality, /research <topic> -<depth>"
+            response_text = f"Unknown command: {cmd}. Supported: /explain, /status, /save, /cloud-save, /cloud-status, /cloud-load, /knowledge <topic>, /analyze <text>, /personality, /research <topic> -<depth>, /cistercian-math <expr>"
         
         if explain_mode:
             explanation = _build_command_explanation(cmd, response_text)

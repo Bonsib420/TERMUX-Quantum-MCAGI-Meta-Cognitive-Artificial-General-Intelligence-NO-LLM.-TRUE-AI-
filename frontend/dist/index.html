@@ -28,8 +28,19 @@ a{color:var(--accent2)}
 .btn-accent:hover{background:#6d28d9}
 .btn-sm{padding:4px 10px;font-size:12px}
 
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
+.tab{padding:10px 20px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;color:var(--dim);transition:.15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent2);border-bottom-color:var(--accent)}
+.tab-content{display:none;flex:1;overflow:hidden}
+.tab-content.active{display:flex}
+
 /* Main layout */
-.main{display:flex;flex:1;overflow:hidden}
+.main{display:flex;flex:1;overflow:hidden;flex-direction:column}
+
+/* Chat layout */
+.chat-layout{display:flex;flex:1;overflow:hidden}
 
 /* Sidebar */
 .sidebar{width:260px;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;flex-shrink:0}
@@ -80,15 +91,44 @@ a{color:var(--accent2)}
 .send-btn:disabled{opacity:.4;cursor:default}
 .input-hint{font-size:11px;color:var(--dim);margin-top:6px;padding-left:2px}
 
-/* Commands dropdown */
+/* Commands bar */
 .commands-bar{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
 .cmd-chip{padding:3px 10px;border:1px solid var(--border);border-radius:12px;font-size:11px;cursor:pointer;color:var(--dim);transition:.15s}
 .cmd-chip:hover{border-color:var(--accent);color:var(--accent2);background:var(--glow)}
+
+/* ===== Cistercian Math Tab ===== */
+.cistercian-page{flex:1;display:flex;flex-direction:column;align-items:center;padding:30px 20px;overflow-y:auto;gap:24px}
+.cistercian-page h2{font-size:22px;color:var(--accent2)}
+.cistercian-page p{color:var(--dim);font-size:13px;text-align:center;max-width:500px}
+
+.cist-calc{display:flex;flex-direction:column;align-items:center;gap:20px;width:100%;max-width:600px}
+.cist-input-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center}
+.cist-input-row input[type=number]{width:100px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:18px;text-align:center;outline:none}
+.cist-input-row input:focus{border-color:var(--accent)}
+.cist-input-row select{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--accent2);font-size:20px;text-align:center;outline:none;cursor:pointer}
+.cist-input-row select:focus{border-color:var(--accent)}
+
+.cist-result{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center;padding:20px;border:1px solid var(--border);border-radius:12px;background:var(--surface);min-height:160px;width:100%}
+.cist-numeral{display:flex;flex-direction:column;align-items:center;gap:6px}
+.cist-numeral .label{font-size:12px;color:var(--dim)}
+.cist-numeral .arabic{font-size:16px;color:var(--accent2);font-weight:600}
+.cist-op{font-size:28px;color:var(--accent2);font-weight:bold;padding:0 4px}
+.cist-equals{font-size:28px;color:var(--green);font-weight:bold}
+.cist-overflow{color:var(--yellow);font-size:11px;text-align:center}
+.cist-svg-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px;display:flex;align-items:center;justify-content:center;min-width:60px;min-height:100px}
+
+/* Cistercian reference grid */
+.cist-ref{width:100%;max-width:600px}
+.cist-ref h3{font-size:14px;color:var(--dim);margin-bottom:10px;text-align:center}
+.cist-ref-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.cist-ref-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
+.cist-ref-item .num{font-size:12px;color:var(--accent2)}
 
 /* Mobile */
 @media(max-width:700px){
   .sidebar{display:none}
   .msg{max-width:95%}
+  .cist-result{padding:12px}
 }
 
 /* Scrollbar */
@@ -109,41 +149,82 @@ a{color:var(--accent2)}
   </div>
 </div>
 
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('chat')">💬 Chat</div>
+  <div class="tab" onclick="switchTab('cistercian')">🖋️ Cistercian Math</div>
+</div>
+
 <div class="main">
-  <div class="sidebar">
-    <div class="sidebar-header">
-      <h3>Sessions</h3>
-      <button class="btn btn-sm btn-accent" onclick="newSession()">+ New</button>
-    </div>
-    <div class="sessions" id="sessionList"></div>
-    <div class="status-panel" id="statusPanel">
-      <div class="stat"><span>Stage</span><span class="stat-val" id="stStage">—</span></div>
-      <div class="stat"><span>Concepts</span><span class="stat-val" id="stConcepts">—</span></div>
-      <div class="stat"><span>Markov</span><span class="stat-val" id="stMarkov">—</span></div>
-      <div class="stat"><span>Quantum</span><span class="stat-val" id="stQuantum">—</span></div>
+  <!-- Chat Tab -->
+  <div class="tab-content active" id="tab-chat">
+    <div class="chat-layout">
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <h3>Sessions</h3>
+          <button class="btn btn-sm btn-accent" onclick="newSession()">+ New</button>
+        </div>
+        <div class="sessions" id="sessionList"></div>
+        <div class="status-panel" id="statusPanel">
+          <div class="stat"><span>Stage</span><span class="stat-val" id="stStage">—</span></div>
+          <div class="stat"><span>Concepts</span><span class="stat-val" id="stConcepts">—</span></div>
+          <div class="stat"><span>Markov</span><span class="stat-val" id="stMarkov">—</span></div>
+          <div class="stat"><span>Quantum</span><span class="stat-val" id="stQuantum">—</span></div>
+        </div>
+      </div>
+
+      <div class="chat-area">
+        <div class="messages" id="messages">
+          <div class="msg system">Welcome to Quantum MCAGI — a TRUE AI with no LLM. Type a message or try a command below.</div>
+        </div>
+        <div class="input-area">
+          <div class="commands-bar">
+            <span class="cmd-chip" onclick="insertCmd('/status')">/status</span>
+            <span class="cmd-chip" onclick="insertCmd('/help')">/help</span>
+            <span class="cmd-chip" onclick="insertCmd('/think ')">/think</span>
+            <span class="cmd-chip" onclick="insertCmd('/dream')">/dream</span>
+            <span class="cmd-chip" onclick="insertCmd('/test')">/test</span>
+            <span class="cmd-chip" onclick="insertCmd('/feed')">/feed</span>
+            <span class="cmd-chip" onclick="insertCmd('/learn ')">/learn</span>
+            <span class="cmd-chip" onclick="insertCmd('/cistercian-math 42 + 73')">/cistercian-math</span>
+          </div>
+          <div class="input-row">
+            <textarea id="input" placeholder="Ask anything..." rows="1" onkeydown="handleKey(event)" oninput="autoGrow(this)"></textarea>
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="Send">▶</button>
+          </div>
+          <div class="input-hint">Enter to send · Shift+Enter for new line · Slash commands: /help /status /think /cistercian-math</div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="chat-area">
-    <div class="messages" id="messages">
-      <div class="msg system">Welcome to Quantum MCAGI — a TRUE AI with no LLM. Type a message or try a command below.</div>
-    </div>
-    <div class="input-area">
-      <div class="commands-bar">
-        <span class="cmd-chip" onclick="insertCmd('/status')">/status</span>
-        <span class="cmd-chip" onclick="insertCmd('/help')">/help</span>
-        <span class="cmd-chip" onclick="insertCmd('/think ')">/think</span>
-        <span class="cmd-chip" onclick="insertCmd('/dream')">/dream</span>
-        <span class="cmd-chip" onclick="insertCmd('/test')">/test</span>
-        <span class="cmd-chip" onclick="insertCmd('/feed')">/feed</span>
-        <span class="cmd-chip" onclick="insertCmd('/learn ')">/learn</span>
-        <span class="cmd-chip" onclick="insertCmd('/quote')">/quote</span>
+  <!-- Cistercian Math Tab -->
+  <div class="tab-content" id="tab-cistercian">
+    <div class="cistercian-page">
+      <h2>🖋️ Cistercian Numeral Math</h2>
+      <p>Perform math using medieval Cistercian numerals (0-9999). Each number is a single glyph on a vertical staff with 4 quadrants: ones (top-right), tens (top-left), hundreds (bottom-right), thousands (bottom-left).</p>
+
+      <div class="cist-calc">
+        <div class="cist-input-row">
+          <input type="number" id="cistA" value="42" min="0" max="9999" placeholder="0-9999">
+          <select id="cistOp">
+            <option value="+">+</option>
+            <option value="-">−</option>
+            <option value="*">×</option>
+            <option value="/">÷</option>
+          </select>
+          <input type="number" id="cistB" value="73" min="0" max="9999" placeholder="0-9999">
+          <button class="btn btn-accent" onclick="calcCistercian()" id="cistCalcBtn">=  Calculate</button>
+        </div>
+
+        <div class="cist-result" id="cistResult">
+          <div style="color:var(--dim);font-size:13px">Enter numbers and click Calculate to see Cistercian math</div>
+        </div>
       </div>
-      <div class="input-row">
-        <textarea id="input" placeholder="Ask anything..." rows="1" onkeydown="handleKey(event)" oninput="autoGrow(this)"></textarea>
-        <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="Send">▶</button>
+
+      <div class="cist-ref">
+        <h3>Reference: Digits 0-9</h3>
+        <div class="cist-ref-grid" id="cistRefGrid"></div>
       </div>
-      <div class="input-hint">Enter to send · Shift+Enter for new line · Slash commands: /help /status /think /dream</div>
     </div>
   </div>
 </div>
@@ -154,7 +235,16 @@ let sessionId = localStorage.getItem('mcagi_session') || crypto.randomUUID();
 let sessions = JSON.parse(localStorage.getItem('mcagi_sessions') || '{}');
 let sending = false;
 
-// Ensure current session exists
+// ===== Tab switching =====
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.tab-content#tab-${name}`).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'cistercian') loadCistercianRef();
+}
+
+// ===== Chat =====
 if (!sessions[sessionId]) {
   sessions[sessionId] = { name: 'Chat ' + Object.keys(sessions).length, created: Date.now(), messages: [] };
   saveSessions();
@@ -260,12 +350,10 @@ async function sendMessage() {
   sending = true;
   document.getElementById('sendBtn').disabled = true;
   
-  // Add user message
   appendMessageDOM('user', text);
   if (!sessions[sessionId].messages) sessions[sessionId].messages = [];
   sessions[sessionId].messages.push({ role: 'user', text });
   
-  // Auto-name session from first message
   if (sessions[sessionId].messages.length === 1) {
     sessions[sessionId].name = text.slice(0, 30) + (text.length > 30 ? '…' : '');
   }
@@ -324,7 +412,84 @@ function insertCmd(cmd) {
   const input = document.getElementById('input');
   input.value = cmd;
   input.focus();
-  if (!cmd.endsWith(' ')) sendMessage();
+  if (!cmd.endsWith(' ') && !cmd.includes('+') && !cmd.includes('-')) sendMessage();
+}
+
+// ===== Cistercian Math =====
+async function calcCistercian() {
+  const a = parseInt(document.getElementById('cistA').value) || 0;
+  const op = document.getElementById('cistOp').value;
+  const b = parseInt(document.getElementById('cistB').value) || 0;
+  const el = document.getElementById('cistResult');
+  const btn = document.getElementById('cistCalcBtn');
+
+  btn.disabled = true;
+  el.innerHTML = '<div style="color:var(--dim)">Calculating...</div>';
+
+  try {
+    const res = await fetch(API + '/cistercian/math', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expression: `${a} ${op} ${b}` })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      el.innerHTML = `<div style="color:var(--red)">⚠️ ${err.detail || 'Error'}</div>`;
+      btn.disabled = false;
+      return;
+    }
+
+    const data = await res.json();
+    const opSymbol = { '+': '+', '-': '−', '*': '×', '/': '÷' }[op] || op;
+    const overflow = data.result.overflow ? `<div class="cist-overflow">⚠️ Result ${data.result.raw_value} clamped to ${data.result.value} (Cistercian range 0-9999)</div>` : '';
+
+    el.innerHTML = `
+      <div class="cist-numeral">
+        <div class="label">First</div>
+        <div class="cist-svg-box">${data.operands[0].svg}</div>
+        <div class="arabic">${data.operands[0].value}</div>
+      </div>
+      <div class="cist-op">${opSymbol}</div>
+      <div class="cist-numeral">
+        <div class="label">Second</div>
+        <div class="cist-svg-box">${data.operands[1].svg}</div>
+        <div class="arabic">${data.operands[1].value}</div>
+      </div>
+      <div class="cist-equals">=</div>
+      <div class="cist-numeral">
+        <div class="label">Result</div>
+        <div class="cist-svg-box">${data.result.svg}</div>
+        <div class="arabic">${data.result.value}</div>
+      </div>
+      ${overflow}
+    `;
+  } catch (e) {
+    el.innerHTML = `<div style="color:var(--red)">⚠️ ${e.message}</div>`;
+  }
+  btn.disabled = false;
+}
+
+let cistRefLoaded = false;
+async function loadCistercianRef() {
+  if (cistRefLoaded) return;
+  const grid = document.getElementById('cistRefGrid');
+  grid.innerHTML = '<div style="color:var(--dim);grid-column:1/-1;text-align:center">Loading reference...</div>';
+  
+  try {
+    const items = [];
+    for (let i = 0; i <= 9; i++) {
+      const res = await fetch(API + `/cistercian/numeral?number=${i}&size=50&color=%23a78bfa`);
+      if (res.ok) {
+        const svg = await res.text();
+        items.push(`<div class="cist-ref-item"><div class="cist-svg-box" style="min-height:70px;min-width:40px">${svg}</div><div class="num">${i}</div></div>`);
+      }
+    }
+    grid.innerHTML = items.join('');
+    cistRefLoaded = true;
+  } catch {
+    grid.innerHTML = '<div style="color:var(--dim);grid-column:1/-1;text-align:center">Could not load reference</div>';
+  }
 }
 
 async function loadStatus() {
@@ -335,8 +500,6 @@ async function loadStatus() {
       const data = await res.json();
       dot.className = 'status-dot';
       dot.title = 'Connected';
-      
-      // Update stats panel
       const s = data.status || data;
       document.getElementById('stStage').textContent = s.growth_stage || s.stage || '—';
       document.getElementById('stConcepts').textContent = s.total_concepts ?? s.concepts ?? '—';
