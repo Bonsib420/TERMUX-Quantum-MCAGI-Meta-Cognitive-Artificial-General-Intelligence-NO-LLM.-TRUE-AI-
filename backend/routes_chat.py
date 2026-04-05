@@ -789,7 +789,7 @@ async def quantum_chat(message: ChatMessage):
                 if op == '+': result_val = a_val + b_val
                 elif op == '-': result_val = a_val - b_val
                 elif op == '*': result_val = a_val * b_val
-                elif op == '/': result_val = int(a_val / b_val)
+                elif op == '/': result_val = a_val // b_val
             
             if error:
                 return ChatResponse(

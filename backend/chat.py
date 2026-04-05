@@ -120,6 +120,12 @@ try:
 except ImportError:
     HAS_LIBRARY = False
 
+try:
+    from cistercian_math import detect_math, evaluate_math, format_math_response, render_cistercian_ascii
+    HAS_CISTERCIAN_MATH = True
+except ImportError:
+    HAS_CISTERCIAN_MATH = False
+
 
 class LocalMemory:
     """JSON-file backed memory for local chat."""
@@ -1254,11 +1260,61 @@ def run_chat(verbose=False):
                     print()
                 continue
 
+            elif cmd[0] in ('/cistercian-math', '/cmath') and HAS_CISTERCIAN_MATH:
+                if len(cmd) < 4:
+                    print("  Usage: /cistercian-math NUMBER OP NUMBER")
+                    print("  Example: /cistercian-math 50 - 20")
+                    print("  Operators: + - * /")
+                    print("  Also: /cistercian NUMBER  (show a Cistercian numeral)")
+                else:
+                    expr_text = ' '.join(cmd[1:])
+                    expr = detect_math(expr_text)
+                    if expr:
+                        ev = evaluate_math(expr)
+                        print(format_math_response(ev))
+                    else:
+                        print("  Invalid expression. Use: NUMBER OP NUMBER")
+                continue
+
+            elif cmd[0] == '/cistercian' and HAS_CISTERCIAN_MATH:
+                if len(cmd) < 2 or not cmd[1].isdigit():
+                    print("  Usage: /cistercian NUMBER  (0-9999)")
+                    print("  Example: /cistercian 1234")
+                else:
+                    n = int(cmd[1])
+                    if 0 <= n <= 9999:
+                        print(f"  𝕮({n}):")
+                        for line in render_cistercian_ascii(n).split('\n'):
+                            print(f"    {line}")
+                    else:
+                        print("  Number must be 0-9999 (Cistercian range)")
+                continue
+
             else:
                 print("  Commands: /status /learn FILE /save /load /reset /quit")
                 print("  Gen:      /hybrid TEXT  /unified TEXT")
                 print("  Extra:    /analyze TEXT  /personality  /knowledge TOPIC  /collapse TEXT")
+                print("  Math:     /cistercian-math 50 - 20  /cistercian 1234")
                 print("  Share:    /export [N]  /copy-last")
+                continue
+
+        # ---- Math detection — compute BEFORE Markov chain ----
+        if HAS_CISTERCIAN_MATH:
+            expr = detect_math(user_input)
+            if expr:
+                ev = evaluate_math(expr)
+                response = format_math_response(ev, show_ascii=True)
+
+                # Still learn from the interaction and store it
+                engine.learn_from_text(user_input)
+                concepts = engine.extract_concepts(user_input)
+                for tag in ["arithmetic", "mathematics"]:
+                    if tag not in concepts:
+                        concepts.append(tag)
+                memory.add_exchange(user_input, response, concepts, [])
+
+                print(f"  AI: {response}")
+                print()
                 continue
 
         # ---- Process input ----

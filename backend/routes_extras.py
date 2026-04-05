@@ -719,7 +719,7 @@ async def cistercian_math(req: CistercianMathRequest):
         expr = req.expression.strip()
 
         # Parse: number operator number (supports +, -, *, /)
-        match = re.match(r'^\s*(\d+)\s*([+\-*/])\s*(\d+)\s*$', expr)
+        match = re.match(r'^\s*(\d{1,5})\s?([+\-*/])\s?(\d{1,5})\s*$', expr[:60])
         if not match:
             raise HTTPException(status_code=400, detail="Expression must be: NUMBER OP NUMBER (e.g. '42 + 73'). Supported operators: + - * /")
 
@@ -741,7 +741,7 @@ async def cistercian_math(req: CistercianMathRequest):
         elif op == '/':
             if b_val == 0:
                 raise HTTPException(status_code=400, detail="Division by zero")
-            result_val = int(a_val / b_val)
+            result_val = a_val // b_val
         else:
             raise HTTPException(status_code=400, detail=f"Unsupported operator: {op}")
 

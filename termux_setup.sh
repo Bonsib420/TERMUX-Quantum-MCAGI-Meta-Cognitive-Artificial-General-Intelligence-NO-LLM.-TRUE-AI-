@@ -125,12 +125,18 @@ echo -e "${GREEN}  ✓ Repository ready at $INSTALL_DIR${NC}"
 # ============================================================================
 # STEP 3: Python dependencies
 # ============================================================================
-echo -e "${CYAN}[3/8] Installing Python dependencies (21 packages)...${NC}"
+echo -e "${CYAN}[3/8] Installing Python dependencies (20 packages)...${NC}"
 
 cd "$BACKEND_DIR"
 
 # Install from requirements.txt
 pip install -r requirements.txt 2>&1 | tail -5
+
+# duckduckgo_search is optional — primp (Rust binary) has no Termux/aarch64 wheel.
+# search_compat.py has a pure-Python fallback using DuckDuckGo Instant Answer API.
+pip install duckduckgo_search 2>/dev/null || {
+    echo -e "${YELLOW}  duckduckgo_search unavailable (primp needs Rust) — using built-in search fallback${NC}"
+}
 
 echo -e "${GREEN}  ✓ Core dependencies installed${NC}"
 

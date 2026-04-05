@@ -3,9 +3,9 @@
 # Only packages directly imported by backend Python modules.
 # Transitive deps resolved automatically by pip.
 # PennyLane: pip install --no-deps PennyLane (pennylane-lightning needs scipy-openblas32, no Termux wheel)
+# duckduckgo_search: optional — primp (Rust) has no Termux/aarch64 wheel. search_compat.py has pure-Python fallback.
 
 beautifulsoup4>=4.12
-duckduckgo_search>=5.0
 fastapi>=0.110
 httpx>=0.27
 internetarchive>=4.0
