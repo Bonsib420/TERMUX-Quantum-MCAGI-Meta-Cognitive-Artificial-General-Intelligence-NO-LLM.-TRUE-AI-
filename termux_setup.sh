@@ -58,7 +58,30 @@ echo -e "${NC}"
 # Config
 REPO_URL="https://github.com/Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-.git"
 INSTALL_DIR="$HOME/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-"
+OLD_INSTALL_DIR="$HOME/Quantum_MCAGI_NO_LLM"
 BACKEND_DIR="$INSTALL_DIR/backend"
+
+# ============================================================================
+# MIGRATION: Move old install path to new path (preserves brain data)
+# ============================================================================
+if [ -d "$OLD_INSTALL_DIR" ] && [ ! -d "$INSTALL_DIR" ]; then
+    echo -e "${YELLOW}[MIGRATE] Found old install at $OLD_INSTALL_DIR${NC}"
+    echo -e "${YELLOW}  Moving to $INSTALL_DIR ...${NC}"
+    if mv "$OLD_INSTALL_DIR" "$INSTALL_DIR"; then
+        # Update alias if it exists
+        if [ -f "$HOME/.bashrc" ]; then
+            sed -i '/alias mcagi=/s|Quantum_MCAGI_NO_LLM|TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-|g' "$HOME/.bashrc" 2>/dev/null
+        fi
+        echo -e "${GREEN}  ✓ Migrated to new path. Brain data preserved.${NC}"
+    else
+        echo -e "${RED}  ✗ Migration failed. Falling back to old path.${NC}"
+        INSTALL_DIR="$OLD_INSTALL_DIR"
+        BACKEND_DIR="$INSTALL_DIR/backend"
+    fi
+elif [ -d "$OLD_INSTALL_DIR" ] && [ -d "$INSTALL_DIR" ]; then
+    echo -e "${YELLOW}[MIGRATE] Both old and new paths exist. Using new path: $INSTALL_DIR${NC}"
+    echo -e "${YELLOW}  You can remove the old dir: rm -rf $OLD_INSTALL_DIR${NC}"
+fi
 
 # ============================================================================
 # STEP 1: System packages
