@@ -409,7 +409,7 @@ class QuantumMarkovChain:
             for word in words:
                 factor = h_scores.get(word, 1.0)
                 if abs(factor - 1.0) > 0.01:
-                    amplitudes[word] = amplitudes[word] * factor
+                    amplitudes[word] = amplitudes[word] * float(factor)
 
         # ── Step 4: Apply decoherence ──
         # As generation progresses, quantum effects gradually decay
