@@ -220,8 +220,7 @@ cd "$BACKEND_DIR"
 
 # Test core imports
 python -c "
-import sys
-import os
+import sys, os, importlib, importlib.util
 ok = 0
 fail = 0
 modules = [
@@ -249,24 +248,28 @@ try:
 except ImportError:
     print(f'  ○ PennyLane — not installed (classical fallback)')
 
-# Test core backend modules — use absolute path for reliable resolution
+# Test core backend modules using explicit file-based import.
+# This avoids issues with PennyLane import hooks or sys.path quirks
+# on Termux by loading directly from the known file path.
 backend_dir = os.path.abspath(os.getcwd())
-sys.path.insert(0, backend_dir)
 core_modules = ['algorithmic_core', 'quantum_markov', 'chat', 'shared_state']
 for mod in core_modules:
+    mod_path = os.path.join(backend_dir, f'{mod}.py')
+    if not os.path.isfile(mod_path):
+        print(f'  ✗ {mod} — file not found: {mod_path}')
+        fail += 1
+        continue
     try:
-        __import__(mod)
+        spec = importlib.util.spec_from_file_location(mod, mod_path)
+        loaded = importlib.util.module_from_spec(spec)
+        sys.modules[mod] = loaded  # register before exec (handles circular imports)
+        spec.loader.exec_module(loaded)
         ok += 1
     except Exception as e:
-        py_file = os.path.join(backend_dir, mod + '.py')
-        pkg_init = os.path.join(backend_dir, mod, '__init__.py')
-        if not os.path.isfile(py_file) and not os.path.isfile(pkg_init):
-            print(f'  ✗ {mod} — file not found: {py_file}')
-        else:
-            print(f'  ✗ {mod} — {e}')
+        print(f'  ✗ {mod} — {e}')
         fail += 1
 
-print(f'  ──────────────────')
+print(f'  ─────────────────────────')
 print(f'  {ok} OK, {fail} failed')
 if fail == 0:
     print(f'  ✅ All core modules verified!')
