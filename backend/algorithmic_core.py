@@ -4,13 +4,14 @@
 Pure algorithmic AI - NO templates, NO canned responses.
 
 Algorithms implemented:
-1. N-gram Markov Chains - Text generation
+1. N-gram Markov Chains - Text generation (classical + quantum L² amplitudes)
 2. TF-IDF - Concept extraction & relevance scoring
 3. PMI (Pointwise Mutual Information) - Semantic relationships
 4. BM25 - Information retrieval from memory
 5. Entropy-based Decision Making - Response selection
 6. Hebbian Learning - Association strengthening
 7. Attention Mechanism - Context weighting
+8. Quantum Markov Chain - L² amplitude interference, entanglement coherence
 
 This is the TRUE algorithmic brain.
 """
@@ -37,11 +38,14 @@ class MarkovTextGenerator:
     """
     Variable-order Markov chain for generating text.
     
-    Algorithm:
-    - Builds transition probability matrix from training corpus
-    - P(w_n | w_{n-1}, ..., w_{n-k}) = count(prefix→word) / count(prefix)
-    - Uses temperature sampling for controlled randomness
-    - Supports backoff to lower orders when prefix not found
+    Supports two modes:
+    - Classical: P(w_n | prefix) = count / total  (L¹ norm)
+    - Quantum:   ψ(w_n | prefix) = √(count/total) · e^{iφ}  (L² norm)
+                 P(w_n) = |ψ_markov + ψ_context|²  (Born rule + interference)
+    
+    Quantum mode preserves the classical chain data — it layers amplitude-based
+    interference and entanglement on top, falling back to classical when
+    quantum features have insufficient data.
     """
     
     def __init__(self, max_order: int = 3):
@@ -51,6 +55,9 @@ class MarkovTextGenerator:
         self.starters = {i: [] for i in range(1, max_order + 1)}
         self.vocabulary = set()
         self.total_tokens = 0
+        
+        # Quantum Markov Chain (lazy-initialized, shares self.chains/starters)
+        self._quantum_chain = None
     
     def train(self, text: str):
         """Train on text corpus."""
@@ -250,12 +257,109 @@ class MarkovTextGenerator:
     
     def get_stats(self) -> Dict:
         """Get statistics."""
-        return {
+        stats = {
             "vocabulary_size": len(self.vocabulary),
             "total_tokens": self.total_tokens,
             "chain_sizes": {o: len(c) for o, c in self.chains.items()},
             "starter_counts": {o: len(s) for o, s in self.starters.items()}
         }
+        if self._quantum_chain is not None:
+            stats["quantum"] = self._quantum_chain.get_quantum_stats()
+        return stats
+
+    # ── Quantum Markov Chain Methods ──
+
+    def init_quantum(self, pmi_engine=None, decoherence_rate: float = 0.05):
+        """
+        Initialize the quantum Markov chain layer.
+        
+        This creates a QuantumMarkovChain that shares the same classical
+        chain data (self.chains, self.starters). Training the classical
+        chain automatically feeds the quantum chain.
+        
+        Args:
+            pmi_engine: Optional PMI instance for learning entanglement/phases
+            decoherence_rate: Rate of quantum→classical decay per step
+        """
+        from quantum_markov import create_quantum_markov
+        self._quantum_chain = create_quantum_markov(
+            self, pmi_engine=pmi_engine, decoherence_rate=decoherence_rate
+        )
+        logger.info("Quantum Markov chain initialized (L² amplitudes active)")
+
+    def quantum_generate(self, seed: List[str] = None, max_words: int = 50,
+                         temperature: float = 0.8, min_words: int = 10,
+                         query_concepts: List[str] = None) -> str:
+        """
+        Generate text using quantum amplitude interference + Born rule collapse.
+        
+        Falls back to classical generation if quantum chain not initialized.
+        
+        Args:
+            seed: Starting words (optional)
+            max_words: Maximum output length
+            temperature: Sampling temperature
+            min_words: Minimum words before sentence end
+            query_concepts: Key concepts for context interference
+            
+        Returns:
+            Generated text string
+        """
+        if self._quantum_chain is None:
+            return self.generate(seed=seed, max_words=max_words,
+                                temperature=temperature, min_words=min_words)
+
+        qmc = self._quantum_chain
+        qmc.begin_generation()
+
+        # Find starting prefix
+        order = self.max_order
+        if seed and len(seed) >= order:
+            prefix = tuple(seed[-order:])
+        else:
+            prefix = self._find_starter(seed, order)
+
+        if not prefix:
+            return ""
+
+        result = list(prefix)
+        for w in prefix:
+            qmc.record_selection(w)
+
+        words_generated = 0
+
+        while words_generated < max_words:
+            # Get candidates from classical chain (backoff)
+            next_word = None
+            for o in range(len(prefix), 0, -1):
+                test_prefix = prefix[-o:] if o < len(prefix) else prefix
+                if test_prefix in self.chains.get(o, {}):
+                    candidates = self.chains[o][test_prefix]
+                    # Quantum sampling with interference
+                    next_word = qmc.quantum_sample(
+                        candidates, temperature,
+                        context_words=result,
+                        query_concepts=query_concepts
+                    )
+                    break
+
+            if not next_word:
+                if len(prefix) > 1:
+                    prefix = prefix[1:]
+                    continue
+                else:
+                    break
+
+            result.append(next_word)
+            qmc.record_selection(next_word)
+            words_generated += 1
+
+            prefix = tuple(result[-self.max_order:])
+
+            if words_generated >= min_words and next_word.endswith(('.', '!', '?')):
+                break
+
+        return self._format_output(result)
 
 
 # ============================================================================
@@ -765,7 +869,11 @@ class AlgorithmicCore:
                         self.tfidf.add_document(clean_text)
                         self.pmi.train(clean_text)
         
-        logger.info(f"Initialized from {len(self.domains.get_all_domains())} domains")
+        # Initialize quantum Markov chain (L² amplitudes) after classical training
+        # Shares the same chain data — quantum features layered on top
+        self.markov.init_quantum(pmi_engine=self.pmi, decoherence_rate=0.05)
+        
+        logger.info(f"Initialized from {len(self.domains.get_all_domains())} domains (quantum Markov active)")
     
     async def get_research_engine(self):
         """Lazy load research engine."""
@@ -937,16 +1045,30 @@ class AlgorithmicCore:
         generation_context = boosted_concepts + associated + cross_domain
         
         # 10. Generate candidate responses with adaptive temperature
+        # Uses quantum generation (L² amplitudes + interference) for half the
+        # candidates, and classical generation for the other half, so the best
+        # of both approaches survives scoring.
         candidates = []
         for i in range(10):  # More attempts for better results
             # Vary temperature around computed optimal
             temp = temperature * random.uniform(0.8, 1.2)
-            generated = self.markov.generate(
-                seed=generation_context[:3] if generation_context else None,
-                max_words=60,
-                temperature=temp,
-                min_words=15  # Increased minimum
-            )
+            
+            # Alternate: quantum for even i, classical for odd i
+            if i % 2 == 0:
+                generated = self.markov.quantum_generate(
+                    seed=generation_context[:3] if generation_context else None,
+                    max_words=60,
+                    temperature=temp,
+                    min_words=15,
+                    query_concepts=query_concepts
+                )
+            else:
+                generated = self.markov.generate(
+                    seed=generation_context[:3] if generation_context else None,
+                    max_words=60,
+                    temperature=temp,
+                    min_words=15
+                )
             if generated and len(generated) > 40:  # Require longer responses
                 # Score by coherence
                 coherence = self.pmi.coherence(generated)
@@ -996,7 +1118,8 @@ class AlgorithmicCore:
             "reasoning": reasoning[:3] if reasoning else [],
             "temperature_used": temperature,
             "candidates_generated": len(candidates),
-            "method": "algorithmic_advanced"
+            "method": "quantum_algorithmic",
+            "quantum_stats": self.markov.get_stats().get("quantum", {})
         }
     
     def _construct_domain_response(self, concepts: List[str], domain) -> str:
