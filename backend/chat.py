@@ -870,7 +870,7 @@ def run_chat(verbose=False):
                 print("  --- RESPONSE PIPELINE ---")
                 print("  1. TF-IDF concept extraction")
                 print(f"  2. Orch OR quantum encoding + collapse [{'ACTIVE' if getattr(engine, "_has_orch_or", False) else 'OFF'}]")
-                print(f"  3. Bloom's taxonomy question gen (stage {g['stage']})")
+                print(f"  3. Bloom's taxonomy question gen (stage {memory.growth['stage']})")
                 print(f"  4. Tone detection -> register matching [{'ACTIVE' if HAS_TONE else 'OFF'}]")
                 print(f"  5. Hybrid quantum generation for deep topics [{'ACTIVE' if hybrid_gen else 'OFF'}]")
                 print(f"  6. Markov + structured composition for casual/conversational")

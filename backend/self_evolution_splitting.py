@@ -195,9 +195,9 @@ class SplittingMixin:
             kept_code, extracted_code, def_lines
         )
 
-        return self.__split_regular_method_continued(extract_blocks, helper_name, keep_blocks, passed_vars, code, lines, func_start, func_end, class_name, method_name, body_indent, class_indent, def_lines)
+        return self.__split_regular_method_continued(extract_blocks, helper_name, keep_blocks, passed_vars, code, lines, func_start, func_end, class_name, method_name, body_indent, class_indent, def_lines, docstring_lines)
 
-    def __split_regular_method_continued(self, extract_blocks, helper_name, keep_blocks, passed_vars, code, lines, func_start, func_end, class_name, method_name, body_indent, class_indent, def_lines):
+    def __split_regular_method_continued(self, extract_blocks, helper_name, keep_blocks, passed_vars, code, lines, func_start, func_end, class_name, method_name, body_indent, class_indent, def_lines, docstring_lines):
         """Continuation of _split_regular_method — auto-extracted by self-evolution."""
         last_line = extract_blocks[-1][-1].strip() if extract_blocks[-1] else ''
         has_return = last_line.startswith('return ')

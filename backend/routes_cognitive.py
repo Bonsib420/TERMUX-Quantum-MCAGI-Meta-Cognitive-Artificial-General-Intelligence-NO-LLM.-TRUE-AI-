@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 
 import shared_state as state
 
+from routes_chat import get_conversation_history
+
 router = APIRouter(prefix="/api")
 
 

@@ -273,4 +273,4 @@ if __name__ == '__main__':
     result = generate_cistercian_numeral(1234)
     print(json.dumps(result, indent=2))
     print("\nSVG:")
-    print(render_cistercian_numeral(1234, size=100))
+    print(render_cistercian_svg(1234, size=100))
