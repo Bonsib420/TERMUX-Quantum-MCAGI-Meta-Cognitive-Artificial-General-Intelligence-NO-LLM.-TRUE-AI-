@@ -11,12 +11,12 @@
 #     bash termux_setup.sh
 #
 #   Method 2 — Run locally after cloning:
-#     cd ~/Quantum_MCAGI_NO_LLM
+#     cd ~/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-
 #     bash termux_setup.sh
 #
 #   Method 3 — Transfer from PC via USB/SSH:
-#     scp -r ./backend user@phone:~/Quantum_MCAGI_NO_LLM/backend
-#     ssh user@phone 'bash ~/Quantum_MCAGI_NO_LLM/termux_setup.sh'
+#     scp -r ./backend user@phone:~/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-/backend
+#     ssh user@phone 'bash ~/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-/termux_setup.sh'
 #
 # REQUIREMENTS:
 #   - Termux 0.119+ (F-Droid version recommended)
@@ -57,7 +57,7 @@ echo -e "${NC}"
 
 # Config
 REPO_URL="https://github.com/Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-.git"
-INSTALL_DIR="$HOME/Quantum_MCAGI_NO_LLM"
+INSTALL_DIR="$HOME/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-"
 BACKEND_DIR="$INSTALL_DIR/backend"
 
 # ============================================================================
@@ -197,7 +197,7 @@ chmod +x "$INSTALL_DIR/start.sh"
 cat > "$INSTALL_DIR/install_alias.sh" << 'ALIAS_EOF'
 #!/data/data/com.termux/files/usr/bin/bash
 # Add 'mcagi' alias to .bashrc
-ALIAS_LINE='alias mcagi="bash ~/Quantum_MCAGI_NO_LLM/start.sh"'
+ALIAS_LINE='alias mcagi="bash ~/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-/start.sh"'
 if ! grep -q "mcagi" "$HOME/.bashrc" 2>/dev/null; then
     echo "$ALIAS_LINE" >> "$HOME/.bashrc"
     echo "✓ Added 'mcagi' alias. Run: source ~/.bashrc"
@@ -280,7 +280,7 @@ echo -e "${MAGENTA}${BOLD}"
 echo "  ╔══════════════════════════════════════════════════╗"
 echo "  ║  🔮 INSTALLATION COMPLETE                       ║"
 echo "  ║                                                  ║"
-echo "  ║  Start:  cd ~/Quantum_MCAGI_NO_LLM              ║"
+echo "  ║  Start:  cd ~/TERMUX-Quantum-MCAGI*              ║"
 echo "  ║          bash start.sh          (chat mode)      ║"
 echo "  ║          bash start.sh server   (API server)     ║"
 echo "  ║                                                  ║"

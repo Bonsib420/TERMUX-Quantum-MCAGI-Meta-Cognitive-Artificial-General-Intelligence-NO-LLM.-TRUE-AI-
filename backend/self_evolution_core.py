@@ -40,7 +40,7 @@ class SelfEvolutionEngine(AnalysisMixin, TransformMixin, SplittingMixin, FileOps
     - Always backup before changes
     """
 
-    def __init__(self, db=None, code_dir: str = "/data/data/com.termux/files/home/Quantum_MCAGI_NO_LLM/backend"):
+    def __init__(self, db=None, code_dir: str = "/data/data/com.termux/files/home/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-/backend"):
         self.db = db
         self.code_dir = Path(code_dir)
         self.backup_dir = Path(code_dir) / "backups"

@@ -193,7 +193,7 @@ curl "http://localhost:8000/api/cistercian/batch?start=0&end=99" -o numerals_0-9
 ### Full Font Generation:
 ```bash
 # Start server first
-cd ~/Quantum_MCAGI_NO_LLM/backend
+cd ~/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-/backend
 MONGO_URL= python3 server.py &
 
 # Generate font set with Unicode mapping
