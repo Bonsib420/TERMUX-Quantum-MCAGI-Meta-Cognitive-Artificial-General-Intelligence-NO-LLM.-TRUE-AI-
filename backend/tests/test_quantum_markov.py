@@ -331,3 +331,168 @@ class TestMarkovQuantumGenerate:
         stats = self.gen.get_stats()
         assert "quantum" in stats
         assert "entangled_pairs" in stats["quantum"]
+
+
+# ============================================================================
+# UnitaryTransitionOperator
+# ============================================================================
+
+class TestUnitaryTransitionOperator:
+    """Tests for quantum unitary word transition operators."""
+
+    def test_build_from_counts(self):
+        from quantum_markov import UnitaryTransitionOperator
+        op = UnitaryTransitionOperator()
+        op.build_from_counts({
+            "the": Counter({"cat": 5, "dog": 3}),
+            "cat": Counter({"sat": 4, "ran": 1}),
+        })
+        assert ("the", "cat") in op._matrix
+        assert ("cat", "sat") in op._matrix
+        assert op._matrix[("the", "cat")].probability > 0
+
+    def test_amplitude_preserves_l2(self):
+        """Row amplitudes should sum to ~1 under Born rule (L² norm)."""
+        from quantum_markov import UnitaryTransitionOperator
+        op = UnitaryTransitionOperator()
+        op.build_from_counts({"the": Counter({"cat": 5, "dog": 3, "bird": 2})})
+        total_prob = sum(
+            op._matrix[("the", w)].probability
+            for w in ["cat", "dog", "bird"]
+        )
+        assert total_prob == pytest.approx(1.0, abs=0.01)
+
+    def test_apply_evolves_state(self):
+        """Applying the operator should produce a valid new state."""
+        from quantum_markov import UnitaryTransitionOperator, QuantumAmplitude
+        op = UnitaryTransitionOperator()
+        op.build_from_counts({
+            "hello": Counter({"world": 8, "there": 2}),
+        })
+        state = {"hello": QuantumAmplitude(1.0, 0.0)}
+        new_state = op.apply(state)
+        assert "world" in new_state
+        assert new_state["world"].probability > 0
+
+    def test_get_transition_amplitude(self):
+        from quantum_markov import UnitaryTransitionOperator
+        op = UnitaryTransitionOperator()
+        op.build_from_counts({"a": Counter({"b": 10})})
+        amp = op.get_transition_amplitude("a", "b")
+        assert amp.probability > 0
+        # Non-existent transition
+        amp_none = op.get_transition_amplitude("x", "y")
+        assert amp_none.probability == 0.0
+
+
+# ============================================================================
+# HilbertSpaceWord
+# ============================================================================
+
+class TestHilbertSpaceWord:
+    """Tests for Hilbert space word representations."""
+
+    def test_word_state_normalized(self):
+        """Word state should have total probability ≈ 1."""
+        from quantum_markov import HilbertSpaceWord
+        hw = HilbertSpaceWord("quantum", dimension=8)
+        total = sum(a.probability for a in hw.amplitudes)
+        assert total == pytest.approx(1.0, abs=1e-6)
+
+    def test_deterministic_per_word(self):
+        """Same word always gets same state."""
+        from quantum_markov import HilbertSpaceWord
+        hw1 = HilbertSpaceWord("test", dimension=8)
+        hw2 = HilbertSpaceWord("test", dimension=8)
+        for a, b in zip(hw1.amplitudes, hw2.amplitudes):
+            assert a.real == pytest.approx(b.real, abs=1e-10)
+            assert a.imag == pytest.approx(b.imag, abs=1e-10)
+
+    def test_different_words_different_states(self):
+        """Different words should have different states."""
+        from quantum_markov import HilbertSpaceWord
+        hw1 = HilbertSpaceWord("quantum", dimension=8)
+        hw2 = HilbertSpaceWord("cooking", dimension=8)
+        different = any(
+            abs(a.real - b.real) > 1e-6 or abs(a.imag - b.imag) > 1e-6
+            for a, b in zip(hw1.amplitudes, hw2.amplitudes)
+        )
+        assert different
+
+    def test_inner_product_self_is_one(self):
+        """⟨word|word⟩ should have |ip|² ≈ 1."""
+        from quantum_markov import HilbertSpaceWord
+        hw = HilbertSpaceWord("test", dimension=8)
+        ip = hw.inner_product(hw)
+        prob = ip.real ** 2 + ip.imag ** 2
+        assert prob == pytest.approx(1.0, abs=1e-4)
+
+    def test_overlap_probability_range(self):
+        from quantum_markov import HilbertSpaceWord
+        hw1 = HilbertSpaceWord("hello", dimension=8)
+        hw2 = HilbertSpaceWord("world", dimension=8)
+        overlap = hw1.overlap_probability(hw2)
+        assert 0.0 <= overlap <= 1.1  # Allow small numerical error
+
+    def test_measure_in_context_returns_valid_index(self):
+        from quantum_markov import HilbertSpaceWord
+        hw = HilbertSpaceWord("test", dimension=8)
+        ctx = [HilbertSpaceWord("context", dimension=8)]
+        idx = hw.measure_in_context(ctx)
+        assert 0 <= idx < 8
+
+
+# ============================================================================
+# HilbertSpace
+# ============================================================================
+
+class TestHilbertSpace:
+    """Tests for the vocabulary Hilbert space."""
+
+    def test_get_word_state(self):
+        from quantum_markov import HilbertSpace
+        hs = HilbertSpace(dimension=8)
+        state = hs.get_word_state("quantum")
+        assert state.word == "quantum"
+        assert len(state.amplitudes) == 8
+
+    def test_similarity_self_is_one(self):
+        from quantum_markov import HilbertSpace
+        hs = HilbertSpace(dimension=8)
+        sim = hs.similarity("test", "test")
+        assert sim == pytest.approx(1.0, abs=0.01)
+
+    def test_similarity_range(self):
+        from quantum_markov import HilbertSpace
+        hs = HilbertSpace(dimension=8)
+        sim = hs.similarity("cat", "dog")
+        assert 0.0 <= sim <= 1.1
+
+    def test_interference_score_returns_all_candidates(self):
+        from quantum_markov import HilbertSpace
+        hs = HilbertSpace(dimension=8)
+        scores = hs.interference_score(
+            ["cat", "dog", "fish"],
+            ["animal", "pet"]
+        )
+        assert "cat" in scores
+        assert "dog" in scores
+        assert "fish" in scores
+        # All scores should be positive
+        for s in scores.values():
+            assert s > 0
+
+    def test_context_resolve_returns_valid(self):
+        from quantum_markov import HilbertSpace
+        hs = HilbertSpace(dimension=8)
+        idx = hs.context_resolve("bank", ["river", "water"])
+        assert 0 <= idx < 8
+
+    def test_stats(self):
+        from quantum_markov import HilbertSpace
+        hs = HilbertSpace(dimension=8)
+        hs.get_word_state("hello")
+        hs.get_word_state("world")
+        stats = hs.get_stats()
+        assert stats["dimension"] == 8
+        assert stats["vocabulary_size"] == 2
