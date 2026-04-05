@@ -221,6 +221,7 @@ cd "$BACKEND_DIR"
 # Test core imports
 python -c "
 import sys
+import os
 ok = 0
 fail = 0
 modules = [
@@ -248,15 +249,21 @@ try:
 except ImportError:
     print(f'  ○ PennyLane — not installed (classical fallback)')
 
-# Test core backend modules
-sys.path.insert(0, '.')
+# Test core backend modules — use absolute path for reliable resolution
+backend_dir = os.path.abspath(os.getcwd())
+sys.path.insert(0, backend_dir)
 core_modules = ['algorithmic_core', 'quantum_markov', 'chat', 'shared_state']
 for mod in core_modules:
     try:
         __import__(mod)
         ok += 1
     except Exception as e:
-        print(f'  ✗ {mod} — {e}')
+        py_file = os.path.join(backend_dir, mod + '.py')
+        pkg_init = os.path.join(backend_dir, mod, '__init__.py')
+        if not os.path.isfile(py_file) and not os.path.isfile(pkg_init):
+            print(f'  ✗ {mod} — file not found: {py_file}')
+        else:
+            print(f'  ✗ {mod} — {e}')
         fail += 1
 
 print(f'  ──────────────────')
