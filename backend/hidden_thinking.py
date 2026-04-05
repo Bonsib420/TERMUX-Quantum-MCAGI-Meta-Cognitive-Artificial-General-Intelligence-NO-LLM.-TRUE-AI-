@@ -569,33 +569,8 @@ class HiddenThinkingMode:
         if synthesized.get("has_document") and document_context:
             doc_content = synthesized.get("document_content") or document_context.get("text", "")
         
-        try:
-            raise NotImplementedError('LLM removed')
-            
-            context = {
-                "concepts": [],
-                "understanding_score": synthesized.get("confidence", 50) / 100,
-                "related_concepts": []
-            }
-            
-            for result in research_results:
-                if result["source"] == "dictionary":
-                    context["concepts"].append(result.get("concept", ""))
-                elif result["source"] == "memory":
-                    context["related_concepts"].append(result.get("concept", ""))
-            
-            response = await llm.llm.generate_response(
-                user_input=user_input,
-                context=context,
-                document_content=doc_content,
-                conversation_history=getattr(self, 'conversation_history', None)
-            )
-            
-            return response
-            
-        except Exception as e:
-            print(f"Legacy LLM error: {str(e)}")
-            return self._fallback_response(user_input, synthesized, document_context)
+        # LLM removed — go straight to fallback
+        return self._fallback_response(user_input, synthesized, document_context)
     
     def _fallback_response(
         self, 

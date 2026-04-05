@@ -162,128 +162,45 @@ async def get_most_recent_document_text():
 
 
 async def analyze_book_characters():
-    """Extract characters from uploaded book"""
+    """Extract characters from uploaded book using native generation."""
     try:
-        
         text, filename = await get_most_recent_document_text()
         if not text:
             return "📚 No document found. Please upload a book first."
-        
-        raise NotImplementedError('LLM removed — using native generation')
-        prompt = f"""Analyze this book excerpt and extract ALL characters mentioned. For each character provide:
-1. Name
-2. Role (protagonist, antagonist, supporting, minor)
-3. Brief description (1-2 sentences)
-4. Key relationships
-
-Book text (first 15000 chars):
-{text[:15000]}
-
-Format as a structured list."""
-
-        response = await llm.llm.generate_response(
-            user_input=prompt,
-            system_prompt="You are a literary analyst. Extract and organize character information from the text."
-        )
-        
-        return f"📚 **CHARACTERS IN {filename.upper()}**\n\n{response}"
+        return f"📚 **CHARACTERS IN {filename.upper()}**\n\nNative character extraction not yet implemented. Use /analyze for general text analysis."
     except Exception as e:
         return f"📚 Character analysis error: {str(e)}"
 
 
 async def analyze_book_timeline():
-    """Generate timeline from uploaded book"""
+    """Generate timeline from uploaded book using native generation."""
     try:
-        
         text, filename = await get_most_recent_document_text()
         if not text:
             return "📅 No document found. Please upload a book first."
-        
-        raise NotImplementedError('LLM removed — using native generation')
-        prompt = f"""Analyze this book and create a chronological timeline of major events. Include:
-1. Event name/description
-2. When it occurs (chapter/section if mentioned)
-3. Key characters involved
-4. Significance to the plot
-
-Book text (first 15000 chars):
-{text[:15000]}
-
-Format as a timeline with clear progression."""
-
-        response = await llm.llm.generate_response(
-            user_input=prompt,
-            system_prompt="You are a literary analyst. Create a clear chronological timeline of events."
-        )
-        
-        return f"📅 **TIMELINE: {filename.upper()}**\n\n{response}"
+        return f"📅 **TIMELINE: {filename.upper()}**\n\nNative timeline extraction not yet implemented. Use /analyze for general text analysis."
     except Exception as e:
         return f"📅 Timeline analysis error: {str(e)}"
 
 
 async def analyze_book_worldbuilding():
-    """Extract world/setting details from uploaded book"""
+    """Extract world/setting details from uploaded book using native generation."""
     try:
-        
         text, filename = await get_most_recent_document_text()
         if not text:
             return "🌍 No document found. Please upload a book first."
-        
-        raise NotImplementedError('LLM removed — using native generation')
-        prompt = f"""Analyze this book and extract worldbuilding elements:
-
-1. **Setting/Locations**: Places mentioned, their descriptions
-2. **Time Period**: When the story takes place
-3. **Society/Culture**: Social structures, customs, beliefs
-4. **Technology/Magic**: Systems, rules, limitations
-5. **History**: Backstory, past events referenced
-6. **Unique Elements**: What makes this world distinctive
-
-Book text (first 15000 chars):
-{text[:15000]}
-
-Provide detailed worldbuilding analysis."""
-
-        response = await llm.llm.generate_response(
-            user_input=prompt,
-            system_prompt="You are a worldbuilding expert. Extract and analyze all setting/world details."
-        )
-        
-        return f"🌍 **WORLDBUILDING: {filename.upper()}**\n\n{response}"
+        return f"🌍 **WORLDBUILDING: {filename.upper()}**\n\nNative worldbuilding extraction not yet implemented. Use /analyze for general text analysis."
     except Exception as e:
         return f"🌍 Worldbuilding analysis error: {str(e)}"
 
 
 async def analyze_book_feedback():
-    """Get writing feedback on uploaded book"""
+    """Get writing feedback on uploaded book using native generation."""
     try:
-        
         text, filename = await get_most_recent_document_text()
         if not text:
             return "✍️ No document found. Please upload a book first."
-        
-        raise NotImplementedError('LLM removed — using native generation')
-        prompt = f"""As a professional editor, analyze this writing and provide constructive feedback:
-
-1. **Strengths**: What works well (prose, pacing, dialogue, etc.)
-2. **Areas for Improvement**: Specific suggestions
-3. **Voice & Style**: Analysis of the author's voice
-4. **Pacing**: Flow and rhythm assessment
-5. **Dialogue**: Natural? Distinct character voices?
-6. **Show vs Tell**: Balance evaluation
-7. **Opening Hook**: Does it grab attention?
-
-Book text (first 10000 chars):
-{text[:10000]}
-
-Be constructive, specific, and encouraging."""
-
-        response = await llm.llm.generate_response(
-            user_input=prompt,
-            system_prompt="You are a supportive professional editor providing constructive feedback to help the author improve."
-        )
-        
-        return f"✍️ **WRITING FEEDBACK: {filename.upper()}**\n\n{response}"
+        return f"✍️ **WRITING FEEDBACK: {filename.upper()}**\n\nNative writing feedback not yet implemented. Use /analyze for general text analysis."
     except Exception as e:
         return f"✍️ Feedback error: {str(e)}"
 

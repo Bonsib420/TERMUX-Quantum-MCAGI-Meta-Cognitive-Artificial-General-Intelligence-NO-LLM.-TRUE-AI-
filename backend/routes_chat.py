@@ -404,22 +404,8 @@ async def quantum_chat(message: ChatMessage):
                     )
                 
                 try:
-                    import base64
-                    
                     raise NotImplementedError("OpenAI image generation removed — this project uses NO LLM")
-                    image_gen = OpenAIImageGeneration(api_key=api_key)
-                    images = await image_gen.generate_images(prompt=prompt, model="gpt-image-1.5", number_of_images=1)
-                    
-                    if images and len(images) > 0:
-                        image_base64 = base64.b64encode(images[0]).decode('utf-8')
-                        filename = f"generated_{uuid.uuid4().hex[:8]}.png"
-                        with open(f"/app/uploads/{filename}", "wb") as f:
-                            f.write(images[0])
-                        
-                        response = f"🎨 **Image Generated**\n\nPrompt: \"{prompt}\"\n\nSaved as: {filename}\n\n![Generated Image](data:image/png;base64,{image_base64[:50]}...)"
-                    else:
-                        response = "🎨 Image generation failed. Please try again."
-                except Exception as e:
+                except NotImplementedError as e:
                     response = f"🎨 Image generation error: {str(e)}"
                 
                 return ChatResponse(
