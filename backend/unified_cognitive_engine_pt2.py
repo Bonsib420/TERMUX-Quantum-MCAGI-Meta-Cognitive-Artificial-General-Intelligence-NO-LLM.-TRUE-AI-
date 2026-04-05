@@ -18,6 +18,7 @@ from typing import Dict, List, Optional, Tuple, Any
 from collections import defaultdict
 from algorithmic_core import get_algorithmic_core
 from domain_knowledge import get_domain_knowledge
+from unified_cognitive_engine import OrchOREngine, BloomEngine, VADEREngine, QuoteEngine, WolframAlphaCloud
 
 class TheologyEngine:
     """
@@ -370,9 +371,9 @@ class UnifiedCognitiveEngine:
         )
         reasoning_data['bloom'] = bloom_question
 
-        self._process_continued(bloom_question, collapse_occurred, reasoning_data, theology_response, tone, wolfram_result, user_input)
+        return self._process_continued(bloom_question, collapse_occurred, domain_name, reasoning_data, theology_response, tone, wolfram_result, user_input)
 
-    def _process_continued(self, bloom_question, collapse_occurred, reasoning_data, theology_response, tone, wolfram_result, user_input):
+    def _process_continued(self, bloom_question, collapse_occurred, domain_name, reasoning_data, theology_response, tone, wolfram_result, user_input):
         """Continuation of process — auto-extracted by self-evolution."""
         # Step 7: Semantic collapse
         words = user_input.lower().split()

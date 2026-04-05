@@ -21,7 +21,10 @@ from typing import Dict, List, Tuple, Optional, Any
 
 # Type aliases that work without pennylane
 if PENNYLANE_AVAILABLE:
-    NDArray = NDArray
+    try:
+        from numpy.typing import NDArray
+    except ImportError:
+        NDArray = Any
 else:
     NDArray = Any
 

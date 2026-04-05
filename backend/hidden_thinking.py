@@ -19,8 +19,11 @@ This is the bridge between questioning AI and conversational AI.
 
 from typing import Dict, List, Optional
 import re
+import logging
 from datetime import datetime, timezone
 from hybrid_generator import create_hybrid_generator
+
+logger = logging.getLogger("quantum_ai")
 
 
 class HiddenThinkingMode:

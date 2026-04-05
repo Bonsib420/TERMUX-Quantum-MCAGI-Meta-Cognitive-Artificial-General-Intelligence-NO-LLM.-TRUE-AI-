@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import os
+import shutil
 import logging
 
 import shared_state as state

@@ -170,7 +170,7 @@ async def _handle_command(content: str, explain_mode: bool = False) -> Optional[
         
         return ChatResponse(
             questions=[],
-            response=resp,
+            response=response_text,
             understanding={"command": cmd},
             concepts=[],
             session_id=session_id,
@@ -406,6 +406,7 @@ async def quantum_chat(message: ChatMessage):
                 try:
                     import base64
                     
+                    raise NotImplementedError("OpenAI image generation removed — this project uses NO LLM")
                     image_gen = OpenAIImageGeneration(api_key=api_key)
                     images = await image_gen.generate_images(prompt=prompt, model="gpt-image-1.5", number_of_images=1)
                     
