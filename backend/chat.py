@@ -674,6 +674,20 @@ def run_chat(verbose=False):
     else:
         print(f"  Orch OR: unavailable (classical fallback)")
     print(f"  Hybrid gen: {'ACTIVE' if hybrid_gen else 'OFF'}")
+
+    # Auto-load concepts into QRAM at startup if concepts exist
+    if HAS_QRAM and memory.concepts:
+        try:
+            _startup_qram = get_quantum_memory()
+            _n = _startup_qram.load_concepts(list(memory.concepts.keys()))
+            _qs = _startup_qram.status()
+            print(f"  QRAM: {_qs['backend']} — {_n} concepts loaded")
+        except Exception as e:
+            print(f"  QRAM: init error ({e})")
+    elif HAS_QRAM:
+        _qs = get_quantum_memory().status()
+        print(f"  QRAM: {_qs['backend']} — ready (use /qram load)")
+
     print()
 
     _last_auto_save = time.time()
@@ -879,6 +893,19 @@ def run_chat(verbose=False):
                 print("  --- GENERATORS ---")
                 print(f"  Hybrid: {'ACTIVE' if hybrid_gen else 'OFF'}")
                 print(f"  Unified: {'ACTIVE' if unified_gen else 'OFF'}")
+                print()
+                print("  --- QRAM (Quantum Random Access Memory) ---")
+                if HAS_QRAM:
+                    _qram = get_quantum_memory()
+                    _qs = _qram.status()
+                    print(f"  Backend:  {_qs['backend']}")
+                    print(f"  PennyLane QRAM: {'✓' if _qs.get('qram_available') else '✗ (classical fallback)'}")
+                    print(f"  Entries:  {_qs['entries_loaded']} / {_qs['max_entries']}")
+                    if _qs.get('templates'):
+                        avail = [k for k, v in _qs['templates'].items() if v]
+                        print(f"  Templates: {', '.join(avail) if avail else 'none'}")
+                else:
+                    print("  Status: unavailable (quantum_memory module not loaded)")
                 print()
                 print("  --- RESPONSE PIPELINE ---")
                 print("  1. TF-IDF concept extraction")
@@ -1299,7 +1326,8 @@ def run_chat(verbose=False):
 
             elif cmd[0] == '/qram' and HAS_QRAM:
                 qram = get_quantum_memory()
-                if len(cmd) > 1 and cmd[1] == 'load':
+                subcmd = cmd[1] if len(cmd) > 1 else ''
+                if subcmd == 'load':
                     # Load current concepts into QRAM
                     concept_names = list(memory.concepts.keys())
                     if concept_names:
@@ -1307,7 +1335,7 @@ def run_chat(verbose=False):
                         print(f"  💾 QRAM: Loaded {count} concepts into quantum memory")
                     else:
                         print("  No concepts learned yet — talk to me first!")
-                elif len(cmd) > 1 and cmd[1] == 'query':
+                elif subcmd == 'query':
                     # Query concept by address
                     if len(cmd) > 2 and cmd[2].isdigit():
                         addr = int(cmd[2])
@@ -1318,7 +1346,76 @@ def run_chat(verbose=False):
                             print(f"  💾 QRAM[{addr}] → (empty)")
                     else:
                         print("  Usage: /qram query ADDRESS")
-                else:
+                elif subcmd == 'search':
+                    # Search QRAM by concept name
+                    if len(cmd) > 2:
+                        needle = ' '.join(cmd[2:]).lower()
+                        s = qram.status()
+                        if s['entries_loaded'] == 0:
+                            print("  💾 QRAM empty — run /qram load first")
+                        else:
+                            matches = []
+                            for addr in range(s['entries_loaded']):
+                                name = qram.query(addr)
+                                if name and needle in name.lower():
+                                    matches.append((addr, name))
+                            if matches:
+                                print(f"  💾 QRAM search '{needle}' — {len(matches)} match{'es' if len(matches) != 1 else ''}:")
+                                for addr, name in matches[:20]:
+                                    print(f"    [{addr}] {name}")
+                                if len(matches) > 20:
+                                    print(f"    ... and {len(matches) - 20} more")
+                            else:
+                                print(f"  💾 No matches for '{needle}'")
+                    else:
+                        print("  Usage: /qram search TERM")
+                elif subcmd == 'super':
+                    # Superposition query across multiple addresses
+                    addrs = [int(a) for a in cmd[2:] if a.isdigit()]
+                    if len(addrs) < 2:
+                        print("  Usage: /qram super ADDR1 ADDR2 [ADDR3 ...]")
+                        print("  Queries multiple addresses in quantum superposition")
+                    else:
+                        s = qram.status()
+                        if s['entries_loaded'] == 0:
+                            print("  💾 QRAM empty — run /qram load first")
+                        else:
+                            results = qram.superposition_query(addrs)
+                            if results:
+                                backend = 'quantum' if s.get('qram_available') else 'classical'
+                                print(f"  💾 QRAM superposition query ({backend}):")
+                                for name, prob in sorted(results, key=lambda x: -x[1]):
+                                    bar = '█' * int(prob * 30)
+                                    print(f"    {name:20s}  {prob:.4f}  {bar}")
+                            else:
+                                print("  💾 No valid addresses in query")
+                elif subcmd == 'strategy':
+                    # Show or switch QRAM strategy
+                    from quantum_memory import reset_quantum_memory, PENNYLANE_QRAM_AVAILABLE as _pqa
+                    if len(cmd) > 2 and cmd[2] in ('bb', 'select', 'hybrid'):
+                        if not _pqa:
+                            print("  💾 Strategy switch requires PennyLane ≥0.44 QRAM templates")
+                        else:
+                            new_strat = cmd[2]
+                            reset_quantum_memory()
+                            qram = get_quantum_memory(strategy=new_strat)
+                            # Reload concepts if memory has them
+                            concept_names = list(memory.concepts.keys())
+                            if concept_names:
+                                qram.load_concepts(concept_names)
+                            s = qram.status()
+                            print(f"  💾 QRAM strategy → {s['backend']}")
+                            print(f"    Entries reloaded: {s['entries_loaded']}")
+                    else:
+                        s = qram.status()
+                        print(f"  💾 Current strategy: {s['backend']}")
+                        if s.get('templates'):
+                            print(f"    Available templates:")
+                            for name, avail in s['templates'].items():
+                                print(f"      {name}: {'✓' if avail else '✗'}")
+                        print(f"  Usage: /qram strategy [bb|select|hybrid]")
+                elif subcmd == '' or subcmd == 'status':
+                    # Show status (default when no subcommand)
                     s = qram.status()
                     print(f"  💾 QRAM Status:")
                     print(f"    Backend:        {s['backend']}")
@@ -1327,6 +1424,20 @@ def run_chat(verbose=False):
                     print(f"    Entries loaded: {s['entries_loaded']}")
                     print(f"    Bit width:      {s['bit_width']}")
                     print(f"    Max entries:    {s['max_entries']}")
+                    if s.get('templates'):
+                        print(f"    Templates:")
+                        for name, avail in s['templates'].items():
+                            print(f"      {name}: {'✓' if avail else '✗'}")
+                else:
+                    # Unknown subcommand — show usage
+                    print(f"  Unknown: /qram {subcmd}")
+                    print("  Usage:")
+                    print("    /qram              — show QRAM status")
+                    print("    /qram load         — load concepts into quantum memory")
+                    print("    /qram query N      — retrieve concept at address N")
+                    print("    /qram search TERM  — find concepts matching TERM")
+                    print("    /qram super N N ...- superposition query (quantum)")
+                    print("    /qram strategy X   — switch QRAM strategy (bb/select/hybrid)")
                 continue
 
             else:
@@ -1334,7 +1445,7 @@ def run_chat(verbose=False):
                 print("  Gen:      /hybrid TEXT  /unified TEXT")
                 print("  Extra:    /analyze TEXT  /personality  /knowledge TOPIC  /collapse TEXT")
                 print("  Math:     /cistercian-math 50 - 20  /cistercian 1234")
-                print("  Memory:   /qram [load|query N]")
+                print("  Memory:   /qram [load|query N|search X|super N N|strategy X]")
                 print("  Share:    /export [N]  /copy-last")
                 continue
 

@@ -216,6 +216,52 @@ async def qram_load_concepts():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/quantum/qram/query/{address}")
+async def qram_query(address: int):
+    """Query a single QRAM address."""
+    try:
+        from quantum_memory import get_quantum_memory
+        qram = get_quantum_memory()
+        result = qram.query(address)
+        return {"address": address, "concept": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/quantum/qram/superposition")
+async def qram_superposition_query(addresses: List[int]):
+    """Query multiple QRAM addresses in superposition."""
+    try:
+        from quantum_memory import get_quantum_memory
+        qram = get_quantum_memory()
+        results = qram.superposition_query(addresses)
+        s = qram.status()
+        return {
+            "backend": s["backend"],
+            "quantum": s.get("qram_available", False),
+            "results": [{"concept": name, "probability": prob} for name, prob in results],
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/quantum/qram/search/{term}")
+async def qram_search(term: str):
+    """Search QRAM for concepts matching a term."""
+    try:
+        from quantum_memory import get_quantum_memory
+        qram = get_quantum_memory()
+        s = qram.status()
+        matches = []
+        for addr in range(s["entries_loaded"]):
+            name = qram.query(addr)
+            if name and term.lower() in name.lower():
+                matches.append({"address": addr, "concept": name})
+        return {"term": term, "matches": matches, "count": len(matches)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============================================================================
 # WOLFRAM ALPHA
 # ============================================================================

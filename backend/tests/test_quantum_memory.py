@@ -92,6 +92,22 @@ class TestClassicalMemoryStore:
         results = self.store.superposition_query([99, 100])
         assert results == []
 
+    def test_superposition_query_three_addresses(self):
+        """Superposition over 3 addresses gives ~1/3 each."""
+        self.store.load_concepts(["x", "y", "z"])
+        results = self.store.superposition_query([0, 1, 2])
+        assert len(results) == 3
+        for _, p in results:
+            assert abs(p - 1.0 / 3) < 1e-9
+
+    def test_superposition_mixed_valid_invalid(self):
+        """Invalid addresses are silently filtered."""
+        self.store.load_concepts(["a", "b"])
+        results = self.store.superposition_query([0, 99])
+        assert len(results) == 1
+        assert results[0][0] == "a"
+        assert abs(results[0][1] - 1.0) < 1e-9
+
     def test_status(self):
         self.store.load_concepts(["a", "b"])
         s = self.store.status()
@@ -114,6 +130,40 @@ class TestClassicalMemoryStore:
 
     def test_query_before_load(self):
         assert self.store.query(0) is None
+
+    def test_search_by_iteration(self):
+        """Verify search-by-name pattern works on classical store."""
+        self.store.load_concepts(["quantum", "quantum_field", "gravity", "consciousness"])
+        matches = []
+        s = self.store.status()
+        for addr in range(s["entries_loaded"]):
+            name = self.store.query(addr)
+            if name and "quantum" in name.lower():
+                matches.append((addr, name))
+        assert len(matches) == 2
+        assert matches[0] == (0, "quantum")
+        assert matches[1] == (1, "quantum_field")
+
+    def test_search_no_match(self):
+        """Search for a term that doesn't exist."""
+        self.store.load_concepts(["alpha", "beta"])
+        matches = []
+        s = self.store.status()
+        for addr in range(s["entries_loaded"]):
+            name = self.store.query(addr)
+            if name and "zzz" in name.lower():
+                matches.append(name)
+        assert matches == []
+
+    def test_reload_concepts(self):
+        """Loading concepts twice should work (overwrite)."""
+        self.store.load_concepts(["a", "b"])
+        assert self.store.query(0) == "a"
+        # Second store to test fresh load
+        store2 = ClassicalMemoryStore(bit_width=8)
+        store2.load_concepts(["x", "y", "z"])
+        assert store2.query(0) == "x"
+        assert store2.query(2) == "z"
 
 
 # ── factory / singleton ──────────────────────────────────
@@ -149,6 +199,24 @@ class TestFactory:
         for key in ("backend", "pennylane_available", "qram_available",
                      "entries_loaded", "bit_width", "max_entries"):
             assert key in s, f"Missing key: {key}"
+
+    def test_factory_load_and_query_roundtrip(self):
+        """Full roundtrip through factory singleton."""
+        store = get_quantum_memory()
+        store.load_concepts(["hello", "world"])
+        assert store.query(0) == "hello"
+        assert store.query(1) == "world"
+        # Same singleton
+        store2 = get_quantum_memory()
+        assert store2.query(0) == "hello"
+
+    def test_reset_then_strategy(self):
+        """Reset + new strategy creates fresh store."""
+        s1 = get_quantum_memory()
+        s1.load_concepts(["a"])
+        reset_quantum_memory()
+        s2 = get_quantum_memory(strategy="bb")
+        assert s2.status()["entries_loaded"] == 0
 
 
 # ── conditional quantum tests ────────────────────────────
@@ -194,3 +262,17 @@ class TestQuantumMemoryStore:
         s = store.status()
         assert "templates" in s
         assert isinstance(s["templates"], dict)
+
+    def test_strategy_bb_if_available(self):
+        from quantum_memory import QuantumMemoryStore, _has_bbqram
+        if not _has_bbqram:
+            pytest.skip("BBQRAM not available")
+        store = QuantumMemoryStore(bit_width=3, strategy="bb")
+        assert "bb" in store.status()["backend"]
+
+    def test_strategy_hybrid_if_available(self):
+        from quantum_memory import QuantumMemoryStore, _has_hybrid
+        if not _has_hybrid:
+            pytest.skip("HybridQRAM not available")
+        store = QuantumMemoryStore(bit_width=3, strategy="hybrid")
+        assert "hybrid" in store.status()["backend"]
