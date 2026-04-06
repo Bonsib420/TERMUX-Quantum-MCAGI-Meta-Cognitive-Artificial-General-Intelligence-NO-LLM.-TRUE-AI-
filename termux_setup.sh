@@ -281,7 +281,7 @@ except ImportError:
 # This avoids issues with PennyLane import hooks or sys.path quirks
 # on Termux by loading directly from the known file path.
 backend_dir = os.path.abspath(os.getcwd())
-core_modules = ['algorithmic_core', 'quantum_markov', 'chat', 'shared_state']
+core_modules = ['algorithmic_core', 'quantum_markov', 'quantum_memory', 'chat', 'shared_state']
 for mod in core_modules:
     mod_path = os.path.join(backend_dir, f'{mod}.py')
     if not os.path.isfile(mod_path):

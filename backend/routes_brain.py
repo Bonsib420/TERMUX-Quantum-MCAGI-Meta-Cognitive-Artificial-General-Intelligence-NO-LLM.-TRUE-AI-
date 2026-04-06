@@ -168,6 +168,54 @@ async def get_quantum_state():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/quantum/qram")
+async def get_qram_status():
+    """Get QRAM (Quantum Random Access Memory) status."""
+    try:
+        from quantum_memory import get_quantum_memory
+        qram = get_quantum_memory()
+        return qram.status()
+    except ImportError:
+        return {
+            "backend": "unavailable",
+            "pennylane_available": False,
+            "qram_available": False,
+            "entries_loaded": 0,
+            "bit_width": 0,
+            "max_entries": 0,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/quantum/qram/load")
+async def qram_load_concepts():
+    """Load current knowledge graph concepts into QRAM."""
+    try:
+        from quantum_memory import get_quantum_memory
+
+        brain = None
+        if state.db:
+            from quantum_brain import get_quantum_brain
+            brain = await get_quantum_brain(state.db)
+
+        qram = get_quantum_memory()
+
+        # Gather concept names from brain or return empty
+        concept_names: list = []
+        if brain and hasattr(brain, "knowledge"):
+            topics = brain.knowledge.get_all_topics() if hasattr(brain.knowledge, "get_all_topics") else []
+            concept_names = list(topics) if topics else []
+
+        if not concept_names:
+            return {"loaded": 0, "message": "No concepts available to load"}
+
+        count = qram.load_concepts(concept_names)
+        return {"loaded": count, "status": qram.status()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============================================================================
 # WOLFRAM ALPHA
 # ============================================================================

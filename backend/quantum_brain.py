@@ -31,6 +31,12 @@ from knowledge_base import get_knowledge_base
 from quote_engine import get_quote_engine
 
 try:
+    from quantum_memory import get_quantum_memory
+    QRAM_AVAILABLE = True
+except ImportError:
+    QRAM_AVAILABLE = False
+
+try:
     from wolfram_integration import get_wolfram_engine
     WOLFRAM_AVAILABLE = True
 except Exception:
@@ -68,6 +74,15 @@ class QuantumBrain:
         # Use modular knowledge and quotes
         self.knowledge = get_knowledge_base()
         self.quotes = get_quote_engine()
+
+        # Initialize QRAM (PennyLane 0.44+ or classical fallback)
+        self.qram = None
+        if QRAM_AVAILABLE:
+            try:
+                self.qram = get_quantum_memory()
+                print(f"[QUANTUM BRAIN] QRAM initialized ({self.qram.status()['backend']})")
+            except Exception as e:
+                print(f"[QUANTUM BRAIN] QRAM init note: {e}")
     
     async def initialize(self):
         self.research_engine = await get_research_engine(self.db)

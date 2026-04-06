@@ -126,6 +126,13 @@ try:
 except ImportError:
     HAS_CISTERCIAN_MATH = False
 
+try:
+    from quantum_memory import get_quantum_memory, PENNYLANE_QRAM_AVAILABLE
+    HAS_QRAM = True
+except ImportError:
+    HAS_QRAM = False
+    PENNYLANE_QRAM_AVAILABLE = False
+
 
 class LocalMemory:
     """JSON-file backed memory for local chat."""
@@ -1290,11 +1297,44 @@ def run_chat(verbose=False):
                         print("  Number must be 0-9999 (Cistercian range)")
                 continue
 
+            elif cmd[0] == '/qram' and HAS_QRAM:
+                qram = get_quantum_memory()
+                if len(cmd) > 1 and cmd[1] == 'load':
+                    # Load current concepts into QRAM
+                    concept_names = list(memory.concepts.keys())
+                    if concept_names:
+                        count = qram.load_concepts(concept_names)
+                        print(f"  💾 QRAM: Loaded {count} concepts into quantum memory")
+                    else:
+                        print("  No concepts learned yet — talk to me first!")
+                elif len(cmd) > 1 and cmd[1] == 'query':
+                    # Query concept by address
+                    if len(cmd) > 2 and cmd[2].isdigit():
+                        addr = int(cmd[2])
+                        result = qram.query(addr)
+                        if result:
+                            print(f"  💾 QRAM[{addr}] → {result}")
+                        else:
+                            print(f"  💾 QRAM[{addr}] → (empty)")
+                    else:
+                        print("  Usage: /qram query ADDRESS")
+                else:
+                    s = qram.status()
+                    print(f"  💾 QRAM Status:")
+                    print(f"    Backend:        {s['backend']}")
+                    print(f"    PennyLane:      {'✓' if s['pennylane_available'] else '✗'}")
+                    print(f"    QRAM templates: {'✓' if s['qram_available'] else '✗ (classical fallback)'}")
+                    print(f"    Entries loaded: {s['entries_loaded']}")
+                    print(f"    Bit width:      {s['bit_width']}")
+                    print(f"    Max entries:    {s['max_entries']}")
+                continue
+
             else:
                 print("  Commands: /status /learn FILE /save /load /reset /quit")
                 print("  Gen:      /hybrid TEXT  /unified TEXT")
                 print("  Extra:    /analyze TEXT  /personality  /knowledge TOPIC  /collapse TEXT")
                 print("  Math:     /cistercian-math 50 - 20  /cistercian 1234")
+                print("  Memory:   /qram [load|query N]")
                 print("  Share:    /export [N]  /copy-last")
                 continue
 
