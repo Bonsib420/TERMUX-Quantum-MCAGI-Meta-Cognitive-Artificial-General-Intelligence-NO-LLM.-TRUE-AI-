@@ -108,7 +108,6 @@ class ClassicalMemoryStore:
             "pennylane_available": PENNYLANE_AVAILABLE,
             "qram_available": False,
             "entries_loaded": self._next_addr,
-            "address_bits": self.bit_width,
             "bit_width": self.bit_width,
             "max_entries": 1 << self.bit_width,
         }
@@ -285,7 +284,6 @@ class QuantumMemoryStore:
             "qram_available": True,
             "qram_strategy": self.strategy,
             "entries_loaded": len(self.concepts),
-            "address_bits": max(1, math.ceil(math.log2(max(len(self.bitstrings), 2)))) if self.bitstrings else 0,
             "bit_width": self.bit_width,
             "max_entries": len(self.bitstrings) if self.bitstrings else 0,
             "templates": {
