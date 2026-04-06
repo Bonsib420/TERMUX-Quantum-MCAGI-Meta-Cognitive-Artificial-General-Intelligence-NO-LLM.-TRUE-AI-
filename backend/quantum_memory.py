@@ -50,10 +50,13 @@ except ImportError:
 def _concept_to_bitstring(concept: str, bit_width: int) -> str:
     """Deterministic mapping: concept name → fixed-width bitstring.
 
-    Uses a hash so that any string maps repeatably to a bit pattern.
+    Uses hashlib so the mapping is stable across Python sessions
+    (unaffected by PYTHONHASHSEED / hash randomization).
     Truncated / zero-padded to *bit_width* bits.
     """
-    h = hash(concept) & ((1 << bit_width) - 1)
+    import hashlib
+    h = int(hashlib.sha256(concept.encode("utf-8")).hexdigest(), 16)
+    h = h & ((1 << bit_width) - 1)
     return format(h, f"0{bit_width}b")
 
 

@@ -127,7 +127,7 @@ except ImportError:
     HAS_CISTERCIAN_MATH = False
 
 try:
-    from quantum_memory import get_quantum_memory, PENNYLANE_QRAM_AVAILABLE
+    from quantum_memory import get_quantum_memory, reset_quantum_memory, PENNYLANE_QRAM_AVAILABLE
     HAS_QRAM = True
 except ImportError:
     HAS_QRAM = False
@@ -1391,7 +1391,7 @@ def run_chat(verbose=False):
                                 print("  💾 No valid addresses in query")
                 elif subcmd == 'strategy':
                     # Show or switch QRAM strategy
-                    from quantum_memory import reset_quantum_memory, PENNYLANE_QRAM_AVAILABLE as _pqa
+                    _pqa = PENNYLANE_QRAM_AVAILABLE
                     if len(cmd) > 2 and cmd[2] in ('bb', 'select', 'hybrid'):
                         if not _pqa:
                             print("  💾 Strategy switch requires PennyLane ≥0.44 QRAM templates")
@@ -1436,7 +1436,7 @@ def run_chat(verbose=False):
                     print("    /qram load         — load concepts into quantum memory")
                     print("    /qram query N      — retrieve concept at address N")
                     print("    /qram search TERM  — find concepts matching TERM")
-                    print("    /qram super N N ...- superposition query (quantum)")
+                    print("    /qram super N N ... — superposition query (quantum)")
                     print("    /qram strategy X   — switch QRAM strategy (bb/select/hybrid)")
                 continue
 
