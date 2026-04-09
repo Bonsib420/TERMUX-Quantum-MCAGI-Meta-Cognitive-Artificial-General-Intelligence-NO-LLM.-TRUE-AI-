@@ -82,7 +82,7 @@ class WordEmbeddings:
                         weight = 1.0 / distance
                         self.cooccurrence[center][context] += weight
         
-        logger.info(f"Built co-occurrence matrix")
+        logger.info("Built co-occurrence matrix")
     
     def train(self, texts: List[str], iterations: int = 10):
         """

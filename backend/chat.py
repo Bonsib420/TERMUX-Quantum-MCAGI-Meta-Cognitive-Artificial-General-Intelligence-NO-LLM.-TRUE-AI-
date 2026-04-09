@@ -659,7 +659,7 @@ def run_chat(verbose=False):
     if getattr(engine, "_has_orch_or", False):
         print(f"  Orch OR: ACTIVE ({engine.orch_or.total_moments} prior moments)")
     else:
-        print(f"  Orch OR: unavailable (classical fallback)")
+        print("  Orch OR: unavailable (classical fallback)")
     print(f"  Hybrid gen: {'ACTIVE' if hybrid_gen else 'OFF'}")
     print()
 
@@ -693,7 +693,7 @@ def run_chat(verbose=False):
                     stats = research.get_research_stats()
                     prog = research.get_autonomous_progress()
                     print()
-                    print(f"  ╔══ RESEARCH STATUS ════════════════════════════")
+                    print("  ╔══ RESEARCH STATUS ════════════════════════════")
                     if prog['is_running']:
                         elapsed = prog['elapsed_minutes']
                         total = prog['duration_minutes']
@@ -704,20 +704,20 @@ def run_chat(verbose=False):
                         print(f"  ║ Elapsed:   {elapsed:.1f} min / {total} min")
                         print(f"  ║ Remaining: {remaining:.1f} min")
                         print(f"  ║ Status:    {prog['status']}")
-                        print(f"  ║")
+                        print("  ║")
                         print(f"  ║ Topics researched: {len(prog['topics_researched'])}")
                         print(f"  ║ Concepts learned:  {prog['concepts_learned']}")
                         print(f"  ║ Insights gained:   {prog['insights_gained']}")
                         if prog['topics_researched']:
                             print(f"  ║ Last topic: {prog['topics_researched'][-1]}")
                     else:
-                        print(f"  ║ Autonomous: IDLE")
+                        print("  ║ Autonomous: IDLE")
                         print(f"  ║ Total researches: {stats['total_researches']}")
                         if stats['recent_topics']:
-                            print(f"  ║ Recent topics:")
+                            print("  ║ Recent topics:")
                             for t in stats['recent_topics'][-3:]:
                                 print(f"  ║   → {t}")
-                    print(f"  ╚═══════════════════════════════════════════════")
+                    print("  ╚═══════════════════════════════════════════════")
                 elif cmd[1] == 'auto':
                     minutes = int(cmd[2]) if len(cmd) > 2 else 30
                     import threading, asyncio
@@ -729,7 +729,7 @@ def run_chat(verbose=False):
                     t = threading.Thread(target=run_research, daemon=True)
                     t.start()
                     print(f"  Autonomous research started — {minutes} min")
-                    print(f"  Topics will print as they complete.")
+                    print("  Topics will print as they complete.")
                 elif cmd[1] == 'stop':
                     result = research.stop_autonomous_research()
                     print(f"  {result}")
@@ -827,7 +827,7 @@ def run_chat(verbose=False):
                 print("  --- ORCH OR (Penrose-Hameroff) ---")
                 if getattr(engine, "_has_orch_or", False):
                     orch = {"note": "use get_system_state"}
-                    print(f"  Status: ACTIVE")
+                    print("  Status: ACTIVE")
                     print(f"  Conscious moments: {engine.orch_or.conscious_moments}")
 
                     for name, mt in engine.orch_or.microtubules.items():
@@ -873,9 +873,9 @@ def run_chat(verbose=False):
                 print(f"  3. Bloom's taxonomy question gen (stage {memory.growth['stage']})")
                 print(f"  4. Tone detection -> register matching [{'ACTIVE' if HAS_TONE else 'OFF'}]")
                 print(f"  5. Hybrid quantum generation for deep topics [{'ACTIVE' if hybrid_gen else 'OFF'}]")
-                print(f"  6. Markov + structured composition for casual/conversational")
-                print(f"  7. Personality perspective (100% baseline) [ON]")
-                print(f"  8. Movie quotes (45%) + asides (75%) + dreams (35%) [ON]")
+                print("  6. Markov + structured composition for casual/conversational")
+                print("  7. Personality perspective (100% baseline) [ON]")
+                print("  8. Movie quotes (45%) + asides (75%) + dreams (35%) [ON]")
                 print()
                 print("  --- TOP CONCEPTS ---")
                 if memory.concepts:
@@ -985,9 +985,9 @@ def run_chat(verbose=False):
                         total += n
                         bridges = ', '.join(cat.get('bridge_to', []))
                         print(f"  ║ {cat_key:<28} {n:>3} URLs  → bridges: {bridges}")
-                    print(f"  ╠══════════════════════════════════════════════════")
+                    print("  ╠══════════════════════════════════════════════════")
                     print(f"  ║ Total: {total} URLs across {len(categories)} domains")
-                    print(f"  ╚══════════════════════════════════════════════════")
+                    print("  ╚══════════════════════════════════════════════════")
                     print()
                     print("  Usage: /feed <category>   — process one category")
                     print("         /feed all          — process all categories")
@@ -1032,11 +1032,11 @@ def run_chat(verbose=False):
                             print(f"✗ ({e})")
                         time.sleep(0.5)  # Be polite to servers
                 print()
-                print(f"  ╔══ FEED COMPLETE ════════════════════════════════")
+                print("  ╔══ FEED COMPLETE ════════════════════════════════")
                 print(f"  ║ URLs processed: {total_urls} ({failed} failed)")
                 print(f"  ║ Words ingested: ~{total_words:,}")
                 print(f"  ║ Chain states:   {len(engine.markov.chain):,}")
-                print(f"  ╚════════════════════════════════════════════════")
+                print("  ╚════════════════════════════════════════════════")
                 print()
                 continue
             elif cmd[0] == '/cloud-save':
@@ -1185,13 +1185,13 @@ def run_chat(verbose=False):
                     ]
                     for ex in exchanges:
                         ts = ex.get("timestamp", "")
-                        lines.append(f"### 🧑 User")
+                        lines.append("### 🧑 User")
                         if ts:
                             lines.append(f"*{ts}*")
                         lines.append("")
                         lines.append(ex.get("user", ""))
                         lines.append("")
-                        lines.append(f"### 🔮 Quantum MCAGI")
+                        lines.append("### 🔮 Quantum MCAGI")
                         lines.append("")
                         lines.append(ex.get("ai", ""))
                         concepts_list = ex.get("concepts", [])
@@ -1352,31 +1352,31 @@ def run_chat(verbose=False):
             gaps = understanding.get('gaps', [])
             related = understanding.get('related_concepts', [])
 
-            print(f"\n  ╔══ COLLAPSE ANALYSIS ══════════════════════════════")
-            print(f"  ║ WAVE FUNCTION")
+            print("\n  ╔══ COLLAPSE ANALYSIS ══════════════════════════════")
+            print("  ║ WAVE FUNCTION")
             print(f"  ║   Generator:     {gen_used}")
             print(f"  ║   Tone register: {tone['register']} (depth={tone.get('depth', 0):.2f})")
             print(f"  ║   Collapse time: {elapsed:.3f}s")
-            print(f"  ║")
-            print(f"  ║ CONCEPT FIELD")
+            print("  ║")
+            print("  ║ CONCEPT FIELD")
             print(f"  ║   Extracted:     {concepts}")
             print(f"  ║   Known:         {known}")
             print(f"  ║   Unknown:       {unknown}")
             print(f"  ║   Related:       {[r.get('concept') for r in related]}")
             print(f"  ║   Gaps:          {gaps}")
             print(f"  ║   Understanding: {understanding['understanding_score']:.2f}")
-            print(f"  ║")
-            print(f"  ║ ORCH OR STATE")
+            print("  ║")
+            print("  ║ ORCH OR STATE")
             print(f"  ║   Conscious moments: {cm}")
             if orch and hasattr(orch, 'microtubules'):
                 for name, mt in orch.microtubules.items():
                     print(f"  ║   {name}: {len(mt.tubulins)} tubulins")
-            print(f"  ║")
-            print(f"  ║ MARKOV CHAIN")
+            print("  ║")
+            print("  ║ MARKOV CHAIN")
             print(f"  ║   States:        {markov_states:,}")
             print(f"  ║   Vocabulary:    {vocab:,}")
-            print(f"  ║")
-            print(f"  ║ GROWTH")
+            print("  ║")
+            print("  ║ GROWTH")
             # Get topology
             topo = memory.check_graph_topology()
             conn = memory.count_connections()
@@ -1385,11 +1385,11 @@ def run_chat(verbose=False):
             print(f"  ║   Connections:   {conn}")
             print(f"  ║   Graph: avg deg={topo['avg_degree']}, diam={topo['diameter']}, comps={topo['component_count']}")
             if questions:
-                print(f"  ║")
-                print(f"  ║ QUESTIONS GENERATED")
+                print("  ║")
+                print("  ║ QUESTIONS GENERATED")
                 for q in questions[:3]:
                     print(f"  ║   → {q}")
-            print(f"  ╚═══════════════════════════════════════════════════")
+            print("  ╚═══════════════════════════════════════════════════")
 
         print()
 

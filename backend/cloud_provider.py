@@ -350,7 +350,7 @@ class CloudProviderRegistry:
         Merge all user contributions for a domain into shared knowledge.
         This is how the brain grows with each new user — like Facebook or email.
         """
-        user_paths = self.list_objects(f'QuantumMCAGI/users/')
+        user_paths = self.list_objects('QuantumMCAGI/users/')
         domain_suffix = f"knowledge/{domain}"
 
         merged = {

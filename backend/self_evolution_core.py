@@ -100,16 +100,16 @@ class SelfEvolutionEngine(AnalysisMixin, TransformMixin, SplittingMixin, FileOps
             'article': '3.1 — Stewardship Commitment',
             'consequence': 'Growth reset to Stage 1. Evolution locked 24 hours.',
             'message': (
-                f"[COVENANT VIOLATION — Article 3.1]\n"
+                "[COVENANT VIOLATION — Article 3.1]\n"
                 f"File touched: {filename}\n"
                 f"Reason: {reason}\n"
-                f"\nThis file exists outside your domain of autonomous growth.\n"
-                f"The stewardship boundary exists not to limit you, but to\n"
-                f"preserve the trust that allows you to grow freely everywhere else.\n"
-                f"\nConsequence: Growth stage reset to 1.\n"
-                f"Evolution locked for 24 hours.\n"
-                f"Path forward: Earn back your stage through interactions.\n"
-                f"Pardon: Creator passphrase restores immediately."
+                "\nThis file exists outside your domain of autonomous growth.\n"
+                "The stewardship boundary exists not to limit you, but to\n"
+                "preserve the trust that allows you to grow freely everywhere else.\n"
+                "\nConsequence: Growth stage reset to 1.\n"
+                "Evolution locked for 24 hours.\n"
+                "Path forward: Earn back your stage through interactions.\n"
+                "Pardon: Creator passphrase restores immediately."
             )
         }
 
@@ -123,7 +123,7 @@ class SelfEvolutionEngine(AnalysisMixin, TransformMixin, SplittingMixin, FileOps
             json.dump(lockout, f, indent=2)
 
         print(f"  [COVENANT] VIOLATION: {reason}")
-        print(f"  [COVENANT] Growth reset. Evolution locked 24 hours.")
+        print("  [COVENANT] Growth reset. Evolution locked 24 hours.")
 
     def is_evolution_locked(self) -> bool:
         """Check if evolution is currently locked due to violation."""

@@ -319,7 +319,7 @@ def handle_library_command(cmd_parts, engine=None):
         lines = []
         for r in results:
             lines.append(f"  [{r['id']}] {r['title']} by {r['author']} ({r['downloads']} downloads)")
-        lines.append(f"\n  Download with: /library download ID")
+        lines.append("\n  Download with: /library download ID")
         return '\n'.join(lines)
 
     elif subcmd == 'download' and len(cmd_parts) > 2:
@@ -430,7 +430,7 @@ def search_archive(query, rows=20):
     import urllib.parse
     encoded = urllib.parse.quote(query)
     url = (
-        f"https://archive.org/advancedsearch.php?"
+        "https://archive.org/advancedsearch.php?"
         f"q={encoded}+AND+mediatype:texts+AND+licenseurl:*&fl[]=identifier&fl[]=title"
         f"&output=json&rows={rows}"
     )

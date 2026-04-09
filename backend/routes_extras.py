@@ -1168,7 +1168,7 @@ async def get_evolution_status():
 
 
 @router.post("/dream/generate")
-async def generate_dream(num_sentences: int = 3):
+async def generate_dream_post(num_sentences: int = 3):
     """
     Generate a dream narrative using the Dream Engine.
 

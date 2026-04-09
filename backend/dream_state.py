@@ -632,7 +632,7 @@ class DreamStateEngine:
                     if not existing:
                         await brain.semantic_memory.store_concept(
                             concept=c,
-                            definition=f"Dream insight concept",
+                            definition="Dream insight concept",
                             relationships=[]
                         )
                 

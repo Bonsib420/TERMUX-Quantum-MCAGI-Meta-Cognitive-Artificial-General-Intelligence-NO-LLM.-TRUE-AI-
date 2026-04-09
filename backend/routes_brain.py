@@ -17,11 +17,6 @@ logger = logging.getLogger("quantum_ai")
 router = APIRouter(prefix="/api")
 
 
-class AutonomousResearchRequest(BaseModel):
-    """AutonomousResearchRequest - Auto-documented by self-evolution."""
-    topic: str
-
-
 @router.get("/brain/status")
 async def get_brain_status():
     """Get Quantum Brain status - the TRUE AI status"""
@@ -206,7 +201,7 @@ async def research_query(query: str, reason: str = "user_request"):
         
         # If engine returned 0 but direct worked, use direct results
         if len(result.get('results', [])) == 0 and len(direct_results) > 0:
-            logger.info(f"[RESEARCH DEBUG] Using direct results")
+            logger.info("[RESEARCH DEBUG] Using direct results")
             result['results'] = [{'title': r.get('title',''), 'body': r.get('body',''), 'href': r.get('href','')} for r in direct_results]
             # Re-extract concepts
             all_text = ' '.join([r.get('body', '') for r in direct_results])

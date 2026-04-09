@@ -283,8 +283,8 @@ class HiddenThinkingMode:
         # Meta-questions about the request
         questions.extend([
             f"What is the user really asking about in '{user_input}'?",
-            f"What context am I missing?",
-            f"What would a complete answer include?"
+            "What context am I missing?",
+            "What would a complete answer include?"
         ])
         
         return questions
@@ -564,11 +564,6 @@ class HiddenThinkingMode:
         document_context: Optional[Dict] = None
     ) -> str:
         """Legacy LLM response method (fallback only)"""
-        doc_content = None
-        
-        if synthesized.get("has_document") and document_context:
-            doc_content = synthesized.get("document_content") or document_context.get("text", "")
-        
         # LLM removed — go straight to fallback
         return self._fallback_response(user_input, synthesized, document_context)
     
@@ -582,7 +577,6 @@ class HiddenThinkingMode:
         # If asking about a document, respond with document content
         if synthesized.get("has_document") and document_context:
             doc_text = synthesized.get("document_content", "")
-            filename = document_context.get("filename", "the document")
             
             # Extract meaningful content (first few sentences or paragraphs)
             preview = doc_text[:500].strip() if doc_text else "Unable to extract content."

@@ -50,7 +50,7 @@ def explain_orch_or(engine):
     
     if has_orch and orch:
         status = orch.get_status()
-        lines.append(f"    Status: ACTIVE")
+        lines.append("    Status: ACTIVE")
         lines.append(f"    Conscious moments: {status.get('conscious_moments', 0)}")
         lines.append(f"    Temperature: {status.get('last_temperature', 0):.3f}")
         
@@ -63,7 +63,7 @@ def explain_orch_or(engine):
         
         gj = status.get('gap_junctions', {})
         if gj:
-            lines.append(f"    Gap junctions:")
+            lines.append("    Gap junctions:")
             for junc, strength in gj.items():
                 lines.append(f"      {junc}: {strength}")
     else:
@@ -84,7 +84,7 @@ def explain_tone(tone_result):
     
     sentiment = tone_result.get('sentiment', {})
     if sentiment:
-        lines.append(f"    VADER sentiment:")
+        lines.append("    VADER sentiment:")
         lines.append(f"      positive={sentiment.get('positive', 0):.3f}  "
                      f"negative={sentiment.get('negative', 0):.3f}  "
                      f"neutral={sentiment.get('neutral', 0):.3f}")
@@ -248,7 +248,7 @@ def full_explanation(engine, user_input, concepts, questions, tone_result,
     sections.append("")
     sections.append(explain_flavor(has_quotes, has_personality))
     sections.append("")
-    sections.append(f"  --- TIMING ---")
+    sections.append("  --- TIMING ---")
     sections.append(f"    Total pipeline: {elapsed:.3f}s")
     sections.append("")
     sections.append("  =============================================")

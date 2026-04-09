@@ -198,12 +198,12 @@ async def export_memory():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-class MemoryImport(BaseModel):
+class MemoryImportData(BaseModel):
     semantic_memory: Optional[List[Dict]] = None
     insights: Optional[List[Dict]] = None
 
 @router.post("/memory/import")
-async def import_memory(data: MemoryImport):
+async def import_memory(data: MemoryImportData):
     """Import memory data"""
     try:
         imported = {"concepts": 0, "insights": 0}
@@ -253,7 +253,7 @@ async def export_conversation(session_id: str, format: str = "markdown"):
             }
         
         # Markdown format
-        md_content = f"# Quantum AI Conversation\n\n"
+        md_content = "# Quantum AI Conversation\n\n"
         md_content += f"**Session:** {session_id}\n"
         md_content += f"**Exported:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}\n\n"
         md_content += "---\n\n"
@@ -261,7 +261,6 @@ async def export_conversation(session_id: str, format: str = "markdown"):
         for msg in history:
             role = "**You:**" if msg.get("role") == "user" else "**Quantum AI:**"
             content = msg.get("content", "")
-            timestamp = msg.get("timestamp", "")[:19] if msg.get("timestamp") else ""
             md_content += f"{role}\n{content}\n\n"
         
         return {"markdown": md_content, "session_id": session_id}

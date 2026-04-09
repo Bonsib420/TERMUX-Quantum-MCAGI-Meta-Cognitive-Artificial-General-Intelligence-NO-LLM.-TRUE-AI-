@@ -382,7 +382,7 @@ async def quantum_chat(message: ChatMessage):
                 
                 # Generate TTS
                 audio_url = await generate_speech(text)
-                response = f"🔊 **Speech Generated**\n\n\"{text[:100]}{'...' if len(text) > 100 else ''}\"\n\n[Audio URL: {audio_url}]" if audio_url else f"🔊 Text to speak:\n\n\"{text}\"\n\n_Use your browser's text-to-speech or copy this text._"
+                response = "🔊 **Speech Generated**\n\n\"{text[:100]}{'...' if len(text) > 100 else ''}\"\n\n[Audio URL: {audio_url}]" if audio_url else "🔊 Text to speak:\n\n\"{text}\"\n\n_Use your browser's text-to-speech or copy this text._"
                 return ChatResponse(
                     questions=[],
                     response=response,
@@ -423,11 +423,11 @@ async def quantum_chat(message: ChatMessage):
                     response = "📤 **Export Memory**\n\nUse the API endpoint: `GET /api/memory/export`\n\nOr click the Export button in the Memory screen."
                 else:
                     response = (
-                        f"📤 **Export Conversation for Claude**\n\n"
-                        f"**Option 1:** Tap the **📤 Share w/ Claude** button in the top bar — copies this chat as markdown to your clipboard.\n\n"
+                        "📤 **Export Conversation for Claude**\n\n"
+                        "**Option 1:** Tap the **📤 Share w/ Claude** button in the top bar — copies this chat as markdown to your clipboard.\n\n"
                         f"**Option 2:** API endpoint: `GET /api/chat/export/{session_id}`\n\n"
-                        f"**Option 3:** Export recent sessions: `GET /api/chat/export-current`\n\n"
-                        f"Then paste into Claude, and it'll have full context of our conversation."
+                        "**Option 3:** Export recent sessions: `GET /api/chat/export-current`\n\n"
+                        "Then paste into Claude, and it'll have full context of our conversation."
                     )
                 
                 return ChatResponse(
@@ -881,7 +881,7 @@ async def export_chat_for_sharing(session_id: str, limit: int = 200, format: str
         
         # Build formatted export
         lines = []
-        lines.append(f"# Quantum MCAGI — Chat Export")
+        lines.append("# Quantum MCAGI — Chat Export")
         lines.append(f"**Session:** `{session_id}`")
         if history:
             lines.append(f"**Messages:** {len(history)}")
@@ -907,9 +907,9 @@ async def export_chat_for_sharing(session_id: str, limit: int = 200, format: str
             else:
                 # Markdown format
                 if role == "user":
-                    lines.append(f"### 🧑 User")
+                    lines.append("### 🧑 User")
                 else:
-                    lines.append(f"### 🔮 Quantum MCAGI")
+                    lines.append("### 🔮 Quantum MCAGI")
                 if ts:
                     lines.append(f"*{ts}*")
                 lines.append("")

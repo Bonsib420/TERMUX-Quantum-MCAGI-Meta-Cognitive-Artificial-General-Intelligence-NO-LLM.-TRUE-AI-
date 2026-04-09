@@ -156,7 +156,6 @@ class FileOpsMixin:
         if len(methods) <= 15:
             return code, None
 
-        keep_methods = methods[:10]
         move_methods = methods[10:]
         lines = code.split('\n')
 
