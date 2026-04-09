@@ -382,7 +382,7 @@ async def quantum_chat(message: ChatMessage):
                 
                 # Generate TTS
                 audio_url = await generate_speech(text)
-                response = "🔊 **Speech Generated**\n\n\"{text[:100]}{'...' if len(text) > 100 else ''}\"\n\n[Audio URL: {audio_url}]" if audio_url else "🔊 Text to speak:\n\n\"{text}\"\n\n_Use your browser's text-to-speech or copy this text._"
+                response = f"🔊 **Speech Generated**\n\n\"{text[:100]}{'...' if len(text) > 100 else ''}\"\n\n[Audio URL: {audio_url}]" if audio_url else f"🔊 Text to speak:\n\n\"{text}\"\n\n_Use your browser's text-to-speech or copy this text._"
                 return ChatResponse(
                     questions=[],
                     response=response,
