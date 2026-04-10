@@ -120,6 +120,37 @@ try:
 except ImportError:
     HAS_LIBRARY = False
 
+try:
+    from cistercian_math import detect_math, evaluate_math, format_math_response
+    HAS_CISTERCIAN_MATH = True
+except ImportError:
+    HAS_CISTERCIAN_MATH = False
+
+try:
+    from quantum_memory import get_qram, load_concepts_into_qram, reset_quantum_memory
+    from quantum_memory import query_qram, search_qram, superposition_query, get_qram_status
+    HAS_QRAM = True
+except ImportError:
+    HAS_QRAM = False
+
+try:
+    from hilbert_bridge import init_hilbert_bridge, get_bridge_status, save_hilbert_state
+    HAS_HILBERT_BRIDGE = True
+except ImportError:
+    HAS_HILBERT_BRIDGE = False
+
+try:
+    from batch_ingest import batch_ingest_directory, batch_ingest_files, format_ingest_stats
+    HAS_BATCH_INGEST = True
+except ImportError:
+    HAS_BATCH_INGEST = False
+
+try:
+    from exam_system import get_exam_system, format_exam_results
+    HAS_EXAM = True
+except ImportError:
+    HAS_EXAM = False
+
 
 class LocalMemory:
     """JSON-file backed memory for local chat."""
@@ -571,6 +602,8 @@ def save_everything(memory, engine, state_dir):
     engine.save_state(state_dir)
     if getattr(engine, "_has_orch_or", False):
         memory.save_orch_or(engine.orch_or)
+    if HAS_HILBERT_BRIDGE:
+        save_hilbert_state()
 
 
 EVOLUTION_ENABLED = True  # Killswitch
@@ -661,6 +694,16 @@ def run_chat(verbose=False):
     else:
         print(f"  Orch OR: unavailable (classical fallback)")
     print(f"  Hybrid gen: {'ACTIVE' if hybrid_gen else 'OFF'}")
+
+    # Initialize Hilbert bridge (persistent Hilbert space)
+    if HAS_HILBERT_BRIDGE:
+        init_hilbert_bridge(engine, state_dir=str(memory.data_dir))
+
+    # Auto-load concepts into QRAM
+    if HAS_QRAM and memory.concepts:
+        concept_list = list(memory.concepts.keys())
+        load_concepts_into_qram(concept_list)
+
     print()
 
     _last_auto_save = time.time()
@@ -866,6 +909,14 @@ def run_chat(verbose=False):
                 print("  --- GENERATORS ---")
                 print(f"  Hybrid: {'ACTIVE' if hybrid_gen else 'OFF'}")
                 print(f"  Unified: {'ACTIVE' if unified_gen else 'OFF'}")
+                if HAS_HILBERT_BRIDGE:
+                    bridge_status = get_bridge_status()
+                    print(f"  Hilbert bridge: {'ACTIVE' if bridge_status.get('active') else 'OFF'}")
+                    if bridge_status.get('active'):
+                        print(f"    States: {bridge_status.get('hilbert_states', 0)}, dim={bridge_status.get('dimension', 0)}")
+                if HAS_QRAM:
+                    qram_status = get_qram_status()
+                    print(f"  QRAM: {qram_status['strategy']} ({qram_status['stored']}/{qram_status['capacity']})")
                 print()
                 print("  --- RESPONSE PIPELINE ---")
                 print("  1. TF-IDF concept extraction")
@@ -1254,15 +1305,118 @@ def run_chat(verbose=False):
                     print()
                 continue
 
+            elif cmd[0] == '/cistercian' or cmd[0] == '/cistercian-math':
+                if not HAS_CISTERCIAN_MATH:
+                    print("  Cistercian math module not available.")
+                elif len(cmd) < 2:
+                    print("  Usage: /cistercian N  or  /cistercian EXPR")
+                else:
+                    expr = ' '.join(cmd[1:])
+                    result = evaluate_math(expr)
+                    if result:
+                        print(f"\n  {format_math_response(result)}\n")
+                    else:
+                        print(f"  Could not evaluate: {expr}")
+                continue
+
+            elif cmd[0] == '/qram':
+                if not HAS_QRAM:
+                    print("  QRAM module not available.")
+                elif len(cmd) == 1:
+                    # Status
+                    status = get_qram_status()
+                    print(f"\n  QRAM Status:")
+                    print(f"    Strategy: {status['strategy']}")
+                    print(f"    Backend:  {status.get('backend', 'classical')}")
+                    print(f"    Stored:   {status['stored']}/{status['capacity']}")
+                    print(f"    Utilization: {status['utilization']:.1%}")
+                    print()
+                elif cmd[1] == 'load':
+                    concept_list = list(memory.concepts.keys())
+                    result = load_concepts_into_qram(concept_list)
+                    print(f"  QRAM loaded: {result['loaded']} concepts ({result['strategy']})")
+                elif cmd[1] == 'query' and len(cmd) > 2:
+                    try:
+                        addr = int(cmd[2])
+                        result = query_qram(addr)
+                        if result:
+                            print(f"  Address {addr}: {result.get('concept', 'unknown')}")
+                        else:
+                            print(f"  Address {addr}: empty")
+                    except ValueError:
+                        print("  Usage: /qram query N (integer address)")
+                elif cmd[1] == 'search' and len(cmd) > 2:
+                    term = ' '.join(cmd[2:])
+                    results = search_qram(term)
+                    if results:
+                        for r in results[:10]:
+                            print(f"  [{r['address_int']:3d}] {r['concept']}")
+                    else:
+                        print(f"  No results for '{term}'")
+                elif cmd[1] == 'super' and len(cmd) > 2:
+                    try:
+                        addrs = [int(a) for a in cmd[2:]]
+                        results = superposition_query(*addrs)
+                        for r in results:
+                            print(f"  [{r['address_int']:3d}] {r['concept']}")
+                        if not results:
+                            print("  No results at those addresses")
+                    except ValueError:
+                        print("  Usage: /qram super N1 N2 N3 ...")
+                elif cmd[1] == 'strategy' and len(cmd) > 2:
+                    strat = cmd[2]
+                    if strat in ('bb', 'select', 'hybrid', 'classical'):
+                        reset_quantum_memory()
+                        get_qram(strategy=strat)
+                        print(f"  QRAM strategy set to: {strat}")
+                    else:
+                        print("  Strategies: bb, select, hybrid, classical")
+                else:
+                    print("  /qram [load|query N|search TERM|super N N|strategy X]")
+                continue
+
+            elif cmd[0] == '/exam':
+                if not HAS_EXAM:
+                    print("  Exam system not available.")
+                elif len(cmd) >= 2 and cmd[1] == 'summary':
+                    exam_sys = get_exam_system()
+                    summary = exam_sys.get_summary()
+                    print(f"\n  Exam Summary:")
+                    print(f"    Exams taken: {summary['exams']}")
+                    if summary['exams'] > 0:
+                        print(f"    Latest: {summary['latest_score']:.1%}")
+                        print(f"    Best:   {summary['best_score']:.1%}")
+                        print(f"    Average: {summary['average_score']:.1%}")
+                        print(f"    Trend:  {summary['trend']}")
+                    print()
+                else:
+                    domain = cmd[1] if len(cmd) > 1 else None
+                    exam_sys = get_exam_system()
+                    results = exam_sys.run_exam(memory, engine, domain=domain)
+                    print(format_exam_results(results))
+                continue
+
             else:
                 print("  Commands: /status /learn FILE /save /load /reset /quit")
                 print("  Gen:      /hybrid TEXT  /unified TEXT")
                 print("  Extra:    /analyze TEXT  /personality  /knowledge TOPIC  /collapse TEXT")
+                print("  Math:     /cistercian N  or type any math expression")
+                print("  Memory:   /qram  /qram load  /qram search TERM  /qram query N")
+                print("  Exam:     /exam  /exam DOMAIN  /exam summary")
                 print("  Share:    /export [N]  /copy-last")
                 continue
 
         # ---- Process input ----
         t0 = time.time()
+
+        # Check for math expression first (before Markov chain)
+        if HAS_CISTERCIAN_MATH and detect_math(user_input):
+            result = evaluate_math(user_input)
+            if result and "error" not in result:
+                print()
+                print(f"AI: {format_math_response(result)}")
+                print()
+                continue
 
         engine.learn_from_text(user_input)
         concepts = engine.extract_concepts(user_input)
