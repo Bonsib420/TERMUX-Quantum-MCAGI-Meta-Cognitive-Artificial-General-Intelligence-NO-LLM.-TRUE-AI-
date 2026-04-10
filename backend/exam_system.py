@@ -248,7 +248,9 @@ class ExamSystem:
             if isinstance(data, dict):
                 domain = data.get('metadata', {}).get('domain', 'general')
             elif hasattr(data, 'metadata'):
-                domain = getattr(data.metadata, 'domain', 'general') if hasattr(data, 'metadata') else 'general'
+                meta = getattr(data, 'metadata', None)
+                if meta is not None:
+                    domain = getattr(meta, 'domain', 'general')
             domain_counts[domain] += 1
 
         for domain_name in DOMAIN_NAMES:
@@ -401,7 +403,7 @@ class ExamSystem:
                 concept_domain = data.get('metadata', {}).get('domain', 'general')
                 connections = data.get('connections', [])
             elif hasattr(data, 'connections'):
-                connections = list(data.connections) if hasattr(data, 'connections') else []
+                connections = list(getattr(data, 'connections', []))
 
             for conn in connections[:5]:
                 conn_name = conn if isinstance(conn, str) else conn.get('concept', '')
