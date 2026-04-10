@@ -205,6 +205,9 @@ class BBQRAMStore(ClassicalMemoryStore):
         """
         Execute a quantum query using BBQRAM circuit.
 
+        BB is limited to 4 address bits because PennyLane's BBQRAM template
+        requires O(2^n) ancilla qubits, making n>4 impractical on simulators.
+
         Args:
             address_bits: List of 0/1 values representing the address
 

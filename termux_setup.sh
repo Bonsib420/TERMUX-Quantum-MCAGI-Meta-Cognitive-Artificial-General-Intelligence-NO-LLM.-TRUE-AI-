@@ -250,7 +250,9 @@ except ImportError:
 
 # Test core backend modules
 sys.path.insert(0, '.')
-core_modules = ['algorithmic_core', 'quantum_markov', 'chat', 'shared_state']
+core_modules = ['algorithmic_core', 'quantum_markov', 'chat', 'shared_state',
+                'quantum_memory', 'hilbert_engine', 'hilbert_bridge',
+                'cistercian_math', 'batch_ingest', 'exam_system', 'code_to_pdf']
 for mod in core_modules:
     try:
         __import__(mod)

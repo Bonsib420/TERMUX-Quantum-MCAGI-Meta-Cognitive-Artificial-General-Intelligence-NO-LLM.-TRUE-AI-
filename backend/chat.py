@@ -1409,7 +1409,10 @@ def run_chat(verbose=False):
         # ---- Process input ----
         t0 = time.time()
 
-        # Check for math expression first (before Markov chain)
+        # Learn from input first (builds Markov vocabulary including math terms)
+        engine.learn_from_text(user_input)
+
+        # Check for math expression (before full response generation)
         if HAS_CISTERCIAN_MATH and detect_math(user_input):
             result = evaluate_math(user_input)
             if result and "error" not in result:
@@ -1418,7 +1421,6 @@ def run_chat(verbose=False):
                 print()
                 continue
 
-        engine.learn_from_text(user_input)
         concepts = engine.extract_concepts(user_input)
         growth_stage = memory.growth["stage"]
         known = memory.get_known_concepts()

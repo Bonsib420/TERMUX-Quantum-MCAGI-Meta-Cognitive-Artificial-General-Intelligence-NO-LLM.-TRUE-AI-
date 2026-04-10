@@ -278,7 +278,7 @@ def _safe_eval(expr: str) -> float:
     def _factorial_replace(m):
         n = int(m.group(1))
         if n > 170:  # prevent overflow
-            return str(float('inf'))
+            raise ValueError(f"Factorial argument too large (max 170, got {n})")
         return str(math.factorial(n))
 
     expr = FACTORIAL_PATTERN.sub(_factorial_replace, expr)
@@ -294,8 +294,8 @@ def _safe_eval(expr: str) -> float:
     expr = re.sub(r'\be\b', str(math.e), expr)
     expr = re.sub(r'\btau\b', str(math.tau), expr)
 
-    # Security: only allow digits, operators, parens, dots, spaces
-    if not re.match(r'^[\d\s\+\-\*/\.\(\)e]+$', expr):
+    # Security: only allow digits, operators, parens, dots, spaces, and valid scientific notation
+    if not re.match(r'^[\d\s\+\-\*/\.\(\)]+(?:[eE][+-]?\d+)?$', expr):
         raise ValueError(f"Unsafe expression: {expr}")
 
     # Evaluate with empty namespace
