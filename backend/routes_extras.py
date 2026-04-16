@@ -1222,57 +1222,64 @@ async def generate_dream(num_sentences: int = 3):
 
 
 # ============================================================================
-# CLOUD STORAGE ENDPOINTS
+# CLOUD STORAGE ENDPOINTS (via CloudProviderRegistry — Rclone + Local)
 # ============================================================================
 
 @router.get("/cloud/status")
-async def cloud_status():
-    """Check Wolfram Cloud storage status (list objects)"""
+async def cloud_status_endpoint():
+    """Check cloud storage status (all providers)"""
     try:
-        from wolfram_cloud import cloud_status as _cloud_status
-        status = _cloud_status()
-        return {"status": status}
+        from cloud_provider import get_cloud_registry
+        registry = get_cloud_registry()
+        return registry.status()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/cloud/save")
-async def cloud_save():
-    """Save current AI state to Wolfram Cloud"""
+async def cloud_save_endpoint():
+    """Save current AI state to cloud (Rclone Google Drive + Local)"""
     try:
-        from wolfram_cloud import cloud_save as _cloud_save
-        # Build a memory-like object from server state
-        class CloudMemory:
-            pass
-        mem = CloudMemory()
+        from cloud_provider import get_cloud_registry
+        from datetime import datetime, timezone
+        registry = get_cloud_registry()
+
         # Get metrics and stage
         metrics = await state.cognitive_core.growth_tracker.calculate_metrics()
-        stage = await state.cognitive_core.growth_tracker.get_current_stage()
-        mem.growth = {**metrics, **stage}
-        # Get concepts (up to 500)
-        concepts_cursor = state.db.semantic_memory.find({}, {"concept": 1, "definition": 1, "relationships": 1, "_id": 0}).limit(500)
-        concepts_list = await concepts_cursor.to_list(500)
-        mem.concepts = {}
+        stage_info = await state.cognitive_core.growth_tracker.get_current_stage()
+
+        # Get concepts (up to 2000)
+        concepts_cursor = state.db.semantic_memory.find(
+            {}, {"concept": 1, "definition": 1, "relationships": 1, "_id": 0}
+        ).limit(2000)
+        concepts_list = await concepts_cursor.to_list(2000)
+        concepts = {}
         for c in concepts_list:
             name = c.get("concept")
             if name:
-                mem.concepts[name] = {k: v for k, v in c.items() if k != "concept"}
-        # Session state (rough estimate)
-        mem.session_state = {"total_interactions": metrics.get("total_interactions", 0)}
-        # Save
-        success = _cloud_save(mem)
+                concepts[name] = {k: v for k, v in c.items() if k != "concept"}
+
+        state_data = {
+            'saved_at': datetime.now(timezone.utc).isoformat(),
+            'growth': {**metrics, **stage_info},
+            'concepts': concepts,
+            'session_state': {"total_interactions": metrics.get("total_interactions", 0)},
+        }
+
+        success = registry.save('QuantumMCAGI/state', state_data)
         if success:
-            return {"status": "saved", "message": "State saved to Wolfram Cloud"}
+            return {"status": "saved", "concepts": len(concepts), "providers": registry.status()['provider_names']}
         else:
-            raise HTTPException(status_code=500, detail="Cloud save failed")
+            raise HTTPException(status_code=500, detail="Cloud save failed (all providers)")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/cloud/load")
-async def cloud_load():
-    """Load AI state from Wolfram Cloud (preview)"""
+async def cloud_load_endpoint():
+    """Load AI state from cloud (preview)"""
     try:
-        from wolfram_cloud import cloud_load as _cloud_load
-        data = _cloud_load()
+        from cloud_provider import get_cloud_registry
+        registry = get_cloud_registry()
+        data = registry.load('QuantumMCAGI/state')
         if not data:
             raise HTTPException(status_code=404, detail="No data found in cloud")
         return {"status": "retrieved", "data": data}
@@ -1280,18 +1287,17 @@ async def cloud_load():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/cloud/restore")
-async def cloud_restore():
-    """Restore AI state from Wolfram Cloud (overwrites local concepts)"""
+async def cloud_restore_endpoint():
+    """Restore AI state from cloud (upserts concepts into DB)"""
     try:
-        from wolfram_cloud import cloud_load as _cloud_load
-        data = _cloud_load()
+        from cloud_provider import get_cloud_registry
+        registry = get_cloud_registry()
+        data = registry.load('QuantumMCAGI/state')
         if not data:
             raise HTTPException(status_code=404, detail="No data in cloud")
-        # Expect data to be a dict with 'concepts' and 'growth'
         if isinstance(data, str):
             data = json.loads(data)
         concepts = data.get("concepts", {})
-        # Upsert concepts into semantic_memory
         for name, attrs in concepts.items():
             doc = {"concept": name}
             doc.update(attrs)
@@ -1300,7 +1306,6 @@ async def cloud_restore():
                 {"$set": doc},
                 upsert=True
             )
-        # Note: we do not overwrite growth_metrics events; those are append-only.
         return {"status": "restored", "concepts_restored": len(concepts)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

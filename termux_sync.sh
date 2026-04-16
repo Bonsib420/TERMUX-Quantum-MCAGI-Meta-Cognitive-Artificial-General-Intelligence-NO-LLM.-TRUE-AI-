@@ -1,18 +1,25 @@
 #!/data/data/com.termux/files/usr/bin/bash
 # ============================================================================
-# 🔮 QUANTUM MCAGI — TERMUX ↔ GITHUB SYNC
+# 🔮 QUANTUM MCAGI — TERMUX → GITHUB SYNC
 # ============================================================================
-# Bidirectional sync between Termux and GitHub using git.
-# Replaces rclone/Google Drive — works anywhere git works.
+# Push ALL local state (code + brain data) to GitHub in one command.
+# Brain data from ~/.quantum-mcagi/ is bundled into brain-data/ automatically.
 #
 # USAGE:
 #   bash termux_sync.sh              # Interactive menu
-#   bash termux_sync.sh push         # Push local changes to GitHub
+#   bash termux_sync.sh push         # Push EVERYTHING (code + brain) to GitHub
 #   bash termux_sync.sh pull         # Pull latest from GitHub
 #   bash termux_sync.sh status       # Show sync status
 #   bash termux_sync.sh backup       # Create local backup before sync
-#   bash termux_sync.sh brain-push   # Push brain data (concepts, markov states)
-#   bash termux_sync.sh brain-pull   # Pull brain data from GitHub
+#   bash termux_sync.sh brain-push   # Push ONLY brain data to GitHub
+#   bash termux_sync.sh brain-pull   # Pull brain data from GitHub → ~/.quantum-mcagi/
+#
+# WHAT GETS PUSHED (on `push`):
+#   Code:  All .py files, scripts, configs in the repo
+#   Brain: concepts.json, growth.json, conversations.json, session_state.json,
+#          orch_or_state.json, engine_state/markov_chain.json,
+#          engine_state/corpus_stats.json, engine_state/engine_state.json,
+#          + any other JSON/txt in ~/.quantum-mcagi/ and subdirectories
 #
 # FIRST-TIME SETUP (run once):
 #   1. Install git:  pkg install git
@@ -172,9 +179,56 @@ do_push() {
     check_repo
     ensure_gitignore
 
-    echo -e "${CYAN}Preparing to push local changes to GitHub...${NC}"
+    echo -e "${CYAN}Preparing to push ALL local state to GitHub...${NC}"
 
-    # Stage all changes (respects .gitignore)
+    # ── Step 1: Bundle brain data into repo so it gets pushed too ─────────
+    if [ -d "$DATA_DIR" ]; then
+        echo -e "  ${BOLD}Bundling brain data from $DATA_DIR ...${NC}"
+        local brain_export="$INSTALL_DIR/brain-data"
+        mkdir -p "$brain_export"
+
+        local brain_count=0
+        # Top-level JSON + txt
+        for f in "$DATA_DIR"/*.json "$DATA_DIR"/*.txt; do
+            [ -f "$f" ] && cp "$f" "$brain_export/" && brain_count=$((brain_count + 1))
+        done
+        # engine_state/ (Markov chain, corpus stats)
+        if [ -d "$DATA_DIR/engine_state" ]; then
+            mkdir -p "$brain_export/engine_state"
+            for f in "$DATA_DIR/engine_state"/*.json; do
+                [ -f "$f" ] && cp "$f" "$brain_export/engine_state/" && brain_count=$((brain_count + 1))
+            done
+        fi
+        # Any subdirectories with JSON (hilbert, qram, etc.)
+        find "$DATA_DIR" -mindepth 2 -name "*.json" -not -path "*/engine_state/*" | while read -r f; do
+            local rel_dir
+            rel_dir=$(dirname "${f#$DATA_DIR/}")
+            mkdir -p "$brain_export/$rel_dir"
+            cp "$f" "$brain_export/$rel_dir/"
+        done
+
+        if [ "$brain_count" -gt 0 ]; then
+            echo -e "  ${GREEN}✓ Bundled $brain_count brain data files${NC}"
+            # Show key stats
+            if [ -f "$brain_export/concepts.json" ]; then
+                local cc
+                cc=$(python -c "import json; print(len(json.load(open('$brain_export/concepts.json'))))" 2>/dev/null || echo "?")
+                echo -e "    Concepts: $cc"
+            fi
+            if [ -f "$brain_export/engine_state/markov_chain.json" ]; then
+                local cs
+                cs=$(du -sh "$brain_export/engine_state/markov_chain.json" 2>/dev/null | awk '{print $1}')
+                echo -e "    Markov chain: $cs"
+            fi
+            if [ -f "$brain_export/growth.json" ]; then
+                local stage
+                stage=$(python -c "import json; g=json.load(open('$brain_export/growth.json')); print(f\"Stage {g.get('stage',0)} ({g.get('name','?')})\")" 2>/dev/null || echo "?")
+                echo -e "    Growth: $stage"
+            fi
+        fi
+    fi
+
+    # ── Step 2: Stage all changes (code + brain data; respects .gitignore) ─
     git add -A
 
     # Check if there's anything to commit
@@ -345,29 +399,62 @@ do_brain_push() {
     local brain_export="$INSTALL_DIR/brain-data"
     mkdir -p "$brain_export"
 
-    # Copy brain state files
+    # Copy ALL brain state files (top-level JSON + txt)
     local file_count=0
-    for f in "$DATA_DIR"/*.json "$DATA_DIR"/*.txt "$DATA_DIR"/markov_*.json; do
+    for f in "$DATA_DIR"/*.json "$DATA_DIR"/*.txt; do
         if [ -f "$f" ]; then
             cp "$f" "$brain_export/"
             file_count=$((file_count + 1))
         fi
     done
 
+    # Copy engine_state/ subdirectory (Markov chain, corpus stats, engine metadata)
+    if [ -d "$DATA_DIR/engine_state" ]; then
+        mkdir -p "$brain_export/engine_state"
+        for f in "$DATA_DIR/engine_state"/*.json; do
+            if [ -f "$f" ]; then
+                cp "$f" "$brain_export/engine_state/"
+                file_count=$((file_count + 1))
+            fi
+        done
+        echo -e "  Copied engine_state/ (Markov chain + corpus stats)"
+    fi
+
+    # Copy orch_or state if present
+    if [ -f "$DATA_DIR/orch_or_state.json" ]; then
+        cp "$DATA_DIR/orch_or_state.json" "$brain_export/"
+    fi
+
     if [ "$file_count" -eq 0 ]; then
         echo -e "${YELLOW}  No brain data files found to push${NC}"
         return 0
     fi
 
-    # Add to .gitignore note
+    # Summary of what's included
+    echo -e "  Files collected: $file_count"
+    if [ -f "$brain_export/concepts.json" ]; then
+        local concept_count
+        concept_count=$(python -c "import json; print(len(json.load(open('$brain_export/concepts.json'))))" 2>/dev/null || echo "?")
+        echo -e "  Concepts: $concept_count"
+    fi
+    if [ -f "$brain_export/engine_state/markov_chain.json" ]; then
+        local chain_size
+        chain_size=$(du -sh "$brain_export/engine_state/markov_chain.json" 2>/dev/null | awk '{print $1}')
+        echo -e "  Markov chain: $chain_size"
+    fi
+
     cat > "$brain_export/README.md" << 'EOF'
 # 🧠 Brain Data Export
 
 Exported from Termux Quantum MCAGI. Contains:
 - `concepts.json` — Concept graph (nodes + edges)
-- `markov_*.json` — Markov chain transition states
 - `growth.json` — Growth stage metrics
-- `conversations.json` — Conversation memory
+- `conversations.json` — Conversation memory (last 500)
+- `session_state.json` — Session tracking
+- `orch_or_state.json` — Orch-OR conscious moments
+- `engine_state/markov_chain.json` — Full Markov chain (states + transitions)
+- `engine_state/corpus_stats.json` — TF-IDF corpus statistics
+- `engine_state/engine_state.json` — Engine metadata
 
 **Import on another device:**
 ```bash
@@ -410,6 +497,8 @@ do_brain_pull() {
     mkdir -p "$DATA_DIR"
 
     local file_count=0
+
+    # Copy top-level files
     for f in "$brain_export"/*.json "$brain_export"/*.txt; do
         if [ -f "$f" ]; then
             local basename
@@ -424,7 +513,34 @@ do_brain_pull() {
         fi
     done
 
+    # Copy engine_state/ subdirectory (Markov chain, corpus stats)
+    if [ -d "$brain_export/engine_state" ]; then
+        mkdir -p "$DATA_DIR/engine_state"
+        for f in "$brain_export/engine_state"/*.json; do
+            if [ -f "$f" ]; then
+                local basename
+                basename=$(basename "$f")
+                if [ -f "$DATA_DIR/engine_state/$basename" ]; then
+                    echo -e "  ${YELLOW}⚠ engine_state/$basename exists locally. Overwrite? (y/N)${NC}"
+                    read -r answer
+                    [ "$answer" != "y" ] && [ "$answer" != "Y" ] && continue
+                fi
+                cp "$f" "$DATA_DIR/engine_state/"
+                file_count=$((file_count + 1))
+            fi
+        done
+    fi
+
+    # Copy any other subdirectories (hilbert, qram, etc.)
+    find "$brain_export" -mindepth 2 -name "*.json" -not -path "*/engine_state/*" 2>/dev/null | while read -r f; do
+        local rel_path="${f#$brain_export/}"
+        local target_dir="$DATA_DIR/$(dirname "$rel_path")"
+        mkdir -p "$target_dir"
+        cp "$f" "$target_dir/"
+    done
+
     echo -e "${GREEN}  ✓ Brain data imported ($file_count files → $DATA_DIR)${NC}"
+    echo -e "  Restart chat to load the new brain state."
 }
 
 # ============================================================================

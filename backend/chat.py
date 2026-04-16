@@ -23,10 +23,10 @@ Commands:
     /feed [CAT]   - Batch-fetch URLs from research_feeds.json (or /feed all)
     /export       - Export full conversation as markdown (file + terminal)
     /copy-last    - Print last AI response in a bordered box for easy copy
-    /cloud-save   - Save state to Wolfram Cloud
-    /cloud-load   - Load & merge concepts/growth from Wolfram Cloud
+    /cloud-save   - Save ALL state to cloud (Google Drive via rclone + local)
+    /cloud-load   - Load & merge ALL state from cloud (concepts, Markov, growth)
     /cloud-pull   - Pull full brain snapshot from all cloud providers
-    /cloud-status - Show Wolfram Cloud status
+    /cloud-status - Show cloud provider status
     /rclone-setup - Check rclone installation and Google Drive connection
     /rclone-status- Show what's stored on Google Drive via rclone
     /quit         - Save and exit
@@ -60,12 +60,6 @@ try:
     HAS_RESEARCH = True
 except ImportError:
     HAS_RESEARCH = False
-
-try:
-    from wolfram_cloud import cloud_save, cloud_load, cloud_status
-    HAS_CLOUD = True
-except ImportError:
-    HAS_CLOUD = False
 
 try:
     from rclone_provider import rclone_check, rclone_save, rclone_load, rclone_list, _rclone_available
@@ -1099,75 +1093,168 @@ def run_chat(verbose=False):
                 print()
                 continue
             elif cmd[0] == '/cloud-save':
-                if HAS_CLOUD:
-                    print("  Saving to Wolfram Cloud...")
-                    result = cloud_save(memory)
-                    print(f"  {result}")
-                else:
-                    print("  Wolfram Cloud not available.")
+                # Save ALL state to cloud via registry (Rclone → Google Drive + Local)
+                print("  Saving ALL state to cloud...")
+                try:
+                    from cloud_provider import get_cloud_registry
+                    registry = get_cloud_registry()
+
+                    # 1. Core state: concepts, growth, session
+                    from datetime import datetime, timezone
+                    state_data = {
+                        'saved_at': datetime.now(timezone.utc).isoformat(),
+                        'concepts': memory.concepts,
+                        'growth': memory.growth,
+                        'session_state': memory.session_state,
+                    }
+                    ok1 = registry.save('QuantumMCAGI/state', state_data)
+                    print(f"  {'✓' if ok1 else '✗'} State: {len(memory.concepts)} concepts, stage {memory.growth.get('stage', 0)}")
+
+                    # 2. Conversations (last 500)
+                    ok2 = registry.save('QuantumMCAGI/conversations', {
+                        'saved_at': datetime.now(timezone.utc).isoformat(),
+                        'conversations': memory.conversations[-500:],
+                    })
+                    print(f"  {'✓' if ok2 else '✗'} Conversations: {len(memory.conversations[-500:])} exchanges")
+
+                    # 3. Markov chain + corpus stats
+                    markov_data = {
+                        'saved_at': datetime.now(timezone.utc).isoformat(),
+                        'order': engine.markov.order,
+                        'chain': {' '.join(k): dict(v) for k, v in engine.markov.chain.items()},
+                        'starters': [' '.join(s) for s in engine.markov.starters],
+                        'total_tokens': engine.markov.total_tokens,
+                    }
+                    ok3 = registry.save('QuantumMCAGI/markov_chain', markov_data)
+                    print(f"  {'✓' if ok3 else '✗'} Markov chain: {len(engine.markov.chain)} states, {engine.markov.total_tokens} transitions")
+
+                    # 4. Corpus stats (TF-IDF)
+                    corpus_data = {
+                        'saved_at': datetime.now(timezone.utc).isoformat(),
+                        'doc_freq': dict(engine.extractor.document_frequencies),
+                        'word_freq': dict(engine.extractor.word_frequencies),
+                        'total_docs': engine.extractor.total_documents,
+                        'total_words': engine.extractor.total_words,
+                    }
+                    ok4 = registry.save('QuantumMCAGI/corpus_stats', corpus_data)
+                    print(f"  {'✓' if ok4 else '✗'} Corpus: {engine.extractor.total_documents} docs, {engine.extractor.total_words} words")
+
+                    # 5. Orch-OR state
+                    if getattr(engine, '_has_orch_or', False) and engine.orch_or:
+                        ok5 = registry.save('QuantumMCAGI/orch_or', {
+                            'saved_at': datetime.now(timezone.utc).isoformat(),
+                            'conscious_moments': engine.orch_or.total_moments,
+                        })
+                        print(f"  {'✓' if ok5 else '✗'} Orch-OR: {engine.orch_or.total_moments} moments")
+
+                    # Summary
+                    providers = registry.status()
+                    names = [p.get('provider', '?') for p in providers.get('providers', [])]
+                    print(f"  ──────────────────────────────")
+                    print(f"  Saved to: {', '.join(names)}")
+                except ImportError:
+                    print("  Cloud provider module not available.")
+                except Exception as e:
+                    print(f"  Cloud save error: {e}")
                 continue
             elif cmd[0] == '/cloud-status':
-                if HAS_CLOUD:
-                    print(f"  {cloud_status()}")
-                else:
-                    print("  Wolfram Cloud not available.")
+                # Show status of all cloud providers
+                try:
+                    from cloud_provider import get_cloud_registry
+                    registry = get_cloud_registry()
+                    status = registry.status()
+                    print(f"  Cloud providers ({status['total_providers']}):")
+                    for p in status.get('providers', []):
+                        connected = '✓' if p.get('connected') else '✗'
+                        print(f"    {connected} {p.get('provider', '?')}")
+                        if p.get('objects'):
+                            print(f"      Objects: {p['objects']}")
+                        if p.get('error'):
+                            print(f"      Error: {p['error']}")
+                        if p.get('base_dir'):
+                            print(f"      Path: {p['base_dir']}")
+                except ImportError:
+                    print("  Cloud provider module not available.")
                 continue
             elif cmd[0] == '/cloud-load':
-                if HAS_CLOUD:
-                    print("  Loading from Wolfram Cloud (QuantumMCAGI/state)...")
-                    data = cloud_load()
-                    if data and isinstance(data, dict):
-                        # Merge concepts
-                        cloud_concepts = data.get("concepts", {})
+                # Load ALL state from cloud via registry
+                print("  Loading state from cloud...")
+                try:
+                    from cloud_provider import get_cloud_registry
+                    registry = get_cloud_registry()
+
+                    # 1. Load core state
+                    state_data = registry.load('QuantumMCAGI/state')
+                    if state_data and isinstance(state_data, dict):
+                        cloud_concepts = state_data.get("concepts", {})
                         merged_concepts = 0
                         for name, attrs in cloud_concepts.items():
                             if name not in memory.concepts:
                                 memory.concepts[name] = attrs
                                 merged_concepts += 1
                             else:
-                                # Merge relationships
                                 existing_rels = set(tuple(r) if isinstance(r, list) else r for r in memory.concepts[name].get("relationships", []))
                                 for rel in attrs.get("relationships", []):
                                     key = tuple(rel) if isinstance(rel, list) else rel
                                     if key not in existing_rels:
                                         memory.concepts[name]["relationships"].append(rel)
                                         merged_concepts += 1
-                        # Merge growth stats (take higher values)
-                        cloud_growth = data.get("growth", {})
+                        cloud_growth = state_data.get("growth", {})
                         for key in ("total_interactions", "total_concepts", "total_connections", "total_questions_asked", "total_insights"):
                             if cloud_growth.get(key, 0) > memory.growth.get(key, 0):
                                 memory.growth[key] = cloud_growth[key]
-                        print(f"  ✓ Merged {merged_concepts} concepts from cloud")
-                        print(f"  ✓ Concepts now: {len(memory.concepts)}")
-                        save_everything(memory, engine, state_dir)
-                    elif data:
-                        print(f"  Cloud returned: {str(data)[:200]}")
+                        print(f"  ✓ Merged {merged_concepts} concepts (total: {len(memory.concepts)})")
                     else:
-                        print("  No data found in cloud.")
-                else:
-                    print("  Wolfram Cloud not available.")
+                        print("  No state data found in cloud.")
+
+                    # 2. Load Markov chain
+                    markov_data = registry.load('QuantumMCAGI/markov_chain')
+                    if markov_data and isinstance(markov_data, dict) and 'chain' in markov_data:
+                        from collections import Counter, defaultdict
+                        cloud_chain_size = len(markov_data.get('chain', {}))
+                        local_chain_size = len(engine.markov.chain)
+                        if cloud_chain_size > local_chain_size:
+                            engine.markov.order = markov_data['order']
+                            engine.markov.chain = defaultdict(Counter)
+                            for k, v in markov_data['chain'].items():
+                                engine.markov.chain[tuple(k.split())] = Counter(v)
+                            engine.markov.starters = [tuple(s.split()) for s in markov_data.get('starters', [])]
+                            engine.markov.total_tokens = markov_data.get('total_tokens', 0)
+                            engine.markov.trained = len(engine.markov.chain) > 0
+                            print(f"  ✓ Markov chain loaded: {cloud_chain_size} states (was {local_chain_size})")
+                        else:
+                            print(f"  ○ Markov chain: local ({local_chain_size}) >= cloud ({cloud_chain_size}), keeping local")
+                    else:
+                        print("  No Markov chain data in cloud.")
+
+                    # 3. Load corpus stats
+                    corpus_data = registry.load('QuantumMCAGI/corpus_stats')
+                    if corpus_data and isinstance(corpus_data, dict):
+                        from collections import Counter
+                        if corpus_data.get('total_words', 0) > engine.extractor.total_words:
+                            engine.extractor.document_frequencies = Counter(corpus_data.get('doc_freq', {}))
+                            engine.extractor.word_frequencies = Counter(corpus_data.get('word_freq', {}))
+                            engine.extractor.total_documents = corpus_data.get('total_docs', 0)
+                            engine.extractor.total_words = corpus_data.get('total_words', 0)
+                            print(f"  ✓ Corpus loaded: {engine.extractor.total_documents} docs, {engine.extractor.total_words} words")
+                        else:
+                            print(f"  ○ Corpus: local >= cloud, keeping local")
+
+                    save_everything(memory, engine, state_dir)
+                    print(f"  ✓ All state saved to disk.")
+                except ImportError:
+                    print("  Cloud provider module not available.")
+                except Exception as e:
+                    print(f"  Cloud load error: {e}")
                 continue
             elif cmd[0] == '/cloud-pull':
-                # Pull full brain snapshot via CloudProviderRegistry
+                # Pull everything from cloud (same as /cloud-load but also shows listing)
                 print("  Pulling brain state from cloud providers...")
-                pulled = False
                 try:
                     from cloud_provider import get_cloud_registry
                     registry = get_cloud_registry()
-                    # Pull QuantumMCAGI/brain (full brain snapshot from dream sync)
-                    brain = registry.load('QuantumMCAGI/brain')
-                    if brain and isinstance(brain, dict):
-                        print(f"  ✓ Brain snapshot: v{brain.get('version', '?')} saved at {brain.get('saved_at', '?')}")
-                        gs = brain.get('growth_stats', {})
-                        if gs:
-                            print(f"    Growth stats: {len(gs)} fields")
-                        ds = brain.get('dream_state', {})
-                        if ds:
-                            print(f"    Dreams: {ds.get('total_dreams', 0)}, Insights: {ds.get('total_insights', 0)}")
-                        pulled = True
-                    else:
-                        print("  No brain snapshot found in cloud.")
-                    # Pull QuantumMCAGI/state (core memory: concepts, growth)
+
+                    # Pull state
                     state_data = registry.load('QuantumMCAGI/state')
                     if state_data and isinstance(state_data, dict):
                         cloud_concepts = state_data.get("concepts", {})
@@ -1182,9 +1269,20 @@ def run_chat(verbose=False):
                                 memory.growth[key] = cloud_growth[key]
                         print(f"  ✓ State: merged {merged} new concepts (total: {len(memory.concepts)})")
                         save_everything(memory, engine, state_dir)
-                        pulled = True
-                    elif not pulled:
+                    else:
                         print("  No state data found in cloud.")
+
+                    # Pull brain snapshot (dream sync data)
+                    brain = registry.load('QuantumMCAGI/brain')
+                    if brain and isinstance(brain, dict):
+                        print(f"  ✓ Brain snapshot: v{brain.get('version', '?')} saved at {brain.get('saved_at', '?')}")
+                        gs = brain.get('growth_stats', {})
+                        if gs:
+                            print(f"    Growth stats: {len(gs)} fields")
+                        ds = brain.get('dream_state', {})
+                        if ds:
+                            print(f"    Dreams: {ds.get('total_dreams', 0)}, Insights: {ds.get('total_insights', 0)}")
+
                     # List what's available
                     objects = registry.list_objects('QuantumMCAGI/')
                     if objects:
@@ -1194,16 +1292,7 @@ def run_chat(verbose=False):
                         if len(objects) > 15:
                             print(f"    ... and {len(objects) - 15} more")
                 except ImportError:
-                    # Fallback to direct Wolfram Cloud
-                    if HAS_CLOUD:
-                        print("  Falling back to direct Wolfram Cloud...")
-                        data = cloud_load()
-                        if data:
-                            print(f"  ✓ Got state: {list(data.keys()) if isinstance(data, dict) else type(data).__name__}")
-                        else:
-                            print("  No data found.")
-                    else:
-                        print("  No cloud providers available.")
+                    print("  No cloud providers available.")
                 continue
             elif cmd[0] == '/rclone-setup':
                 if HAS_RCLONE:
