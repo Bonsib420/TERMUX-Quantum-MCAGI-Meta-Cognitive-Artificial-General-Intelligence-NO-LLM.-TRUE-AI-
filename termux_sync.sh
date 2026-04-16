@@ -200,12 +200,13 @@ do_push() {
             done
         fi
         # Any subdirectories with JSON (hilbert, qram, etc.)
-        find "$DATA_DIR" -mindepth 2 -name "*.json" -not -path "*/engine_state/*" | while read -r f; do
+        while IFS= read -r f; do
             local rel_dir
             rel_dir=$(dirname "${f#$DATA_DIR/}")
             mkdir -p "$brain_export/$rel_dir"
             cp "$f" "$brain_export/$rel_dir/"
-        done
+            brain_count=$((brain_count + 1))
+        done < <(find "$DATA_DIR" -mindepth 2 -name "*.json" -not -path "*/engine_state/*" 2>/dev/null)
 
         if [ "$brain_count" -gt 0 ]; then
             echo -e "  ${GREEN}✓ Bundled $brain_count brain data files${NC}"
@@ -532,12 +533,13 @@ do_brain_pull() {
     fi
 
     # Copy any other subdirectories (hilbert, qram, etc.)
-    find "$brain_export" -mindepth 2 -name "*.json" -not -path "*/engine_state/*" 2>/dev/null | while read -r f; do
+    while IFS= read -r f; do
         local rel_path="${f#$brain_export/}"
         local target_dir="$DATA_DIR/$(dirname "$rel_path")"
         mkdir -p "$target_dir"
         cp "$f" "$target_dir/"
-    done
+        file_count=$((file_count + 1))
+    done < <(find "$brain_export" -mindepth 2 -name "*.json" -not -path "*/engine_state/*" 2>/dev/null)
 
     echo -e "${GREEN}  ✓ Brain data imported ($file_count files → $DATA_DIR)${NC}"
     echo -e "  Restart chat to load the new brain state."
