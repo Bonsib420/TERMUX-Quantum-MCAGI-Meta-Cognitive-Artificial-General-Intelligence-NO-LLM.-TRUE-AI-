@@ -70,82 +70,9 @@ class CloudProvider(ABC):
         ...
 
 
-# ── Wolfram Cloud implementation ─────────────────────────────────────────────
-
-class WolframCloudProvider(CloudProvider):
-    """
-    Wolfram Cloud storage via wolframclient.
-    Wraps the existing wolfram_cloud.py functions.
-    """
-
-    @property
-    def name(self) -> str:
-        return "Wolfram Cloud"
-
-    def _get_session(self):
-        from wolfram_cloud import get_cloud_session
-        return get_cloud_session()
-
-    def save(self, path: str, data: dict) -> bool:
-        try:
-            from wolframclient.language import wl
-            from wolfram_cloud import _serialize_dates
-            session = self._get_session()
-            serialized = _serialize_dates(data)
-            session.evaluate(wl.CloudPut(json.dumps(serialized), path))
-            session.stop()
-            return True
-        except Exception as e:
-            logger.warning(f"[WolframCloud] save({path}) failed: {e}")
-            return False
-
-    def load(self, path: str) -> Optional[dict]:
-        try:
-            from wolframclient.language import wl
-            session = self._get_session()
-            raw = session.evaluate(wl.CloudGet(path))
-            session.stop()
-            if raw:
-                return json.loads(raw)
-        except Exception as e:
-            logger.warning(f"[WolframCloud] load({path}) failed: {e}")
-        return None
-
-    def list_objects(self, prefix: str) -> List[str]:
-        try:
-            from wolframclient.language import wl
-            session = self._get_session()
-            objects = session.evaluate(wl.CloudObjects(f'{prefix}*'))
-            session.stop()
-            if isinstance(objects, (list, tuple)):
-                return [str(o) for o in objects]
-            return [str(objects)] if objects else []
-        except Exception as e:
-            logger.warning(f"[WolframCloud] list({prefix}) failed: {e}")
-            return []
-
-    def delete(self, path: str) -> bool:
-        try:
-            from wolframclient.language import wl
-            session = self._get_session()
-            session.evaluate(wl.DeleteObject(wl.CloudObject(path)))
-            session.stop()
-            return True
-        except Exception as e:
-            logger.warning(f"[WolframCloud] delete({path}) failed: {e}")
-            return False
-
-    def status(self) -> Dict[str, Any]:
-        try:
-            objects = self.list_objects('QuantumMCAGI/')
-            return {
-                'provider': self.name,
-                'connected': True,
-                'objects': len(objects),
-                'paths': objects[:20],
-            }
-        except Exception as e:
-            return {'provider': self.name, 'connected': False, 'error': str(e)}
+# ── Rclone (Google Drive) implementation ─────────────────────────────────────
+# See rclone_provider.py for the full implementation.
+# RcloneProvider is registered dynamically in get_cloud_registry() below.
 
 
 # ── Local filesystem fallback ────────────────────────────────────────────────
@@ -385,7 +312,7 @@ _cloud_registry = None
 def get_cloud_registry() -> CloudProviderRegistry:
     """
     Get or create the global cloud provider registry.
-    Initializes with local storage (always available) + Wolfram Cloud (if configured).
+    Initializes with Rclone (Google Drive, if available) + local storage (always available).
     """
     global _cloud_registry
     if _cloud_registry is None:
@@ -394,22 +321,17 @@ def get_cloud_registry() -> CloudProviderRegistry:
         # Local storage is always available (zero-dependency fallback)
         _cloud_registry.register(LocalProvider())
 
-        # Try to add Wolfram Cloud
-        try:
-            _cloud_registry.register(WolframCloudProvider(), primary=True)
-            logger.info("☁️ Cloud registry: Wolfram Cloud + Local Storage")
-        except Exception:
-            logger.info("☁️ Cloud registry: Local Storage only (Wolfram unavailable)")
-
-        # Try to add Rclone (Google Drive)
+        # Try to add Rclone (Google Drive) as primary
         try:
             from rclone_provider import RcloneProvider as _RcloneProvider, _rclone_available
             if _RcloneProvider is not None and _rclone_available():
-                _cloud_registry.register(_RcloneProvider())
-                logger.info("☁️ Cloud registry: + Rclone (Google Drive)")
+                _cloud_registry.register(_RcloneProvider(), primary=True)
+                logger.info("☁️ Cloud registry: Rclone (Google Drive) + Local Storage")
+            else:
+                logger.info("☁️ Cloud registry: Local Storage only (rclone not installed)")
         except ImportError:
-            pass
+            logger.info("☁️ Cloud registry: Local Storage only (rclone_provider not found)")
         except Exception:
-            logger.info("☁️ Cloud registry: Rclone not available")
+            logger.info("☁️ Cloud registry: Local Storage only (rclone init error)")
 
     return _cloud_registry

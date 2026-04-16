@@ -97,11 +97,19 @@ async def _handle_command(content: str, explain_mode: bool = False) -> Optional[
             response_text = "State automatically saved to local storage."
         elif cmd in ('/cloud-save', '/cloud-status', '/cloud-load'):
             try:
-                from wolfram_cloud import cloud_save, cloud_status, cloud_load
-                # But these functions expect LocalMemory object; server uses different storage.
-                response_text = f"Wolfram Cloud command '{cmd}' is only available in local chat mode (chat.py)."
+                from cloud_provider import get_cloud_registry
+                registry = get_cloud_registry()
+                if cmd == '/cloud-status':
+                    status = registry.status()
+                    lines = [f"Cloud providers ({status['total_providers']}):"]
+                    for p in status.get('providers', []):
+                        connected = '✓' if p.get('connected') else '✗'
+                        lines.append(f"  {connected} {p.get('provider', '?')}")
+                    response_text = "\n".join(lines)
+                else:
+                    response_text = f"Cloud command '{cmd}' is available in local chat mode (chat.py). Use API endpoints /cloud/save or /cloud/load for server mode."
             except ImportError:
-                response_text = "Wolfram Cloud not available."
+                response_text = "Cloud provider module not available."
         elif cmd in ('/rclone-setup', '/rclone-status'):
             try:
                 from rclone_provider import rclone_check, rclone_list, _rclone_available
