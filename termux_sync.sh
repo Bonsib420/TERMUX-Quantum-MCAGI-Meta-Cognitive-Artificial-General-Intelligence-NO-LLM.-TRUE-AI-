@@ -1,6 +1,6 @@
 #!/data/data/com.termux/files/usr/bin/bash
 # ============================================================================
-# 🔮 QUANTUM MCAGI — TERMUX → GITHUB SYNC
+# 🔮 QUANTUM MCAGI -- TERMUX -> GITHUB SYNC
 # ============================================================================
 # Push ALL local state (code + brain data) to GitHub in one command.
 # Brain data from ~/.quantum-mcagi/ is bundled into brain-data/ automatically.
@@ -12,7 +12,7 @@
 #   bash termux_sync.sh status       # Show sync status
 #   bash termux_sync.sh backup       # Create local backup before sync
 #   bash termux_sync.sh brain-push   # Push ONLY brain data to GitHub
-#   bash termux_sync.sh brain-pull   # Pull brain data from GitHub → ~/.quantum-mcagi/
+#   bash termux_sync.sh brain-pull   # Pull brain data from GitHub -> ~/.quantum-mcagi/
 #
 # WHAT GETS PUSHED (on `push`):
 #   Code:  All .py files, scripts, configs in the repo
@@ -54,7 +54,7 @@ BRAIN_BRANCH="brain-data"
 banner() {
     echo -e "${MAGENTA}${BOLD}"
     echo "  ╔══════════════════════════════════════════════════╗"
-    echo "  ║  🔮 QUANTUM MCAGI — TERMUX ↔ GITHUB SYNC       ║"
+    echo "  ║  🔮 QUANTUM MCAGI -- TERMUX <-> GITHUB SYNC       ║"
     echo "  ╚══════════════════════════════════════════════════╝"
     echo -e "${NC}"
 }
@@ -173,7 +173,7 @@ sync_status() {
 }
 
 # ============================================================================
-# PUSH — Commit and push local changes to GitHub
+# PUSH -- Commit and push local changes to GitHub
 # ============================================================================
 do_push() {
     check_repo
@@ -300,7 +300,7 @@ do_push() {
 }
 
 # ============================================================================
-# PULL — Pull latest from GitHub
+# PULL -- Pull latest from GitHub
 # ============================================================================
 do_pull() {
     check_repo
@@ -323,7 +323,7 @@ do_pull() {
         echo -e "${YELLOW}  Fast-forward failed, trying merge...${NC}"
         git pull origin "$branch" --no-rebase && \
             echo -e "${GREEN}  ✓ Merged from GitHub${NC}" || {
-            echo -e "${RED}  ✗ Pull failed — conflicts detected${NC}"
+            echo -e "${RED}  ✗ Pull failed -- conflicts detected${NC}"
             echo -e "  Run: git status   to see conflicts"
             echo -e "  Fix conflicts, then: git add . && git commit"
             # Restore stash even on failure
@@ -346,7 +346,7 @@ do_pull() {
 }
 
 # ============================================================================
-# BACKUP — Create timestamped local backup before sync
+# BACKUP -- Create timestamped local backup before sync
 # ============================================================================
 do_backup() {
     check_repo
@@ -383,7 +383,7 @@ do_backup() {
 }
 
 # ============================================================================
-# BRAIN-PUSH — Push brain state (concepts, markov, growth) to a data branch
+# BRAIN-PUSH -- Push brain state (concepts, markov, growth) to a data branch
 # ============================================================================
 do_brain_push() {
     check_repo
@@ -448,14 +448,14 @@ do_brain_push() {
 # 🧠 Brain Data Export
 
 Exported from Termux Quantum MCAGI. Contains:
-- `concepts.json` — Concept graph (nodes + edges)
-- `growth.json` — Growth stage metrics
-- `conversations.json` — Conversation memory (last 500)
-- `session_state.json` — Session tracking
-- `orch_or_state.json` — Orch-OR conscious moments
-- `engine_state/markov_chain.json` — Full Markov chain (states + transitions)
-- `engine_state/corpus_stats.json` — TF-IDF corpus statistics
-- `engine_state/engine_state.json` — Engine metadata
+- `concepts.json` -- Concept graph (nodes + edges)
+- `growth.json` -- Growth stage metrics
+- `conversations.json` -- Conversation memory (last 500)
+- `session_state.json` -- Session tracking
+- `orch_or_state.json` -- Orch-OR conscious moments
+- `engine_state/markov_chain.json` -- Full Markov chain (states + transitions)
+- `engine_state/corpus_stats.json` -- TF-IDF corpus statistics
+- `engine_state/engine_state.json` -- Engine metadata
 
 **Import on another device:**
 ```bash
@@ -473,11 +473,11 @@ EOF
     branch=$(git rev-parse --abbrev-ref HEAD)
     git push origin "$branch" && \
         echo -e "${GREEN}  ✓ Brain data pushed ($file_count files)${NC}" || \
-        echo -e "${RED}  ✗ Push failed — check auth${NC}"
+        echo -e "${RED}  ✗ Push failed -- check auth${NC}"
 }
 
 # ============================================================================
-# BRAIN-PULL — Pull brain state from GitHub
+# BRAIN-PULL -- Pull brain state from GitHub
 # ============================================================================
 do_brain_pull() {
     check_repo
@@ -541,7 +541,7 @@ do_brain_pull() {
         file_count=$((file_count + 1))
     done < <(find "$brain_export" -mindepth 2 -name "*.json" -not -path "*/engine_state/*" 2>/dev/null)
 
-    echo -e "${GREEN}  ✓ Brain data imported ($file_count files → $DATA_DIR)${NC}"
+    echo -e "${GREEN}  ✓ Brain data imported ($file_count files -> $DATA_DIR)${NC}"
     echo -e "  Restart chat to load the new brain state."
 }
 
@@ -552,12 +552,12 @@ interactive_menu() {
     banner
 
     echo -e "  ${BOLD}Commands:${NC}"
-    echo -e "    ${CYAN}1${NC}) ${BOLD}status${NC}      — Show sync status"
-    echo -e "    ${CYAN}2${NC}) ${BOLD}push${NC}        — Push local changes → GitHub"
-    echo -e "    ${CYAN}3${NC}) ${BOLD}pull${NC}        — Pull from GitHub → local"
-    echo -e "    ${CYAN}4${NC}) ${BOLD}backup${NC}      — Create local backup"
-    echo -e "    ${CYAN}5${NC}) ${BOLD}brain-push${NC}  — Push brain data → GitHub"
-    echo -e "    ${CYAN}6${NC}) ${BOLD}brain-pull${NC}  — Pull brain data ← GitHub"
+    echo -e "    ${CYAN}1${NC}) ${BOLD}status${NC}      -- Show sync status"
+    echo -e "    ${CYAN}2${NC}) ${BOLD}push${NC}        -- Push local changes -> GitHub"
+    echo -e "    ${CYAN}3${NC}) ${BOLD}pull${NC}        -- Pull from GitHub -> local"
+    echo -e "    ${CYAN}4${NC}) ${BOLD}backup${NC}      -- Create local backup"
+    echo -e "    ${CYAN}5${NC}) ${BOLD}brain-push${NC}  -- Push brain data -> GitHub"
+    echo -e "    ${CYAN}6${NC}) ${BOLD}brain-pull${NC}  -- Pull brain data <- GitHub"
     echo -e "    ${CYAN}q${NC}) ${BOLD}quit${NC}"
     echo ""
 
