@@ -286,17 +286,36 @@ do_push() {
     branch=$(git rev-parse --abbrev-ref HEAD)
     echo -e "${CYAN}  Pushing to origin/$branch...${NC}"
 
-    git push origin "$branch" && \
-        echo -e "${GREEN}  ✓ Pushed to GitHub successfully!${NC}" || {
-        echo -e "${RED}  ✗ Push failed.${NC}"
-        echo ""
-        echo -e "  ${BOLD}Troubleshooting:${NC}"
-        echo -e "  1. Set up a Personal Access Token (PAT):"
-        echo -e "     https://github.com/settings/tokens"
-        echo -e "  2. Update remote URL:"
-        echo -e "     git remote set-url origin https://TOKEN@github.com/Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-.git"
-        return 1
-    }
+    if git push origin "$branch" 2>&1; then
+        echo -e "${GREEN}  ✓ Pushed to GitHub successfully!${NC}"
+    else
+        # Check if it's a "fetch first" / diverged history issue
+        echo -e "${YELLOW}  Push rejected -- remote has newer commits.${NC}"
+        echo -e "${CYAN}  Pulling with rebase to integrate remote changes...${NC}"
+        if git pull --rebase origin "$branch"; then
+            echo -e "${GREEN}  ✓ Rebased on top of remote changes${NC}"
+            echo -e "${CYAN}  Retrying push...${NC}"
+            if git push origin "$branch"; then
+                echo -e "${GREEN}  ✓ Pushed to GitHub successfully!${NC}"
+            else
+                echo -e "${RED}  ✗ Push still failed after rebase.${NC}"
+                echo ""
+                echo -e "  ${BOLD}Troubleshooting:${NC}"
+                echo -e "  1. Set up a Personal Access Token (PAT):"
+                echo -e "     https://github.com/settings/tokens"
+                echo -e "  2. Update remote URL:"
+                echo -e "     git remote set-url origin https://TOKEN@github.com/Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-.git"
+                return 1
+            fi
+        else
+            echo -e "${RED}  ✗ Rebase failed -- conflicts detected.${NC}"
+            echo -e "  Fix conflicts, then run:"
+            echo -e "    git rebase --continue"
+            echo -e "    bash termux_sync.sh push"
+            echo -e "  Or abort with: git rebase --abort"
+            return 1
+        fi
+    fi
 }
 
 # ============================================================================
