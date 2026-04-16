@@ -150,6 +150,72 @@ ensure_gitignore() {
     fi
 }
 
+# Push current branch with automatic rebase + force-with-lease fallback
+push_with_fallback() {
+    local branch
+    branch=$(git rev-parse --abbrev-ref HEAD)
+
+    if git push origin "$branch" 2>&1; then
+        echo -e "${GREEN}  ✓ Pushed to GitHub successfully!${NC}"
+        return 0
+    fi
+
+    # Push rejected -- try rebase then re-push
+    echo -e "${YELLOW}  Push rejected -- remote has newer commits.${NC}"
+    echo -e "${CYAN}  Pulling with rebase to integrate remote changes...${NC}"
+
+    if git pull --rebase origin "$branch"; then
+        echo -e "${GREEN}  ✓ Rebased on top of remote changes${NC}"
+        echo -e "${CYAN}  Retrying push...${NC}"
+        if git push origin "$branch"; then
+            echo -e "${GREEN}  ✓ Pushed to GitHub successfully!${NC}"
+            return 0
+        fi
+        echo -e "${RED}  ✗ Push still failed after rebase.${NC}"
+        echo ""
+        echo -e "  ${BOLD}Troubleshooting:${NC}"
+        echo -e "  1. Set up a Personal Access Token (PAT):"
+        echo -e "     https://github.com/settings/tokens"
+        echo -e "  2. Update remote URL:"
+        echo -e "     git remote set-url origin https://TOKEN@github.com/Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-.git"
+        return 1
+    fi
+
+    # Rebase hit conflicts -- auto-resolve with local (Termux) as source of truth
+    echo -e "${YELLOW}  Rebase hit conflicts -- auto-resolving (Termux = source of truth)...${NC}"
+    # During rebase, --theirs = our local commits (counterintuitive Git naming)
+    local conflict_count=0
+    while IFS= read -r cfile; do
+        [ -z "$cfile" ] && continue
+        git checkout --theirs "$cfile" 2>/dev/null && git add "$cfile"
+        conflict_count=$((conflict_count + 1))
+    done < <(git diff --name-only --diff-filter=U 2>/dev/null)
+
+    if [ "$conflict_count" -gt 0 ]; then
+        echo -e "  ${GREEN}✓ Auto-resolved $conflict_count conflict(s) using local version${NC}"
+        if GIT_EDITOR=true git rebase --continue 2>/dev/null; then
+            echo -e "${CYAN}  Retrying push...${NC}"
+            if git push origin "$branch"; then
+                echo -e "${GREEN}  ✓ Pushed to GitHub successfully!${NC}"
+                return 0
+            fi
+        fi
+    fi
+
+    # Rebase continue failed or no conflicts detected -- abort and force push
+    echo -e "${YELLOW}  Aborting rebase and retrying with force-with-lease...${NC}"
+    git rebase --abort 2>/dev/null
+    if git push --force-with-lease origin "$branch"; then
+        echo -e "${GREEN}  ✓ Pushed to GitHub (force-with-lease)${NC}"
+        return 0
+    fi
+
+    echo -e "${RED}  ✗ Push failed.${NC}"
+    echo -e "  ${BOLD}Manual fix:${NC}"
+    echo -e "    git push --force origin $branch"
+    return 1
+}
+
 # Count of files that differ from remote
 sync_status() {
     check_repo
@@ -286,9 +352,7 @@ do_push() {
 
         if [ "$ahead" -gt 0 ]; then
             echo -e "${YELLOW}  $ahead unpushed commit(s) found. Pushing...${NC}"
-            git push origin "$branch" && \
-                echo -e "${GREEN}  ✓ Pushed $ahead commit(s) to GitHub${NC}" || \
-                echo -e "${RED}  ✗ Push failed. Check auth (see --help for PAT setup)${NC}"
+            push_with_fallback || true
         else
             echo -e "${GREEN}  ✓ Already in sync with GitHub${NC}"
         fi
@@ -327,77 +391,7 @@ do_push() {
     branch=$(git rev-parse --abbrev-ref HEAD)
     echo -e "${CYAN}  Pushing to origin/$branch...${NC}"
 
-    if git push origin "$branch" 2>&1; then
-        echo -e "${GREEN}  ✓ Pushed to GitHub successfully!${NC}"
-    else
-        # Check if it's a "fetch first" / diverged history issue
-        echo -e "${YELLOW}  Push rejected -- remote has newer commits.${NC}"
-        echo -e "${CYAN}  Pulling with rebase to integrate remote changes...${NC}"
-        if git pull --rebase origin "$branch"; then
-            echo -e "${GREEN}  ✓ Rebased on top of remote changes${NC}"
-            echo -e "${CYAN}  Retrying push...${NC}"
-            if git push origin "$branch"; then
-                echo -e "${GREEN}  ✓ Pushed to GitHub successfully!${NC}"
-            else
-                echo -e "${RED}  ✗ Push still failed after rebase.${NC}"
-                echo ""
-                echo -e "  ${BOLD}Troubleshooting:${NC}"
-                echo -e "  1. Set up a Personal Access Token (PAT):"
-                echo -e "     https://github.com/settings/tokens"
-                echo -e "  2. Update remote URL:"
-                echo -e "     git remote set-url origin https://TOKEN@github.com/Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-.git"
-                return 1
-            fi
-        else
-            echo -e "${YELLOW}  Rebase hit conflicts -- auto-resolving (Termux = source of truth)...${NC}"
-            # During rebase, --theirs = our local commits (counterintuitive Git naming)
-            local conflict_count=0
-            while IFS= read -r cfile; do
-                [ -z "$cfile" ] && continue
-                git checkout --theirs "$cfile" 2>/dev/null && git add "$cfile"
-                conflict_count=$((conflict_count + 1))
-            done < <(git diff --name-only --diff-filter=U 2>/dev/null)
-
-            if [ "$conflict_count" -gt 0 ]; then
-                echo -e "  ${GREEN}✓ Auto-resolved $conflict_count conflict(s) using local version${NC}"
-                if GIT_EDITOR=true git rebase --continue 2>/dev/null; then
-                    echo -e "${CYAN}  Retrying push...${NC}"
-                    if git push origin "$branch"; then
-                        echo -e "${GREEN}  ✓ Pushed to GitHub successfully!${NC}"
-                    else
-                        echo -e "${RED}  ✗ Push failed after conflict resolution.${NC}"
-                        echo -e "  Try: bash termux_sync.sh push"
-                        return 1
-                    fi
-                else
-                    # Rebase continue failed -- abort and force push
-                    echo -e "${YELLOW}  Rebase continue failed. Aborting rebase...${NC}"
-                    git rebase --abort 2>/dev/null
-                    echo -e "${CYAN}  Retrying push with force-with-lease...${NC}"
-                    if git push --force-with-lease origin "$branch"; then
-                        echo -e "${GREEN}  ✓ Pushed to GitHub (force-with-lease)${NC}"
-                    else
-                        echo -e "${RED}  ✗ Push failed.${NC}"
-                        echo -e "  ${BOLD}Manual fix:${NC}"
-                        echo -e "    git push --force origin $branch"
-                        return 1
-                    fi
-                fi
-            else
-                # No conflicts found but rebase still failed -- abort
-                echo -e "${YELLOW}  Aborting rebase and retrying with force-with-lease...${NC}"
-                git rebase --abort 2>/dev/null
-                if git push --force-with-lease origin "$branch"; then
-                    echo -e "${GREEN}  ✓ Pushed to GitHub (force-with-lease)${NC}"
-                else
-                    echo -e "${RED}  ✗ Push failed.${NC}"
-                    echo -e "  ${BOLD}Manual fix:${NC}"
-                    echo -e "    git push --force origin $branch"
-                    return 1
-                fi
-            fi
-        fi
-    fi
+    push_with_fallback || return 1
 }
 
 # ============================================================================
