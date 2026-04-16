@@ -68,6 +68,46 @@ check_repo() {
     cd "$INSTALL_DIR"
 }
 
+# Detect and recover from in-progress rebase/merge/cherry-pick
+recover_git_state() {
+    local git_dir="$INSTALL_DIR/.git"
+
+    # Check for in-progress rebase
+    if [ -d "$git_dir/rebase-merge" ] || [ -d "$git_dir/rebase-apply" ]; then
+        echo -e "${YELLOW}  Detected in-progress rebase. Aborting to clean state...${NC}"
+        git rebase --abort 2>/dev/null
+        echo -e "${GREEN}  ✓ Rebase aborted${NC}"
+        return 0
+    fi
+
+    # Check for in-progress merge
+    if [ -f "$git_dir/MERGE_HEAD" ]; then
+        echo -e "${YELLOW}  Detected in-progress merge. Aborting to clean state...${NC}"
+        git merge --abort 2>/dev/null
+        echo -e "${GREEN}  ✓ Merge aborted${NC}"
+        return 0
+    fi
+
+    # Check for in-progress cherry-pick
+    if [ -f "$git_dir/CHERRY_PICK_HEAD" ]; then
+        echo -e "${YELLOW}  Detected in-progress cherry-pick. Aborting to clean state...${NC}"
+        git cherry-pick --abort 2>/dev/null
+        echo -e "${GREEN}  ✓ Cherry-pick aborted${NC}"
+        return 0
+    fi
+
+    # Check for unmerged files (leftover conflict markers without active operation)
+    if git ls-files -u --error-unmatch . >/dev/null 2>&1; then
+        echo -e "${YELLOW}  Detected unmerged files. Resetting to clean state...${NC}"
+        git reset HEAD . 2>/dev/null
+        git checkout -- . 2>/dev/null
+        echo -e "${GREEN}  ✓ Reset to clean state${NC}"
+        return 0
+    fi
+
+    return 1  # No recovery needed
+}
+
 # Files that should NOT be synced (backups, caches, debug files)
 ensure_gitignore() {
     local gitignore="$INSTALL_DIR/.gitignore"
@@ -177,6 +217,7 @@ sync_status() {
 # ============================================================================
 do_push() {
     check_repo
+    recover_git_state && echo ""  # recover if needed, blank line separator
     ensure_gitignore
 
     echo -e "${CYAN}Preparing to push ALL local state to GitHub...${NC}"
@@ -308,12 +349,53 @@ do_push() {
                 return 1
             fi
         else
-            echo -e "${RED}  ✗ Rebase failed -- conflicts detected.${NC}"
-            echo -e "  Fix conflicts, then run:"
-            echo -e "    git rebase --continue"
-            echo -e "    bash termux_sync.sh push"
-            echo -e "  Or abort with: git rebase --abort"
-            return 1
+            echo -e "${YELLOW}  Rebase hit conflicts -- auto-resolving (Termux = source of truth)...${NC}"
+            # During rebase, --theirs = our local commits (counterintuitive Git naming)
+            local conflict_count=0
+            while IFS= read -r cfile; do
+                [ -z "$cfile" ] && continue
+                git checkout --theirs "$cfile" 2>/dev/null && git add "$cfile"
+                conflict_count=$((conflict_count + 1))
+            done < <(git diff --name-only --diff-filter=U 2>/dev/null)
+
+            if [ "$conflict_count" -gt 0 ]; then
+                echo -e "  ${GREEN}✓ Auto-resolved $conflict_count conflict(s) using local version${NC}"
+                if GIT_EDITOR=true git rebase --continue 2>/dev/null; then
+                    echo -e "${CYAN}  Retrying push...${NC}"
+                    if git push origin "$branch"; then
+                        echo -e "${GREEN}  ✓ Pushed to GitHub successfully!${NC}"
+                    else
+                        echo -e "${RED}  ✗ Push failed after conflict resolution.${NC}"
+                        echo -e "  Try: bash termux_sync.sh push"
+                        return 1
+                    fi
+                else
+                    # Rebase continue failed -- abort and force push
+                    echo -e "${YELLOW}  Rebase continue failed. Aborting rebase...${NC}"
+                    git rebase --abort 2>/dev/null
+                    echo -e "${CYAN}  Retrying push with force-with-lease...${NC}"
+                    if git push --force-with-lease origin "$branch"; then
+                        echo -e "${GREEN}  ✓ Pushed to GitHub (force-with-lease)${NC}"
+                    else
+                        echo -e "${RED}  ✗ Push failed.${NC}"
+                        echo -e "  ${BOLD}Manual fix:${NC}"
+                        echo -e "    git push --force origin $branch"
+                        return 1
+                    fi
+                fi
+            else
+                # No conflicts found but rebase still failed -- abort
+                echo -e "${YELLOW}  Aborting rebase and retrying with force-with-lease...${NC}"
+                git rebase --abort 2>/dev/null
+                if git push --force-with-lease origin "$branch"; then
+                    echo -e "${GREEN}  ✓ Pushed to GitHub (force-with-lease)${NC}"
+                else
+                    echo -e "${RED}  ✗ Push failed.${NC}"
+                    echo -e "  ${BOLD}Manual fix:${NC}"
+                    echo -e "    git push --force origin $branch"
+                    return 1
+                fi
+            fi
         fi
     fi
 }
@@ -323,6 +405,7 @@ do_push() {
 # ============================================================================
 do_pull() {
     check_repo
+    recover_git_state && echo ""  # recover if needed
 
     echo -e "${CYAN}Pulling latest from GitHub...${NC}"
 
