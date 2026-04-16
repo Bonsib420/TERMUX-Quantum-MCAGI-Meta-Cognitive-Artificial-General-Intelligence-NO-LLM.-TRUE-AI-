@@ -72,6 +72,17 @@ pkg install -y python git clang libffi openssl-tool \
     echo -e "${YELLOW}Some packages may already be installed, continuing...${NC}"
 }
 
+# Install rclone for Google Drive cloud sync
+pkg install -y rclone 2>/dev/null || {
+    echo -e "${YELLOW}  rclone not available via pkg — trying manual install...${NC}"
+    # rclone may need to be installed from release binary on some Termux versions
+    if ! command -v rclone &>/dev/null; then
+        echo -e "${YELLOW}  rclone install failed. Cloud sync via Google Drive will be unavailable.${NC}"
+        echo -e "${YELLOW}  You can install it later: pkg install rclone${NC}"
+        echo -e "${YELLOW}  Then configure: rclone config  (create a remote named 'gdrive')${NC}"
+    fi
+}
+
 # Ensure pip is available
 python -m ensurepip --upgrade 2>/dev/null || true
 pip install --upgrade pip 2>/dev/null || true
@@ -252,7 +263,8 @@ except ImportError:
 sys.path.insert(0, '.')
 core_modules = ['algorithmic_core', 'quantum_markov', 'chat', 'shared_state',
                 'quantum_memory', 'hilbert_engine', 'hilbert_bridge',
-                'cistercian_math', 'batch_ingest', 'exam_system', 'code_to_pdf']
+                'cistercian_math', 'batch_ingest', 'exam_system', 'code_to_pdf',
+                'rclone_provider', 'cloud_provider']
 for mod in core_modules:
     try:
         __import__(mod)
@@ -279,8 +291,14 @@ echo "  ║                                                  ║"
 echo "  ║  Alias:  bash install_alias.sh                   ║"
 echo "  ║          Then just: mcagi                        ║"
 echo "  ║                                                  ║"
-echo "  ║  Transfer brain data:                            ║"
-echo "  ║    /cloud-save    (save to Wolfram Cloud)        ║"
-echo "  ║    /cloud-load    (restore from Wolfram Cloud)   ║"
+echo "  ║  Cloud sync (Google Drive via rclone):           ║"
+echo "  ║    /rclone-setup  (check config & connection)    ║"
+echo "  ║    /rclone-status (list Drive contents)          ║"
+echo "  ║    /cloud-save    (save to all cloud providers)  ║"
+echo "  ║    /cloud-load    (restore from cloud)           ║"
+echo "  ║    /cloud-pull    (pull from all providers)      ║"
+echo "  ║                                                  ║"
+echo "  ║  Push code to GitHub:                            ║"
+echo "  ║    bash termux_sync.sh push                      ║"
 echo "  ╚══════════════════════════════════════════════════╝"
 echo -e "${NC}"

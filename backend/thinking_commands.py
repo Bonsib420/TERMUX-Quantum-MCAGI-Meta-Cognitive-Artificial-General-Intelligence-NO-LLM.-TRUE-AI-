@@ -78,6 +78,10 @@ class ThinkingModeCommands:
             return {"command": "cloud_status"}
         elif message_lower.startswith("/cloud-load"):
             return {"command": "cloud_load"}
+        elif message_lower.startswith("/rclone-setup"):
+            return {"command": "rclone_setup"}
+        elif message_lower.startswith("/rclone-status"):
+            return {"command": "rclone_status"}
         elif message_lower == "/save":
             return {"command": "save"}
         elif message_lower == "/status":
