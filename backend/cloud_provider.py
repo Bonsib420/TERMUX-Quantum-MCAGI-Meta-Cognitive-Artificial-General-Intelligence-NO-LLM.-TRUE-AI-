@@ -401,4 +401,15 @@ def get_cloud_registry() -> CloudProviderRegistry:
         except Exception:
             logger.info("☁️ Cloud registry: Local Storage only (Wolfram unavailable)")
 
+        # Try to add Rclone (Google Drive)
+        try:
+            from rclone_provider import RcloneProvider as _RcloneProvider, _rclone_available
+            if _RcloneProvider is not None and _rclone_available():
+                _cloud_registry.register(_RcloneProvider())
+                logger.info("☁️ Cloud registry: + Rclone (Google Drive)")
+        except ImportError:
+            pass
+        except Exception:
+            logger.info("☁️ Cloud registry: Rclone not available")
+
     return _cloud_registry

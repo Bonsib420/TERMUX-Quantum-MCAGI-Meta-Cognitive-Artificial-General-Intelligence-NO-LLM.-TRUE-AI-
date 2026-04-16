@@ -27,6 +27,8 @@ Commands:
     /cloud-load   - Load & merge concepts/growth from Wolfram Cloud
     /cloud-pull   - Pull full brain snapshot from all cloud providers
     /cloud-status - Show Wolfram Cloud status
+    /rclone-setup - Check rclone installation and Google Drive connection
+    /rclone-status- Show what's stored on Google Drive via rclone
     /quit         - Save and exit
 """
 
@@ -64,6 +66,12 @@ try:
     HAS_CLOUD = True
 except ImportError:
     HAS_CLOUD = False
+
+try:
+    from rclone_provider import rclone_check, rclone_save, rclone_load, rclone_list, _rclone_available
+    HAS_RCLONE = _rclone_available()
+except ImportError:
+    HAS_RCLONE = False
 
 # Optional imports — degrade gracefully
 try:
@@ -1196,6 +1204,48 @@ def run_chat(verbose=False):
                             print("  No data found.")
                     else:
                         print("  No cloud providers available.")
+                continue
+            elif cmd[0] == '/rclone-setup':
+                if HAS_RCLONE:
+                    print("  Checking rclone configuration...")
+                    check = rclone_check()
+                    print(f"  rclone installed: {'✓' if check['rclone_installed'] else '✗'}")
+                    print(f"  Remote '{check['remote_name']}' configured: {'✓' if check['remote_configured'] else '✗'}")
+                    if check.get('configured_remotes'):
+                        print(f"  Available remotes: {', '.join(check['configured_remotes'])}")
+                    print(f"  Connection test: {'✓ OK' if check['test_ok'] else '✗ FAILED'}")
+                    if check.get('objects') is not None:
+                        print(f"  Objects in {check['base_path']}/: {check['objects']}")
+                    if check.get('note'):
+                        print(f"  Note: {check['note']}")
+                    if check.get('error'):
+                        print(f"  Error: {check['error']}")
+                    if not check['test_ok']:
+                        print()
+                        print("  Setup instructions:")
+                        print("    1. pkg install rclone")
+                        print("    2. rclone config  (create a remote named 'gdrive')")
+                        print("    3. Or set: export RCLONE_REMOTE=your_remote_name")
+                else:
+                    print("  rclone not available.")
+                    print("  Install: pkg install rclone")
+                    print("  Then: rclone config  (create a Google Drive remote)")
+                continue
+            elif cmd[0] == '/rclone-status':
+                if HAS_RCLONE:
+                    print("  Listing Google Drive contents...")
+                    objects = rclone_list('QuantumMCAGI/')
+                    if objects:
+                        print(f"  Found {len(objects)} object(s):")
+                        for obj in objects[:20]:
+                            print(f"    {obj}")
+                        if len(objects) > 20:
+                            print(f"    ... and {len(objects) - 20} more")
+                    else:
+                        print("  No objects found (or QuantumMCAGI/ doesn't exist yet).")
+                        print("  Use /cloud-save to push brain data to Google Drive.")
+                else:
+                    print("  rclone not available. Run /rclone-setup for instructions.")
                 continue
             elif cmd[0] == '/pardon':
                 if evolution and len(cmd) > 1:

@@ -102,6 +102,29 @@ async def _handle_command(content: str, explain_mode: bool = False) -> Optional[
                 response_text = f"Wolfram Cloud command '{cmd}' is only available in local chat mode (chat.py)."
             except ImportError:
                 response_text = "Wolfram Cloud not available."
+        elif cmd in ('/rclone-setup', '/rclone-status'):
+            try:
+                from rclone_provider import rclone_check, rclone_list, _rclone_available
+                if not _rclone_available():
+                    response_text = "rclone not installed. Install: pkg install rclone"
+                elif cmd == '/rclone-setup':
+                    check = rclone_check()
+                    lines = [
+                        f"rclone installed: {'✓' if check['rclone_installed'] else '✗'}",
+                        f"Remote '{check['remote_name']}' configured: {'✓' if check['remote_configured'] else '✗'}",
+                        f"Connection test: {'✓ OK' if check['test_ok'] else '✗ FAILED'}",
+                    ]
+                    if check.get('error'):
+                        lines.append(f"Error: {check['error']}")
+                    response_text = "\n".join(lines)
+                else:
+                    objects = rclone_list('QuantumMCAGI/')
+                    if objects:
+                        response_text = f"Found {len(objects)} object(s):\n" + "\n".join(f"  {o}" for o in objects[:20])
+                    else:
+                        response_text = "No objects found on Google Drive."
+            except ImportError:
+                response_text = "rclone_provider module not available."
         elif cmd == '/knowledge' and args:
             topic = ' '.join(args)
             try:
