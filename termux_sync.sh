@@ -68,7 +68,7 @@ check_repo() {
     cd "$INSTALL_DIR"
 }
 
-# Detect and recover from in-progress rebase/merge/cherry-pick
+# Detect and recover from in-progress rebase/merge/cherry-pick/detached HEAD
 recover_git_state() {
     local git_dir="$INSTALL_DIR/.git"
 
@@ -93,6 +93,49 @@ recover_git_state() {
         echo -e "${YELLOW}  Detected in-progress cherry-pick. Aborting to clean state...${NC}"
         git cherry-pick --abort 2>/dev/null
         echo -e "${GREEN}  ✓ Cherry-pick aborted${NC}"
+        return 0
+    fi
+
+    # Check for detached HEAD (common after failed rebase or git pull --rebase)
+    if [ "$(git rev-parse --abbrev-ref HEAD 2>/dev/null)" = "HEAD" ]; then
+        echo -e "${YELLOW}  Detected detached HEAD. Reattaching to branch...${NC}"
+        local current_sha target_branch
+        current_sha=$(git rev-parse HEAD)
+        target_branch=""
+
+        # Strategy 1: Find a local branch pointing at exactly this commit
+        target_branch=$(git for-each-ref --points-at="$current_sha" \
+            --format='%(refname:short)' refs/heads/ 2>/dev/null | head -1)
+
+        # Strategy 2: Check reflog for the last branch we were on
+        if [ -z "$target_branch" ]; then
+            while IFS= read -r reflog_line; do
+                local candidate
+                candidate=$(echo "$reflog_line" | sed -n 's/checkout: moving from \([^ ]*\) to .*/\1/p')
+                if [ -n "$candidate" ] && git rev-parse --verify "refs/heads/$candidate" &>/dev/null; then
+                    target_branch="$candidate"
+                    break
+                fi
+            done < <(git log -g --format='%gs' HEAD 2>/dev/null)
+        fi
+
+        # Strategy 3: Find any branch containing this commit
+        if [ -z "$target_branch" ]; then
+            target_branch=$(git branch --contains "$current_sha" 2>/dev/null | \
+                grep -v 'HEAD detached' | head -1 | sed 's/^[* ]*//')
+        fi
+
+        if [ -n "$target_branch" ]; then
+            # Reattach HEAD; -B moves the branch pointer to current commit
+            git checkout -B "$target_branch" "$current_sha" 2>/dev/null
+            echo -e "${GREEN}  ✓ Reattached to branch: $target_branch${NC}"
+        else
+            # Last resort: create a timestamped recovery branch
+            target_branch="termux-recovery-$(date +%Y%m%d-%H%M%S)"
+            git checkout -b "$target_branch" 2>/dev/null
+            echo -e "${GREEN}  ✓ Created recovery branch: $target_branch${NC}"
+            echo -e "${YELLOW}  (Could not determine original branch. You may want to merge into your main branch later.)${NC}"
+        fi
         return 0
     fi
 
