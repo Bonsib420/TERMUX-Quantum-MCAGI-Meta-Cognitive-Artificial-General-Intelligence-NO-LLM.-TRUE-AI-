@@ -13,6 +13,7 @@
 #   bash termux_sync.sh backup       # Create local backup before sync
 #   bash termux_sync.sh brain-push   # Push ONLY brain data to GitHub
 #   bash termux_sync.sh brain-pull   # Pull brain data from GitHub -> ~/.quantum-mcagi/
+#   MCAGI_INSTALL_DIR=/path/to/repo bash termux_sync.sh push  # Override repo path
 #
 # WHAT GETS PUSHED (on `push`):
 #   Code:  All .py files, scripts, configs in the repo
@@ -42,7 +43,15 @@ NC='\033[0m'
 BOLD='\033[1m'
 
 # Config
-INSTALL_DIR="$HOME/Quantum_MCAGI_NO_LLM"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEFAULT_INSTALL_DIR="$HOME/Quantum_MCAGI_NO_LLM"
+if [ -n "${MCAGI_INSTALL_DIR:-}" ]; then
+    INSTALL_DIR="$MCAGI_INSTALL_DIR"
+elif [ -d "$SCRIPT_DIR/.git" ] && [ -d "$SCRIPT_DIR/backend" ]; then
+    INSTALL_DIR="$SCRIPT_DIR"
+else
+    INSTALL_DIR="$DEFAULT_INSTALL_DIR"
+fi
 BACKEND_DIR="$INSTALL_DIR/backend"
 DATA_DIR="$HOME/.quantum-mcagi"
 BRAIN_BRANCH="brain-data"
@@ -63,6 +72,7 @@ check_repo() {
     if [ ! -d "$INSTALL_DIR/.git" ]; then
         echo -e "${RED}Error: Not a git repo at $INSTALL_DIR${NC}"
         echo -e "Run termux_setup.sh first to clone the repository."
+        echo -e "Or set MCAGI_INSTALL_DIR to your existing project path."
         exit 1
     fi
     cd "$INSTALL_DIR"
@@ -729,6 +739,7 @@ case "${1:-}" in
     help|--help|-h)
         banner
         echo -e "  ${BOLD}Usage:${NC} bash termux_sync.sh [command]"
+        echo -e "  ${BOLD}Repo path:${NC} $INSTALL_DIR"
         echo ""
         echo -e "  ${BOLD}Commands:${NC}"
         echo -e "    push        Push local changes to GitHub"
