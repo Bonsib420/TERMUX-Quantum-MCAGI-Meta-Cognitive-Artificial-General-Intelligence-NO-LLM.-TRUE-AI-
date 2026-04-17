@@ -83,6 +83,13 @@ pkg install -y python git clang libffi openssl-tool \
     echo -e "${YELLOW}Some packages may already be installed, continuing...${NC}"
 }
 
+# Install git-lfs for brain data versioning (large JSON files)
+pkg install -y git-lfs 2>/dev/null || {
+    echo -e "${YELLOW}  git-lfs not available via pkg — brain data will commit without LFS tracking.${NC}"
+    echo -e "${YELLOW}  You can install it later: pkg install git-lfs && git lfs install${NC}"
+}
+command -v git-lfs &>/dev/null && git lfs install 2>/dev/null || true
+
 # Install rclone for Google Drive cloud sync
 pkg install -y rclone 2>/dev/null || {
     echo -e "${YELLOW}  rclone not available via pkg — trying manual install...${NC}"
