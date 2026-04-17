@@ -16,6 +16,3 @@ backend/test_render.png
 backend/quantum_language_engine.py.backup
 backend/quantum_language_engine.py.bak
 backend/quantum_language_engine.py.orchorfix.backup
-
-# Brain data (synced separately via brain-push/brain-pull)
-brain-data/

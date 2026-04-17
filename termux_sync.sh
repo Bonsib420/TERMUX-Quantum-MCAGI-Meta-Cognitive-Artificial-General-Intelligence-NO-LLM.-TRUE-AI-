@@ -3,7 +3,9 @@
 # 🔮 QUANTUM MCAGI -- TERMUX -> GITHUB SYNC
 # ============================================================================
 # Push ALL local state (code + brain data) to GitHub in one command.
-# Brain data from ~/.quantum-mcagi/ is bundled into brain-data/ automatically.
+# Brain data from ~/.quantum-mcagi/ is bundled into brain-data/ and committed
+# alongside code — the brain IS the product, it belongs in the repo.
+# Large JSON files (hilbert, engine_state) use Git LFS for efficient storage.
 #
 # USAGE:
 #   bash termux_sync.sh              # Interactive menu
@@ -339,6 +341,11 @@ do_push() {
     recover_git_state && echo ""  # recover if needed, blank line separator
     ensure_gitignore
 
+    # Ensure Git LFS is initialized (brain data uses LFS for large JSON files)
+    if command -v git-lfs &>/dev/null; then
+        git lfs install --local 2>/dev/null || true
+    fi
+
     echo -e "${CYAN}Preparing to push ALL local state to GitHub...${NC}"
 
     # ── Step 1: Bundle brain data into repo so it gets pushed too ─────────
@@ -536,6 +543,11 @@ do_backup() {
 # ============================================================================
 do_brain_push() {
     check_repo
+
+    # Ensure Git LFS is initialized (brain data uses LFS for large JSON files)
+    if command -v git-lfs &>/dev/null; then
+        git lfs install --local 2>/dev/null || true
+    fi
 
     if [ ! -d "$DATA_DIR" ]; then
         echo -e "${YELLOW}  No brain data found at $DATA_DIR${NC}"

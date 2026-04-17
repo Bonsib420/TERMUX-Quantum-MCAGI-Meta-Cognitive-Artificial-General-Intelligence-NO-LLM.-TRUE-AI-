@@ -1,0 +1,2 @@
+brain-data/hilbert/*.json filter=lfs diff=lfs merge=lfs -text
+brain-data/engine_state/*.json filter=lfs diff=lfs merge=lfs -text
