@@ -88,7 +88,9 @@ pkg install -y git-lfs 2>/dev/null || {
     echo -e "${YELLOW}  git-lfs not available via pkg — brain data will commit without LFS tracking.${NC}"
     echo -e "${YELLOW}  You can install it later: pkg install git-lfs && git lfs install${NC}"
 }
-command -v git-lfs &>/dev/null && git lfs install 2>/dev/null || true
+command -v git-lfs &>/dev/null && git lfs install 2>/dev/null || {
+    command -v git-lfs &>/dev/null && echo -e "${YELLOW}  Warning: git-lfs installed but initialization failed. Run: git lfs install${NC}"
+}
 
 # Install rclone for Google Drive cloud sync
 pkg install -y rclone 2>/dev/null || {
