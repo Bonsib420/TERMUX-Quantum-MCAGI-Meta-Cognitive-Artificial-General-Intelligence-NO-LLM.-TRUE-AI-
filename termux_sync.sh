@@ -343,10 +343,9 @@ do_push() {
 
     # Ensure Git LFS is initialized (brain data uses LFS for large JSON files)
     if command -v git-lfs &>/dev/null; then
-        git lfs install --local 2>/dev/null || true
+        git lfs install --local 2>/dev/null || \
+            echo -e "${YELLOW}  Warning: git-lfs init failed — large brain files may push without LFS${NC}"
     fi
-
-    echo -e "${CYAN}Preparing to push ALL local state to GitHub...${NC}"
 
     # ── Step 1: Bundle brain data into repo so it gets pushed too ─────────
     if [ -d "$DATA_DIR" ]; then
@@ -546,7 +545,8 @@ do_brain_push() {
 
     # Ensure Git LFS is initialized (brain data uses LFS for large JSON files)
     if command -v git-lfs &>/dev/null; then
-        git lfs install --local 2>/dev/null || true
+        git lfs install --local 2>/dev/null || \
+            echo -e "${YELLOW}  Warning: git-lfs init failed — large brain files may push without LFS${NC}"
     fi
 
     if [ ! -d "$DATA_DIR" ]; then
