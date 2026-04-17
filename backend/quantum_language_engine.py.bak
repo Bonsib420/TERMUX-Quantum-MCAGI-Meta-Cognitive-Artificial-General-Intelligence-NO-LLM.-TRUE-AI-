@@ -657,13 +657,8 @@ class ResponseComposer:
         gaps = understanding.get('gaps', [])
         related = understanding.get('related_concepts', [])
         
-        kg_facts = understanding.get('kg_facts', [])
         parts = []
         
-        # 0. Knowledge graph facts
-        if kg_facts:
-            parts.append('From what I know: ' + '. '.join(kg_facts[:3]) + '.')
-
         # 1. Opening — varies by understanding depth
         opening = self._compose_opening(topic, score, user_input, growth_stage)
         parts.append(opening)
@@ -704,8 +699,8 @@ class ResponseComposer:
         """
         input_words = user_input.lower().split()
         
-        if self.markov.trained and score < 0.7:
-            # Low-depth only — Markov cannot handle philosophical reasoning chains
+        if self.markov.trained:
+            # Try to generate a relevant opening from the Markov chain
             candidates = []
             for _ in range(5):  # Generate 5 candidates, pick best
                 sent = self.markov.generate(max_words=20, seed_words=input_words,
@@ -1064,35 +1059,11 @@ class QuantumLanguageEngine:
         if self._has_orch_or:
             try:
                 self.orch_or.conscious_moment()
-
+            if hasattr(self, "orch_bridge"):
+                self.orch_bridge.total_moments += 1
             except Exception:
                 pass
-        # Knowledge graph lookup - structured Wikidata facts
-        try:
-            import sys as _sys
-            _sys.path.insert(0, os.path.dirname(__file__))
-            from wikidata_ingester import kg_to_facts, query_kg
-            _input_lower = user_input.lower()
-            _kg_facts = []
-            # Check each concept against knowledge graph
-            for _c in concepts:
-                _c_str = _c if isinstance(_c, str) else str(_c)
-                _entry = query_kg(_c_str)
-                if _entry:
-                    _kg_facts.extend(kg_to_facts(_c_str))
-            # Also check input words directly
-            for _word in _input_lower.split():
-                if len(_word) > 4:
-                    _entry = query_kg(_word)
-                    if _entry:
-                        _kg_facts.extend(kg_to_facts(_word))
-            # Deduplicate
-            _kg_facts = list(dict.fromkeys(_kg_facts))
-            if _kg_facts:
-                # Inject facts into understanding context
-                understanding['kg_facts'] = _kg_facts[:6]
-        except Exception:
-            pass
+
         return self.composer.compose_response(
             user_input, concepts, understanding, q_dicts, growth_stage
         )
@@ -1129,7 +1100,7 @@ class QuantumLanguageEngine:
             'total_words': self.extractor.total_words,
             'coherence_pairs': len(self.coherence.cooccurrence) if hasattr(self.coherence, 'cooccurrence') else 0,
             'has_orch_or': self._has_orch_or,
-            'orch_or_moments': getattr(self.orch_or, 'conscious_moments', 0) if self.orch_or else 0,
+            'orch_or_moments': getattr(self.orch_or, 'total_moments', 0) if self.orch_or else 0,
             'has_pennylane': self._has_pennylane,
         }
         with open(os.path.join(directory, 'engine_state.json'), 'w') as f:

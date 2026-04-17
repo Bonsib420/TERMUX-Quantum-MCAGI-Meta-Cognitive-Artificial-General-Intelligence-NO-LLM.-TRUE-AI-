@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Quantum MCAGI -- Local Chat (Termux)
+Quantum MCAGI — Local Chat (Termux)
 Standalone chat interface. No MongoDB, no FastAPI, no server.
 Runs the real communication engine directly in your terminal.
 
@@ -70,7 +70,7 @@ try:
 except ImportError:
     HAS_CLOUD = False
 
-# Optional imports -- degrade gracefully
+# Optional imports — degrade gracefully
 try:
     from hybrid_generator import create_hybrid_generator
     HAS_HYBRID = True
@@ -132,7 +132,7 @@ except ImportError:
     HAS_CISTERCIAN_MATH = False
 
 try:
-    from quantum_memory import get_quantum_memory, reset_quantum_memory, PENNYLANE_QRAM_AVAILABLE
+    from quantum_memory import get_quantum_memory, PENNYLANE_QRAM_AVAILABLE
     HAS_QRAM = True
 except ImportError:
     HAS_QRAM = False
@@ -142,7 +142,7 @@ except ImportError:
 class LocalMemory:
     """JSON-file backed memory for local chat."""
 
-    # Lightweight domain classifier -- maps keywords to knowledge domains.
+    # Lightweight domain classifier — maps keywords to knowledge domains.
     # Used to populate concept metadata so distinct_domains count works
     # and growth stages can advance.
     DOMAIN_KEYWORDS = {
@@ -209,7 +209,7 @@ class LocalMemory:
         return best_domain if best_score > 0 else 'general'
 
     # All 12 tracks must be met simultaneously to advance.
-    # High watermark protection on diameter and avg_degree -- earned progress never regresses.
+    # High watermark protection on diameter and avg_degree — earned progress never regresses.
     GROWTH_STAGES = [
         {"stage": 0, "name": "Nascent", "threshold": {
             "connections": 0, "concepts": 0, "min_avg_degree": 0, "min_diameter": 0, "min_domains": 0,
@@ -265,7 +265,7 @@ class LocalMemory:
             "total_questions_asked": 0,
             "total_insights": 0,
         })
-        # High watermark protection -- earned topology progress never regresses
+        # High watermark protection — earned topology progress never regresses
         self._hwm_avg_degree = self.growth.get("hwm_avg_degree", 0.0)
         self._hwm_diameter = self.growth.get("hwm_diameter", 0)
         # Ensure advancement tracking field exists
@@ -356,13 +356,10 @@ class LocalMemory:
                 if c1 != c2 and c1 in self.concepts and c2 in self.concepts:
                     # Add c2 to c1's relationships if not already present
                     if c2 not in self.concepts[c1]["relationships"]:
-                        self.concepts[c1]["relationships"] = list(self.concepts[c1].get("relationships", [])) if isinstance(self.concepts[c1].get("relationships"), dict) else self.concepts[c1].get("relationships", []); self.concepts[c1]["relationships"].append(c2)
+                        self.concepts[c1]["relationships"].append(c2)
                     # Add c1 to c2's relationships (undirected graph)
-                    rels2 = self.concepts[c2].get("relationships", [])
-                    if isinstance(rels2, dict): rels2 = list(rels2.keys())
-                    if c1 not in rels2:
-                        rels2.append(c1)
-                        self.concepts[c2]["relationships"] = rels2
+                    if c1 not in self.concepts[c2]["relationships"]:
+                        self.concepts[c2]["relationships"].append(c1)
 
         # Detect insights: response mentions 2+ known concepts
         response_lower = response.lower()
@@ -462,7 +459,7 @@ class LocalMemory:
 
     def get_current_stage(self):
         """Compute current growth stage from all 12 metric tracks.
-        High watermark protection on diameter and avg_degree -- earned progress never regresses."""
+        High watermark protection on diameter and avg_degree — earned progress never regresses."""
         metrics = {
             "total_concepts": self.growth.get("total_concepts", 0),
             "total_connections": self.count_connections(),
@@ -615,7 +612,7 @@ def run_chat(verbose=False):
     print("  Quantum MCAGI - Local Chat")
     print("  Real algorithms. No templates. No LLM.")
     print("  /status  /learn FILE  /save  /load  /quit")
-    print("  /export [N]  /copy-last  -- share conversations")
+    print("  /export [N]  /copy-last  — share conversations")
     print()
 
     # Initialize all systems
@@ -710,20 +707,6 @@ def run_chat(verbose=False):
     else:
         print(f"  Orch OR: unavailable (classical fallback)")
     print(f"  Hybrid gen: {'ACTIVE' if hybrid_gen else 'OFF'}")
-
-    # Auto-load concepts into QRAM at startup if concepts exist
-    if HAS_QRAM and memory.concepts:
-        try:
-            _startup_qram = get_quantum_memory()
-            _n = _startup_qram.load_concepts(list(memory.concepts.keys()))
-            _qs = _startup_qram.status()
-            print(f"  QRAM: {_qs['backend']} — {_n} concepts loaded")
-        except Exception as e:
-            print(f"  QRAM: init error ({e})")
-    elif HAS_QRAM:
-        _qs = get_quantum_memory().status()
-        print(f"  QRAM: {_qs['backend']} — ready (use /qram load)")
-
     print()
 
     _last_auto_save = time.time()
@@ -791,7 +774,7 @@ def run_chat(verbose=False):
                         loop.close()
                     t = threading.Thread(target=run_research, daemon=True)
                     t.start()
-                    print(f"  Autonomous research started -- {minutes} min")
+                    print(f"  Autonomous research started — {minutes} min")
                     print(f"  Topics will print as they complete.")
                 elif cmd[1] == 'stop':
                     result = research.stop_autonomous_research()
@@ -957,19 +940,6 @@ def run_chat(verbose=False):
                 print(f"  Hybrid: {'ACTIVE' if hybrid_gen else 'OFF'}")
                 print(f"  Unified: {'ACTIVE' if unified_gen else 'OFF'}")
                 print()
-                print("  --- QRAM (Quantum Random Access Memory) ---")
-                if HAS_QRAM:
-                    _qram = get_quantum_memory()
-                    _qs = _qram.status()
-                    print(f"  Backend:  {_qs['backend']}")
-                    print(f"  PennyLane QRAM: {'✓' if _qs.get('qram_available') else '✗ (classical fallback)'}")
-                    print(f"  Entries:  {_qs['entries_loaded']} / {_qs['max_entries']}")
-                    if _qs.get('templates'):
-                        avail = [k for k, v in _qs['templates'].items() if v]
-                        print(f"  Templates: {', '.join(avail) if avail else 'none'}")
-                else:
-                    print("  Status: unavailable (quantum_memory module not loaded)")
-                print()
                 print("  --- RESPONSE PIPELINE ---")
                 print("  1. TF-IDF concept extraction")
                 print(f"  2. Orch OR quantum encoding + collapse [{'ACTIVE' if getattr(engine, "_has_orch_or", False) else 'OFF'}]")
@@ -1092,8 +1062,8 @@ def run_chat(verbose=False):
                     print(f"  ║ Total: {total} URLs across {len(categories)} domains")
                     print(f"  ╚══════════════════════════════════════════════════")
                     print()
-                    print("  Usage: /feed <category>   -- process one category")
-                    print("         /feed all          -- process all categories")
+                    print("  Usage: /feed <category>   — process one category")
+                    print("         /feed all          — process all categories")
                     print()
                     continue
                 target = cmd[1].lower()
@@ -1279,8 +1249,8 @@ def run_chat(verbose=False):
                     n = int(cmd[1]) if len(cmd) > 1 and cmd[1].isdigit() else len(memory.conversations)
                     exchanges = memory.conversations[-n:]
                     lines = [
-                        "# Quantum MCAGI -- Local Chat Export",
-                        f"**Growth stage:** {memory.growth.get('stage', 0)} -- {memory.growth.get('name', 'Unknown')}",
+                        "# Quantum MCAGI — Local Chat Export",
+                        f"**Growth stage:** {memory.growth.get('stage', 0)} — {memory.growth.get('name', 'Unknown')}",
                         f"**Concepts:** {memory.growth.get('total_concepts', len(memory.concepts))}",
                         f"**Interactions:** {len(memory.conversations)}",
                         f"**Exported:** {datetime.now().isoformat()}",
@@ -1389,21 +1359,15 @@ def run_chat(verbose=False):
 
             elif cmd[0] == '/qram' and HAS_QRAM:
                 qram = get_quantum_memory()
-                subcmd = cmd[1] if len(cmd) > 1 else ''
-                if subcmd == 'load':
+                if len(cmd) > 1 and cmd[1] == 'load':
                     # Load current concepts into QRAM
                     concept_names = list(memory.concepts.keys())
                     if concept_names:
                         count = qram.load_concepts(concept_names)
                         print(f"  💾 QRAM: Loaded {count} concepts into quantum memory")
                     else:
-<<<<<<< HEAD
                         print("  No concepts learned yet — talk to me first!")
-                elif subcmd == 'query':
-=======
-                        print("  No concepts learned yet -- talk to me first!")
                 elif len(cmd) > 1 and cmd[1] == 'query':
->>>>>>> 44692b9 (Latest Termux build)
                     # Query concept by address
                     if len(cmd) > 2 and cmd[2].isdigit():
                         addr = int(cmd[2])
@@ -1414,76 +1378,7 @@ def run_chat(verbose=False):
                             print(f"  💾 QRAM[{addr}] → (empty)")
                     else:
                         print("  Usage: /qram query ADDRESS")
-                elif subcmd == 'search':
-                    # Search QRAM by concept name
-                    if len(cmd) > 2:
-                        needle = ' '.join(cmd[2:]).lower()
-                        s = qram.status()
-                        if s['entries_loaded'] == 0:
-                            print("  💾 QRAM empty — run /qram load first")
-                        else:
-                            matches = []
-                            for addr in range(s['entries_loaded']):
-                                name = qram.query(addr)
-                                if name and needle in name.lower():
-                                    matches.append((addr, name))
-                            if matches:
-                                print(f"  💾 QRAM search '{needle}' — {len(matches)} match{'es' if len(matches) != 1 else ''}:")
-                                for addr, name in matches[:20]:
-                                    print(f"    [{addr}] {name}")
-                                if len(matches) > 20:
-                                    print(f"    ... and {len(matches) - 20} more")
-                            else:
-                                print(f"  💾 No matches for '{needle}'")
-                    else:
-                        print("  Usage: /qram search TERM")
-                elif subcmd == 'super':
-                    # Superposition query across multiple addresses
-                    addrs = [int(a) for a in cmd[2:] if a.isdigit()]
-                    if len(addrs) < 2:
-                        print("  Usage: /qram super ADDR1 ADDR2 [ADDR3 ...]")
-                        print("  Queries multiple addresses in quantum superposition")
-                    else:
-                        s = qram.status()
-                        if s['entries_loaded'] == 0:
-                            print("  💾 QRAM empty — run /qram load first")
-                        else:
-                            results = qram.superposition_query(addrs)
-                            if results:
-                                backend = 'quantum' if s.get('qram_available') else 'classical'
-                                print(f"  💾 QRAM superposition query ({backend}):")
-                                for name, prob in sorted(results, key=lambda x: -x[1]):
-                                    bar = '█' * int(prob * 30)
-                                    print(f"    {name:20s}  {prob:.4f}  {bar}")
-                            else:
-                                print("  💾 No valid addresses in query")
-                elif subcmd == 'strategy':
-                    # Show or switch QRAM strategy
-                    _pqa = PENNYLANE_QRAM_AVAILABLE
-                    if len(cmd) > 2 and cmd[2] in ('bb', 'select', 'hybrid'):
-                        if not _pqa:
-                            print("  💾 Strategy switch requires PennyLane ≥0.44 QRAM templates")
-                        else:
-                            new_strat = cmd[2]
-                            reset_quantum_memory()
-                            qram = get_quantum_memory(strategy=new_strat)
-                            # Reload concepts if memory has them
-                            concept_names = list(memory.concepts.keys())
-                            if concept_names:
-                                qram.load_concepts(concept_names)
-                            s = qram.status()
-                            print(f"  💾 QRAM strategy → {s['backend']}")
-                            print(f"    Entries reloaded: {s['entries_loaded']}")
-                    else:
-                        s = qram.status()
-                        print(f"  💾 Current strategy: {s['backend']}")
-                        if s.get('templates'):
-                            print(f"    Available templates:")
-                            for name, avail in s['templates'].items():
-                                print(f"      {name}: {'✓' if avail else '✗'}")
-                        print(f"  Usage: /qram strategy [bb|select|hybrid]")
-                elif subcmd == '' or subcmd == 'status':
-                    # Show status (default when no subcommand)
+                else:
                     s = qram.status()
                     print(f"  💾 QRAM Status:")
                     print(f"    Backend:        {s['backend']}")
@@ -1492,20 +1387,6 @@ def run_chat(verbose=False):
                     print(f"    Entries loaded: {s['entries_loaded']}")
                     print(f"    Bit width:      {s['bit_width']}")
                     print(f"    Max entries:    {s['max_entries']}")
-                    if s.get('templates'):
-                        print(f"    Templates:")
-                        for name, avail in s['templates'].items():
-                            print(f"      {name}: {'✓' if avail else '✗'}")
-                else:
-                    # Unknown subcommand — show usage
-                    print(f"  Unknown: /qram {subcmd}")
-                    print("  Usage:")
-                    print("    /qram              — show QRAM status")
-                    print("    /qram load         — load concepts into quantum memory")
-                    print("    /qram query N      — retrieve concept at address N")
-                    print("    /qram search TERM  — find concepts matching TERM")
-                    print("    /qram super N N ... — superposition query (quantum)")
-                    print("    /qram strategy X   — switch QRAM strategy (bb/select/hybrid)")
                 continue
 
             else:
@@ -1513,11 +1394,11 @@ def run_chat(verbose=False):
                 print("  Gen:      /hybrid TEXT  /unified TEXT")
                 print("  Extra:    /analyze TEXT  /personality  /knowledge TOPIC  /collapse TEXT")
                 print("  Math:     /cistercian-math 50 - 20  /cistercian 1234")
-                print("  Memory:   /qram [load|query N|search X|super N N|strategy X]")
+                print("  Memory:   /qram [load|query N]")
                 print("  Share:    /export [N]  /copy-last")
                 continue
 
-        # ---- Math detection -- compute BEFORE Markov chain ----
+        # ---- Math detection — compute BEFORE Markov chain ----
         if HAS_CISTERCIAN_MATH:
             expr = detect_math(user_input)
             if expr:
@@ -1569,13 +1450,38 @@ def run_chat(verbose=False):
 
         # Generate response based on register
 # --- COMPETITIVE GENERATION ---
-        concept_scores = engine.extract_concepts_scored(user_input) if hybrid_gen else []
-        r_hybrid = hybrid_gen.generate(user_input, concepts, concept_scores, min_words=10, max_words=25) if hybrid_gen else ""
-        r_casual = engine.generate_response(user_input, questions, understanding, concepts, growth_stage=growth_stage)
-        response = r_hybrid if len(r_hybrid) > len(r_casual) else r_casual
-        if questions:
-            q = questions[0] if isinstance(questions[0], str) else questions[0].get("question", "")
-            response += " " + q
+concept_scores = engine.extract_concepts_scored(user_input) if hybrid_gen else []
+
+r_hybrid = hybrid_gen.generate(
+    user_input,
+    concepts,
+    concept_scores,
+    min_words=10,
+    max_words=25
+) if hybrid_gen else ""
+
+r_casual = engine.generate_response(
+    user_input,
+    questions,
+    understanding,
+    concepts,
+    growth_stage=growth_stage
+)
+
+response = r_hybrid if len(r_hybrid) > len(r_casual) else r_casual
+
+if questions:
+    q = questions[0] if isinstance(questions[0], str) else questions[0].get("question", "")
+    response += " " + q
+                response = response + " " + q
+        else:
+            # Casual/conversational: tone-aware composer
+        r1 = hybrid_gen.generate(user_input, concepts, engine.extract_concepts_scored(user_input), min_words=10, max_words=25);
+        r2 = engine.generate_response(user_input, engine.generate_questions(user_input, growth_stage=memory.growth["stage"], known_concepts=memory.get_known_concepts()), {"topic": concepts[0] if concepts else "general","understanding_score":0.0,"gaps":[],"related_concepts":[]}, concepts, growth_stage=memory.growth["stage"]);
+        response = r1 if len(r1) > len(r2) else r2
+                user_input, questions, understanding, concepts,
+                growth_stage=growth_stage
+            )
 
         # Add personality perspective (30% chance)
         if personality:
@@ -1645,7 +1551,7 @@ def run_chat(verbose=False):
             # Get topology
             topo = memory.check_graph_topology()
             conn = memory.count_connections()
-            print(f"  ║   Stage:         {growth_stage} -- {memory.growth['name']}")
+            print(f"  ║   Stage:         {growth_stage} — {memory.growth['name']}")
             print(f"  ║   Concepts:      {memory.growth.get('total_concepts', len(memory.concepts))}")
             print(f"  ║   Connections:   {conn}")
             print(f"  ║   Graph: avg deg={topo['avg_degree']}, diam={topo['diameter']}, comps={topo['component_count']}")

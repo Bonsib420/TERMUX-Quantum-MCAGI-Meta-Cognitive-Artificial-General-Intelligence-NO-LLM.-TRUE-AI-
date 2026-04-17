@@ -198,7 +198,7 @@ async def export_memory():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-class MemoryImport(BaseModel):
+class MemoryImportCloud(BaseModel):
     semantic_memory: Optional[List[Dict]] = None
     insights: Optional[List[Dict]] = None
 

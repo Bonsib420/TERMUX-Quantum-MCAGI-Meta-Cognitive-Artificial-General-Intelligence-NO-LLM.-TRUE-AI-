@@ -332,8 +332,25 @@ class HiddenThinkingMode:
                 pass
         
         # 3. Web research (if enabled and needed)
-        # TODO: Add web search integration when available
-        
+        if unknown_concepts and len(research_results) < 3:
+            try:
+                from duckduckgo_search import DDGS
+                query = ' '.join(unknown_concepts[:3]) + ' ' + ' '.join(user_input.split()[:5])
+                with DDGS() as ddgs:
+                    results = list(ddgs.text(query, max_results=3))
+                for r in results:
+                    research_results.append({
+                        'type': 'web_search',
+                        'concept': query,
+                        'data': {
+                            'title': r.get('title', ''),
+                            'snippet': r.get('body', ''),
+                            'url': r.get('href', '')
+                        }
+                    })
+            except Exception:
+                pass
+
         return research_results
     
     async def _synthesize_understanding(self, user_input: str, research_results: List[Dict], document_context: Optional[Dict] = None) -> Dict:

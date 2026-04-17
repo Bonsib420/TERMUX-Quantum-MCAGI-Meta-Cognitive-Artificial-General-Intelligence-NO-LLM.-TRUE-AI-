@@ -289,7 +289,7 @@ async def research_query(query: str, reason: str = "user_request"):
     """Perform autonomous research on a topic"""
     try:
         # Direct DDGS test
-        from ddgs import DDGS
+        from duckduckgo_search import DDGS
         ddgs = DDGS()
         direct_results = list(ddgs.text(query, max_results=3))
         logger.info(f"[RESEARCH DEBUG] Direct DDGS returned {len(direct_results)} results for '{query}'")
@@ -326,12 +326,6 @@ async def get_research_stats():
 
 
 # ============================================================================
-# AUTONOMOUS RESEARCH (30-60 MINUTES)
-# ============================================================================
-
-class AutonomousResearchRequest(BaseModel):
-    duration_minutes: int = 30
-
 @router.post("/research/autonomous/start")
 async def start_autonomous_research(request: AutonomousResearchRequest):
     """Start autonomous research session (30-60 minutes)"""

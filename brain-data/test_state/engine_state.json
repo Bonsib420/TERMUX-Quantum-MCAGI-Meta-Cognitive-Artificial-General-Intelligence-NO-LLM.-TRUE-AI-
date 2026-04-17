@@ -1,0 +1,14 @@
+{
+  "saved_at": "2026-04-13T06:47:35.630913+00:00",
+  "version": "3.0",
+  "markov_states": 422,
+  "markov_transitions": 442,
+  "markov_order": 2,
+  "vocabulary_size": 293,
+  "total_documents": 46,
+  "total_words": 534,
+  "coherence_pairs": 0,
+  "has_orch_or": true,
+  "orch_or_moments": 0,
+  "has_pennylane": true
+}

@@ -20,7 +20,7 @@ logger = logging.getLogger("quantum_image_gen")
 
 def _seed_from_prompt(prompt: str) -> int:
     """Generate deterministic seed from prompt text"""
-    return int(hashlib.md5(prompt.encode()).hexdigest()[:8], 16)
+    return int(hashlib.md5(prompt.encode(), usedforsecurity=False).hexdigest()[:8], 16)
 
 
 def _fbm_noise(shape, octaves=6, persistence=0.5, seed=42):

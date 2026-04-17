@@ -1,0 +1,45 @@
+# MCAGI YouTube Training Channels
+# One URL per line. Run with: python youtube_ingest.py --batch channels.txt
+
+# ── SCIENCE & PHYSICS ──
+https://youtube.com/@pbsspacetime
+https://youtube.com/@pbsterra
+https://youtube.com/@startalkplus
+https://youtube.com/@isaacarthursfia
+
+# ── PHILOSOPHY & THEOLOGY ──
+https://youtube.com/@cosmicskeptic
+https://youtube.com/@justinbrierley
+
+# ── LINGUISTICS & LANGUAGE ──
+https://youtube.com/@wordsunravelled
+
+# ── MYTHOLOGY & ANCIENT HISTORY ──
+https://youtube.com/@crecganford
+https://youtube.com/@knowledgia
+https://youtube.com/@historywithkayleigh
+https://youtube.com/@usefulcharts
+
+# ── MYSTERIES, CONSPIRACY & FRONTIER ──
+https://youtube.com/@thewhyfiles
+https://youtube.com/@the5thkind
+https://youtube.com/@astrallegends
+https://youtube.com/@emperorkalos
+
+# ── STORYTELLING & NARRATIVE ──
+https://youtube.com/@theartofstorytelling1
+https://youtube.com/@monsieurdean
+https://youtube.com/@fexl
+
+# ── HUMAN DEBATE & SOCIAL ──
+https://youtube.com/@jubilee
+
+# ── TECHNOLOGY ──
+https://youtube.com/@mrwhosetheboss
+
+# ── STRATEGY & GAME THEORY (Poker) ──
+https://youtube.com/@pokergo
+
+# ── ENTERTAINMENT & CULTURE ──
+https://youtube.com/@vinemontanatv
+https://youtube.com/@gingerbilly

@@ -395,8 +395,58 @@ def handle_ingest_command(cmd_parts, engine=None, memory=None):
                     memory.growth['total_concepts'] += 1
             memory.growth['total_insights'] += 1
 
+        # Extract and persist SVO facts
+        try:
+            import re, json
+            fact_path = os.path.join(os.path.expanduser('~/.quantum-mcagi'), 'fact_store.json')
+            try:
+                with open(fact_path) as f:
+                    fact_store = json.load(f)
+            except Exception:
+                fact_store = {}
+            ASSERTION_VERBS = {'is','are','was','were','has','have','contains',
+                               'includes','consists','means','refers','represents',
+                               'located','found','known','called','defined'}
+            sentences = re.split(r'[.!?]+', text)
+            new_facts = 0
+            # Skip first 2000 chars (front matter/metadata)
+            content = text[2000:]
+            sentences = re.split(r'[.!?]+', content)
+            SKIP_SUBJECTS = {'this book','the book','our company','the cover',
+                             'the author','the publisher','this text','the text',
+                             'this page','the page','we','it','this','that','he','she','they'}
+            for sentence in sentences:
+                words = sentence.strip().split()
+                if len(words) < 4 or len(words) > 40:
+                    continue
+                for i, word in enumerate(words):
+                    if word.lower() in ASSERTION_VERBS and i >= 1:
+                        subject = ' '.join(words[:i]).strip().lower()
+                        verb = word.lower()
+                        obj = ' '.join(words[i+1:]).strip().lower()
+                        # Filter: subject must be 1-5 words, not boilerplate, not a pronoun
+                        subj_words = subject.split()
+                        if (subject and obj and 1 <= len(subj_words) <= 5
+                                and subject not in SKIP_SUBJECTS
+                                and not subject.startswith('this ')
+                                and not subject.startswith('the following')
+                                and len(obj) > 10
+                                and not any(c.isdigit() for c in subject)):
+                            if subject not in fact_store:
+                                fact_store[subject] = []
+                            triple = [verb, obj[:120]]
+                            if triple not in fact_store[subject]:
+                                fact_store[subject].append(triple)
+                                new_facts += 1
+                        break
+            with open(fact_path, 'w') as f:
+                json.dump(fact_store, f)
+        except Exception as e:
+            new_facts = -1
+
         word_count = len(text.split())
-        return f"  ✓ {status}\n  Trained Markov chain: +{word_count:,} words\n  Chain states: {len(engine.markov.chain):,}"
+        fact_msg = f"\n  Facts stored: +{new_facts:,} triples" if new_facts >= 0 else ""
+        return f"  ✓ {status}\n  Trained Markov chain: +{word_count:,} words\n  Chain states: {len(engine.markov.chain):,}{fact_msg}"
 
     return f"  ✓ {status}\n  (no engine — text extracted only)"
 

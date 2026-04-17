@@ -49,6 +49,50 @@ class CloudProvider(ABC):
         ...
 
     @abstractmethod
+    def save_chain(self, chain_path: str, state_dir: str) -> bool:
+        """Save full Markov chain compressed to Wolfram Cloud via REST API."""
+        import gzip, os, requests
+        try:
+            chain_file = os.path.join(state_dir, 'markov_chain.json')
+            if not os.path.exists(chain_file):
+                return False
+            with open(chain_file, 'rb') as f:
+                raw = f.read()
+            compressed = gzip.compress(raw)
+            # Use REST API directly — bypasses kernel memory limit
+            url = f"https://www.wolframcloud.com/obj/bonsibcory420/{chain_path}"
+            sak_key = 'XQFcaGYqlxKynDG/OnScZgYiVue2HLfDJkBwiLDl1gw='
+            sak_secret = 'gsJeEwTtCBrOJOojWWFLlR2yrwszXJfzBI8mFco/Q1U='
+            r = requests.put(url, data=compressed,
+                headers={'Content-Type': 'application/octet-stream'},
+                auth=(sak_key, sak_secret), timeout=60)
+            if r.status_code in (200, 201):
+                logger.info(f"[WolframCloud] Chain saved: {len(compressed)/1024/1024:.1f}MB")
+                return True
+            logger.warning(f"[WolframCloud] save_chain REST failed: {r.status_code}")
+            return False
+        except Exception as e:
+            logger.warning(f"[WolframCloud] save_chain failed: {e}")
+            return False
+
+    def load_chain(self, chain_path: str, state_dir: str) -> bool:
+        """Load full Markov chain from Wolfram Cloud and decompress."""
+        import gzip, base64, os
+        try:
+            data = self.load(chain_path)
+            if not data or 'chain_gz_b64' not in data:
+                return False
+            compressed = base64.b64decode(data['chain_gz_b64'])
+            raw = gzip.decompress(compressed)
+            chain_file = os.path.join(state_dir, 'markov_chain.json')
+            with open(chain_file, 'wb') as f:
+                f.write(raw)
+            logger.info(f"[WolframCloud] Chain restored: {len(raw)/1024/1024:.1f}MB")
+            return True
+        except Exception as e:
+            logger.warning(f"[WolframCloud] load_chain failed: {e}")
+            return False
+
     def list_objects(self, prefix: str) -> List[str]:
         """List all logical paths under a prefix."""
         ...
@@ -110,6 +154,50 @@ class WolframCloudProvider(CloudProvider):
         except Exception as e:
             logger.warning(f"[WolframCloud] load({path}) failed: {e}")
         return None
+
+    def save_chain(self, chain_path: str, state_dir: str) -> bool:
+        """Save full Markov chain compressed to Wolfram Cloud via REST API."""
+        import gzip, os, requests
+        try:
+            chain_file = os.path.join(state_dir, 'markov_chain.json')
+            if not os.path.exists(chain_file):
+                return False
+            with open(chain_file, 'rb') as f:
+                raw = f.read()
+            compressed = gzip.compress(raw)
+            # Use REST API directly — bypasses kernel memory limit
+            url = f"https://www.wolframcloud.com/obj/bonsibcory420/{chain_path}"
+            sak_key = 'XQFcaGYqlxKynDG/OnScZgYiVue2HLfDJkBwiLDl1gw='
+            sak_secret = 'gsJeEwTtCBrOJOojWWFLlR2yrwszXJfzBI8mFco/Q1U='
+            r = requests.put(url, data=compressed,
+                headers={'Content-Type': 'application/octet-stream'},
+                auth=(sak_key, sak_secret), timeout=60)
+            if r.status_code in (200, 201):
+                logger.info(f"[WolframCloud] Chain saved: {len(compressed)/1024/1024:.1f}MB")
+                return True
+            logger.warning(f"[WolframCloud] save_chain REST failed: {r.status_code}")
+            return False
+        except Exception as e:
+            logger.warning(f"[WolframCloud] save_chain failed: {e}")
+            return False
+
+    def load_chain(self, chain_path: str, state_dir: str) -> bool:
+        """Load full Markov chain from Wolfram Cloud and decompress."""
+        import gzip, base64, os
+        try:
+            data = self.load(chain_path)
+            if not data or 'chain_gz_b64' not in data:
+                return False
+            compressed = base64.b64decode(data['chain_gz_b64'])
+            raw = gzip.decompress(compressed)
+            chain_file = os.path.join(state_dir, 'markov_chain.json')
+            with open(chain_file, 'wb') as f:
+                f.write(raw)
+            logger.info(f"[WolframCloud] Chain restored: {len(raw)/1024/1024:.1f}MB")
+            return True
+        except Exception as e:
+            logger.warning(f"[WolframCloud] load_chain failed: {e}")
+            return False
 
     def list_objects(self, prefix: str) -> List[str]:
         try:
@@ -193,6 +281,50 @@ class LocalProvider(CloudProvider):
         except Exception as e:
             logger.warning(f"[Local] load({path}) failed: {e}")
         return None
+
+    def save_chain(self, chain_path: str, state_dir: str) -> bool:
+        """Save full Markov chain compressed to Wolfram Cloud via REST API."""
+        import gzip, os, requests
+        try:
+            chain_file = os.path.join(state_dir, 'markov_chain.json')
+            if not os.path.exists(chain_file):
+                return False
+            with open(chain_file, 'rb') as f:
+                raw = f.read()
+            compressed = gzip.compress(raw)
+            # Use REST API directly — bypasses kernel memory limit
+            url = f"https://www.wolframcloud.com/obj/bonsibcory420/{chain_path}"
+            sak_key = 'XQFcaGYqlxKynDG/OnScZgYiVue2HLfDJkBwiLDl1gw='
+            sak_secret = 'gsJeEwTtCBrOJOojWWFLlR2yrwszXJfzBI8mFco/Q1U='
+            r = requests.put(url, data=compressed,
+                headers={'Content-Type': 'application/octet-stream'},
+                auth=(sak_key, sak_secret), timeout=60)
+            if r.status_code in (200, 201):
+                logger.info(f"[WolframCloud] Chain saved: {len(compressed)/1024/1024:.1f}MB")
+                return True
+            logger.warning(f"[WolframCloud] save_chain REST failed: {r.status_code}")
+            return False
+        except Exception as e:
+            logger.warning(f"[WolframCloud] save_chain failed: {e}")
+            return False
+
+    def load_chain(self, chain_path: str, state_dir: str) -> bool:
+        """Load full Markov chain from Wolfram Cloud and decompress."""
+        import gzip, base64, os
+        try:
+            data = self.load(chain_path)
+            if not data or 'chain_gz_b64' not in data:
+                return False
+            compressed = base64.b64decode(data['chain_gz_b64'])
+            raw = gzip.decompress(compressed)
+            chain_file = os.path.join(state_dir, 'markov_chain.json')
+            with open(chain_file, 'wb') as f:
+                f.write(raw)
+            logger.info(f"[WolframCloud] Chain restored: {len(raw)/1024/1024:.1f}MB")
+            return True
+        except Exception as e:
+            logger.warning(f"[WolframCloud] load_chain failed: {e}")
+            return False
 
     def list_objects(self, prefix: str) -> List[str]:
         try:
@@ -281,6 +413,50 @@ class CloudProviderRegistry:
             except Exception as e:
                 logger.warning(f"[Registry] {provider.name} load failed: {e}")
         return None
+
+    def save_chain(self, chain_path: str, state_dir: str) -> bool:
+        """Save full Markov chain compressed to Wolfram Cloud via REST API."""
+        import gzip, os, requests
+        try:
+            chain_file = os.path.join(state_dir, 'markov_chain.json')
+            if not os.path.exists(chain_file):
+                return False
+            with open(chain_file, 'rb') as f:
+                raw = f.read()
+            compressed = gzip.compress(raw)
+            # Use REST API directly — bypasses kernel memory limit
+            url = f"https://www.wolframcloud.com/obj/bonsibcory420/{chain_path}"
+            sak_key = 'XQFcaGYqlxKynDG/OnScZgYiVue2HLfDJkBwiLDl1gw='
+            sak_secret = 'gsJeEwTtCBrOJOojWWFLlR2yrwszXJfzBI8mFco/Q1U='
+            r = requests.put(url, data=compressed,
+                headers={'Content-Type': 'application/octet-stream'},
+                auth=(sak_key, sak_secret), timeout=60)
+            if r.status_code in (200, 201):
+                logger.info(f"[WolframCloud] Chain saved: {len(compressed)/1024/1024:.1f}MB")
+                return True
+            logger.warning(f"[WolframCloud] save_chain REST failed: {r.status_code}")
+            return False
+        except Exception as e:
+            logger.warning(f"[WolframCloud] save_chain failed: {e}")
+            return False
+
+    def load_chain(self, chain_path: str, state_dir: str) -> bool:
+        """Load full Markov chain from Wolfram Cloud and decompress."""
+        import gzip, base64, os
+        try:
+            data = self.load(chain_path)
+            if not data or 'chain_gz_b64' not in data:
+                return False
+            compressed = base64.b64decode(data['chain_gz_b64'])
+            raw = gzip.decompress(compressed)
+            chain_file = os.path.join(state_dir, 'markov_chain.json')
+            with open(chain_file, 'wb') as f:
+                f.write(raw)
+            logger.info(f"[WolframCloud] Chain restored: {len(raw)/1024/1024:.1f}MB")
+            return True
+        except Exception as e:
+            logger.warning(f"[WolframCloud] load_chain failed: {e}")
+            return False
 
     def list_objects(self, prefix: str) -> List[str]:
         """Merge object lists from all providers (union)."""
@@ -377,6 +553,132 @@ class CloudProviderRegistry:
             return merged
         return None
 
+
+class PCloudProvider:
+    """pCloud backup provider for full chain storage."""
+    AUTH_TOKEN = '5pV5WZ21Ax7ZgxsLeOwoRspJhseUe9dTdj02dSPV'
+    FOLDER_ID = 30996413679
+    BASE_URL = 'https://api.pcloud.com'
+
+    def save_chain(self, state_dir: str, filename: str = 'markov_chain.json.gz') -> bool:
+        """Upload compressed chain to pCloud Quantum Cloud folder."""
+        import gzip, os, requests
+        try:
+            chain_file = os.path.join(state_dir, 'markov_chain.json')
+            if not os.path.exists(chain_file):
+                return False
+            with open(chain_file, 'rb') as f:
+                raw = f.read()
+            compressed = gzip.compress(raw)
+            r = requests.post(f'{self.BASE_URL}/uploadfile',
+                params={'auth': self.AUTH_TOKEN, 'folderid': self.FOLDER_ID, 'filename': filename},
+                files={'file': (filename, compressed, 'application/octet-stream')},
+                timeout=120)
+            result = r.json()
+            if result.get('result') == 0:
+                logger.info(f"[pCloud] Chain saved: {len(compressed)/1024/1024:.1f}MB")
+                return True
+            logger.warning(f"[pCloud] save_chain failed: {result}")
+            return False
+        except Exception as e:
+            logger.warning(f"[pCloud] save_chain error: {e}")
+            return False
+
+    def load_chain(self, state_dir: str, filename: str = 'markov_chain.json.gz') -> bool:
+        """Download and decompress chain from pCloud."""
+        import gzip, os, requests
+        try:
+            r = requests.get(f'{self.BASE_URL}/listfolder',
+                params={'auth': self.AUTH_TOKEN, 'folderid': self.FOLDER_ID})
+            contents = r.json().get('metadata', {}).get('contents', [])
+            file_id = None
+            for f in contents:
+                if f.get('name') == filename:
+                    file_id = f['fileid']
+                    break
+            if not file_id:
+                return False
+            r = requests.get(f'{self.BASE_URL}/getfilelink',
+                params={'auth': self.AUTH_TOKEN, 'fileid': file_id})
+            link_data = r.json()
+            hosts = link_data.get('hosts', [])
+            path = link_data.get('path', '')
+            if not hosts or not path:
+                return False
+            dl_url = f"https://{hosts[0]}{path}"
+            r = requests.get(dl_url, timeout=120)
+            raw = gzip.decompress(r.content)
+            chain_file = os.path.join(state_dir, 'markov_chain.json')
+            with open(chain_file, 'wb') as f:
+                f.write(raw)
+            logger.info(f"[pCloud] Chain restored: {len(raw)/1024/1024:.1f}MB")
+            return True
+        except Exception as e:
+            logger.warning(f"[pCloud] load_chain error: {e}")
+            return False
+
+class PCloudProvider:
+    """pCloud backup provider for full chain storage."""
+    AUTH_TOKEN = '5pV5WZ21Ax7ZgxsLeOwoRspJhseUe9dTdj02dSPV'
+    FOLDER_ID = 30996413679
+    BASE_URL = 'https://api.pcloud.com'
+
+    def save_chain(self, state_dir: str, filename: str = 'markov_chain.json.gz') -> bool:
+        """Upload compressed chain to pCloud Quantum Cloud folder."""
+        import gzip, os, requests
+        try:
+            chain_file = os.path.join(state_dir, 'markov_chain.json')
+            if not os.path.exists(chain_file):
+                return False
+            with open(chain_file, 'rb') as f:
+                raw = f.read()
+            compressed = gzip.compress(raw)
+            r = requests.post(f'{self.BASE_URL}/uploadfile',
+                params={'auth': self.AUTH_TOKEN, 'folderid': self.FOLDER_ID, 'filename': filename},
+                files={'file': (filename, compressed, 'application/octet-stream')},
+                timeout=120)
+            result = r.json()
+            if result.get('result') == 0:
+                logger.info(f"[pCloud] Chain saved: {len(compressed)/1024/1024:.1f}MB")
+                return True
+            logger.warning(f"[pCloud] save_chain failed: {result}")
+            return False
+        except Exception as e:
+            logger.warning(f"[pCloud] save_chain error: {e}")
+            return False
+
+    def load_chain(self, state_dir: str, filename: str = 'markov_chain.json.gz') -> bool:
+        """Download and decompress chain from pCloud."""
+        import gzip, os, requests
+        try:
+            r = requests.get(f'{self.BASE_URL}/listfolder',
+                params={'auth': self.AUTH_TOKEN, 'folderid': self.FOLDER_ID})
+            contents = r.json().get('metadata', {}).get('contents', [])
+            file_id = None
+            for f in contents:
+                if f.get('name') == filename:
+                    file_id = f['fileid']
+                    break
+            if not file_id:
+                return False
+            r = requests.get(f'{self.BASE_URL}/getfilelink',
+                params={'auth': self.AUTH_TOKEN, 'fileid': file_id})
+            link_data = r.json()
+            hosts = link_data.get('hosts', [])
+            path = link_data.get('path', '')
+            if not hosts or not path:
+                return False
+            dl_url = f"https://{hosts[0]}{path}"
+            r = requests.get(dl_url, timeout=120)
+            raw = gzip.decompress(r.content)
+            chain_file = os.path.join(state_dir, 'markov_chain.json')
+            with open(chain_file, 'wb') as f:
+                f.write(raw)
+            logger.info(f"[pCloud] Chain restored: {len(raw)/1024/1024:.1f}MB")
+            return True
+        except Exception as e:
+            logger.warning(f"[pCloud] load_chain error: {e}")
+            return False
 
 # ── Global singleton ─────────────────────────────────────────────────────────
 

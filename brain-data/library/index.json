@@ -1,0 +1,248 @@
+{
+  "1497": {
+    "title": "The Republic - Plato",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_1497.txt",
+    "words": 216285,
+    "trained": true
+  },
+  "2680": {
+    "title": "Meditations - Marcus Aurelius",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_2680.txt",
+    "words": 71957,
+    "trained": true
+  },
+  "5827": {
+    "title": "The Problems of Philosophy - Bertrand Russell",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_5827.txt",
+    "words": 42756,
+    "trained": true
+  },
+  "4280": {
+    "title": "The Critique of Pure Reason - Immanuel Kant",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_4280.txt",
+    "words": 209061,
+    "trained": true
+  },
+  "1232": {
+    "title": "The Prince - Machiavelli",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_1232.txt",
+    "words": 49943,
+    "trained": true
+  },
+  "3600": {
+    "title": "Thus Spake Zarathustra - Nietzsche",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_3600.txt",
+    "words": 525864,
+    "trained": true
+  },
+  "10616": {
+    "title": "The Art of War - Sun Tzu",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_10616.txt",
+    "words": 124627,
+    "trained": true
+  },
+  "12345": {
+    "title": "some book title",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_12345.txt",
+    "words": 47373,
+    "trained": true
+  },
+  "84": {
+    "title": "Frankenstein - Mary Shelley",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_84.txt",
+    "words": 75042,
+    "trained": true
+  },
+  "1342": {
+    "title": "Pride and Prejudice - Jane Austen",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_1342.txt",
+    "words": 127359,
+    "trained": true
+  },
+  "11": {
+    "title": "Alice in Wonderland - Lewis Carroll",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_11.txt",
+    "words": 26525,
+    "trained": true
+  },
+  "1661": {
+    "title": "Sherlock Holmes - Arthur Conan Doyle",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_1661.txt",
+    "words": 104506,
+    "trained": true
+  },
+  "2701": {
+    "title": "Moby Dick - Herman Melville",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_2701.txt",
+    "words": 212796,
+    "trained": true
+  },
+  "1952": {
+    "title": "The Yellow Wallpaper - Charlotte Perkins Gilman",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_1952.txt",
+    "words": 6085,
+    "trained": true
+  },
+  "98": {
+    "title": "A Tale of Two Cities - Charles Dickens",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_98.txt",
+    "words": 135886,
+    "trained": true
+  },
+  "10": {
+    "title": "King James Bible",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_10.txt",
+    "words": 821496,
+    "trained": true
+  },
+  "2500": {
+    "title": "Siddhartha - Hermann Hesse",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_2500.txt",
+    "words": 39157,
+    "trained": true
+  },
+  "7118": {
+    "title": "The Quran",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_7118.txt",
+    "words": 94878,
+    "trained": true
+  },
+  "2852": {
+    "title": "The Tao Te Ching - Lao Tzu",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_2852.txt",
+    "words": 59258,
+    "trained": true
+  },
+  "16295": {
+    "title": "The Bhagavad Gita",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_16295.txt",
+    "words": 202130,
+    "trained": true
+  },
+  "49010": {
+    "title": "The Feynman Lectures (selections)",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_49010.txt",
+    "words": 29456,
+    "trained": true
+  },
+  "14725": {
+    "title": "The Problems of Science - Federigo Enriques",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_14725.txt",
+    "words": 38179,
+    "trained": true
+  },
+  "1065": {
+    "title": "Leaves of Grass - Walt Whitman",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_1065.txt",
+    "words": 1075,
+    "trained": true
+  },
+  "1321": {
+    "title": "Paradise Lost - John Milton",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_1321.txt",
+    "words": 4697,
+    "trained": true
+  },
+  "100": {
+    "title": "Complete Works of Shakespeare",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_100.txt",
+    "words": 963460,
+    "trained": true
+  },
+  "4300": {
+    "title": "Ulysses - James Joyce",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_4300.txt",
+    "words": 265059,
+    "trained": true
+  },
+  "1064": {
+    "title": "The Divine Comedy - Dante",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_1064.txt",
+    "words": 2406,
+    "trained": true
+  },
+  "76": {
+    "title": "Adventures of Huckleberry Finn - Mark Twain",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_76.txt",
+    "words": 111085,
+    "trained": true
+  },
+  "1400": {
+    "title": "Great Expectations - Charles Dickens",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_1400.txt",
+    "words": 184478,
+    "trained": true
+  },
+  "74": {
+    "title": "Adventures of Tom Sawyer - Mark Twain",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_74.txt",
+    "words": 70800,
+    "trained": true
+  },
+  "16": {
+    "title": "Peter Pan - J.M. Barrie",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_16.txt",
+    "words": 47268,
+    "trained": true
+  },
+  "514": {
+    "title": "Little Women - Louisa May Alcott",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_514.txt",
+    "words": 186112,
+    "trained": true
+  },
+  "55": {
+    "title": "The Wonderful Wizard of Oz - L. Frank Baum",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_55.txt",
+    "words": 39649,
+    "trained": true
+  },
+  "32": {
+    "title": "Herland - Charlotte Perkins Gilman",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_32.txt",
+    "words": 52158,
+    "trained": true
+  },
+  "arc_a_calendar_of_dinners_with_615_recipes_": {
+    "title": "a_calendar_of_dinners_with_615_recipes_",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/archive_a_calendar_of_dinners_with_615_recipes_.txt",
+    "words": 13993,
+    "trained": false
+  },
+  "arc_identifier": {
+    "title": "identifier",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/archive_identifier.txt",
+    "words": 42,
+    "trained": false
+  },
+  "46": {
+    "title": "A Christmas Carol - Charles Dickens",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_46.txt",
+    "words": 28541,
+    "trained": true
+  },
+  "3207": {
+    "title": "Leviathan - Thomas Hobbes",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_3207.txt",
+    "words": 213346,
+    "trained": true
+  },
+  "7370": {
+    "title": "The Histories - Herodotus",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_7370.txt",
+    "words": 56517,
+    "trained": true
+  },
+  "14969": {
+    "title": "The Interpretation of Dreams - Sigmund Freud",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_14969.txt",
+    "words": 42193,
+    "trained": true
+  },
+  "5116": {
+    "title": "The Psychology of the Unconscious - Carl Jung",
+    "filepath": "/data/data/com.termux/files/home/.quantum-mcagi/library/gutenberg_5116.txt",
+    "words": 51984,
+    "trained": true
+  }
+}

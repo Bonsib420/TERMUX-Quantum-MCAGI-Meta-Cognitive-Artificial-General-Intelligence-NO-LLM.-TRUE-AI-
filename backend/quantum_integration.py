@@ -119,7 +119,7 @@ def quantum_seed_from_prompt(prompt: str, device_name: str = "default.qubit") ->
         Integer seed
     """
     # Classical hash component
-    classical_hash = int(hashlib.md5(prompt.encode()).hexdigest()[:8], 16)
+    classical_hash = int(hashlib.md5(prompt.encode(), usedforsecurity=False).hexdigest()[:8], 16)
 
     # Quantum enhancement: Use prompt hash to determine circuit parameters
     # This ensures same prompt gives same "quantum" result (reproducibility)
@@ -312,7 +312,7 @@ def quantum_parameter_bias(prompt: str, n_params: int = 5,
 
 def _seed_from_prompt(prompt: str) -> int:
     """Helper: deterministic seed from prompt"""
-    return int(hashlib.md5(prompt.encode()).hexdigest()[:8], 16)
+    return int(hashlib.md5(prompt.encode(), usedforsecurity=False).hexdigest()[:8], 16)
 
 
 # ============ Quantum Renderer Enhancements ============

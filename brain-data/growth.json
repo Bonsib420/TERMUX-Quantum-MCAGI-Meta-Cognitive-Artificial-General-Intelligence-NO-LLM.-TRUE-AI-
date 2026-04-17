@@ -1,0 +1,27 @@
+{
+  "stage": 3,
+  "name": "Understanding",
+  "total_interactions": 561,
+  "total_concepts": 2245,
+  "total_questions_asked": 1001,
+  "total_insights": 1106,
+  "last_recorded_stage": 5,
+  "knowledge_track": {
+    "connections": 0,
+    "avg_degree": 0,
+    "domains": 0,
+    "diameter": 0,
+    "stage": 0
+  },
+  "communication_track": {
+    "avg_score": 0.0,
+    "total_samples": 0,
+    "score_sum": 0.0,
+    "stage": 0
+  },
+  "total_connections": 2199,
+  "hwm_avg_degree": 5.93,
+  "hwm_diameter": 53,
+  "markov_states": 5224683,
+  "markov_transitions": 14823889
+}

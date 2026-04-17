@@ -1,2 +1,16 @@
 backend/__pycache__/
 **/__pycache__/
+*.pyc
+*.bak
+*.backup
+*.debug
+*.trace
+*.orchorfix.backup
+backend/chat_backup.py
+backend/chat_broken.py
+backend/chat.py.WORKING_STAGE3
+backend/backups/
+backend/test_render.png
+backend/quantum_language_engine.py.backup
+backend/quantum_language_engine.py.bak
+backend/quantum_language_engine.py.orchorfix.backup

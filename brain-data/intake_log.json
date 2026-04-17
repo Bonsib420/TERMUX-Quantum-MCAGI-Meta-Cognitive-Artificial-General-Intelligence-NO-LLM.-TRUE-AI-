@@ -1,0 +1,117 @@
+{
+  "stages": {},
+  "current_stage": 0,
+  "sources": [],
+  "exam_history": [
+    {
+      "stage": 0,
+      "timestamp": "2026-04-07T07:56:29.314078",
+      "questions": 4,
+      "passed": 2,
+      "failed": 2,
+      "score": 0.5,
+      "advanced": false,
+      "failures_by_type": {
+        "math": 2
+      },
+      "details": [
+        {
+          "type": "math",
+          "question": "What is 15 - 8?",
+          "passed": false,
+          "explanation": "Expected 7, got: ERROR: QuantumLanguageEngine.generate_response() missing 1 required positional argument: 'concepts'"
+        },
+        {
+          "type": "math",
+          "question": "What is 2 + 2?",
+          "passed": false,
+          "explanation": "Expected 4, got: ERROR: QuantumLanguageEngine.generate_response() missing 1 required positional argument: 'concepts'"
+        },
+        {
+          "type": "casual",
+          "question": "Tell me a joke",
+          "passed": true,
+          "explanation": "Response generated"
+        },
+        {
+          "type": "casual",
+          "question": "How are you?",
+          "passed": true,
+          "explanation": "Response generated"
+        }
+      ]
+    },
+    {
+      "stage": 0,
+      "timestamp": "2026-04-07T08:05:36.549729",
+      "questions": 4,
+      "passed": 4,
+      "failed": 0,
+      "score": 1.0,
+      "advanced": true,
+      "failures_by_type": {},
+      "details": [
+        {
+          "type": "casual",
+          "question": "Hello",
+          "passed": true,
+          "explanation": "Response generated"
+        },
+        {
+          "type": "math",
+          "question": "What is 6 * 4?",
+          "passed": true,
+          "explanation": "Correct: 24"
+        },
+        {
+          "type": "math",
+          "question": "What is 50 - 17?",
+          "passed": true,
+          "explanation": "Correct: 33"
+        },
+        {
+          "type": "casual",
+          "question": "What is your name?",
+          "passed": true,
+          "explanation": "Response generated"
+        }
+      ]
+    },
+    {
+      "stage": 0,
+      "timestamp": "2026-04-07T08:06:00.709635",
+      "questions": 4,
+      "passed": 4,
+      "failed": 0,
+      "score": 1.0,
+      "advanced": true,
+      "failures_by_type": {},
+      "details": [
+        {
+          "type": "math",
+          "question": "What is 12 + 15?",
+          "passed": true,
+          "explanation": "Correct: 27"
+        },
+        {
+          "type": "casual",
+          "question": "What is your name?",
+          "passed": true,
+          "explanation": "Response generated"
+        },
+        {
+          "type": "math",
+          "question": "What is 6 * 4?",
+          "passed": true,
+          "explanation": "Correct: 24"
+        },
+        {
+          "type": "casual",
+          "question": "Tell me a joke",
+          "passed": true,
+          "explanation": "Response generated"
+        }
+      ]
+    }
+  ]
+}

@@ -10,6 +10,7 @@ Refactored: Uses knowledge_base.py and quote_engine.py for cleaner code.
 import os
 import re
 import random
+import ast
 from typing import Dict, List, Optional
 from datetime import datetime, timezone
 
@@ -292,7 +293,7 @@ class QuantumBrain:
             clean_expr = re.sub(r'[a-zA-Z\?]', '', clean_expr).strip()
             
             if clean_expr and re.match(r'^[\d\s\+\-\*\/\(\)\.]+$', clean_expr):
-                result = eval(clean_expr)
+                result = ast.literal_eval(clean_expr)
                 return f"The answer is: {result}"
             
             if self.wolfram:
