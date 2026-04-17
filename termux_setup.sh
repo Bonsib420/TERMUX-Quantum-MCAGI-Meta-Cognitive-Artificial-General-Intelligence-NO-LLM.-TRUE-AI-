@@ -18,6 +18,9 @@
 #     scp -r ./backend user@phone:~/Quantum_MCAGI_NO_LLM/backend
 #     ssh user@phone 'bash ~/Quantum_MCAGI_NO_LLM/termux_setup.sh'
 #
+#   Optional:
+#     MCAGI_INSTALL_DIR=/path/to/project bash termux_setup.sh
+#
 # REQUIREMENTS:
 #   - Termux 0.119+ (F-Droid version recommended)
 #   - Android 10+ (API 29+)
@@ -57,7 +60,15 @@ echo -e "${NC}"
 
 # Config
 REPO_URL="https://github.com/Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-.git"
-INSTALL_DIR="$HOME/Quantum_MCAGI_NO_LLM"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEFAULT_INSTALL_DIR="$HOME/Quantum_MCAGI_NO_LLM"
+if [ -n "${MCAGI_INSTALL_DIR:-}" ]; then
+    INSTALL_DIR="$MCAGI_INSTALL_DIR"
+elif [ -d "$SCRIPT_DIR/.git" ] && [ -d "$SCRIPT_DIR/backend" ]; then
+    INSTALL_DIR="$SCRIPT_DIR"
+else
+    INSTALL_DIR="$DEFAULT_INSTALL_DIR"
+fi
 BACKEND_DIR="$INSTALL_DIR/backend"
 
 # ============================================================================
@@ -208,7 +219,8 @@ chmod +x "$INSTALL_DIR/start.sh"
 cat > "$INSTALL_DIR/install_alias.sh" << 'ALIAS_EOF'
 #!/data/data/com.termux/files/usr/bin/bash
 # Add 'mcagi' alias to .bashrc
-ALIAS_LINE='alias mcagi="bash ~/Quantum_MCAGI_NO_LLM/start.sh"'
+INSTALL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ALIAS_LINE="alias mcagi=\"bash $INSTALL_DIR/start.sh\""
 if ! grep -q "mcagi" "$HOME/.bashrc" 2>/dev/null; then
     echo "$ALIAS_LINE" >> "$HOME/.bashrc"
     echo "✓ Added 'mcagi' alias. Run: source ~/.bashrc"
@@ -284,9 +296,9 @@ echo -e "${MAGENTA}${BOLD}"
 echo "  ╔══════════════════════════════════════════════════╗"
 echo "  ║  🔮 INSTALLATION COMPLETE                       ║"
 echo "  ║                                                  ║"
-echo "  ║  Start:  cd ~/Quantum_MCAGI_NO_LLM              ║"
-echo "  ║          bash start.sh          (chat mode)      ║"
-echo "  ║          bash start.sh server   (API server)     ║"
+echo "  ║  Start:  cd $INSTALL_DIR"
+echo "  ║          bash start.sh"
+echo "  ║          bash start.sh server"
 echo "  ║                                                  ║"
 echo "  ║  Alias:  bash install_alias.sh                   ║"
 echo "  ║          Then just: mcagi                        ║"
