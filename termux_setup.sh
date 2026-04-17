@@ -219,7 +219,15 @@ chmod +x "$INSTALL_DIR/start.sh"
 cat > "$INSTALL_DIR/install_alias.sh" << 'ALIAS_EOF'
 #!/data/data/com.termux/files/usr/bin/bash
 # Add 'mcagi' alias to .bashrc
-INSTALL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEFAULT_INSTALL_DIR="$HOME/Quantum_MCAGI_NO_LLM"
+if [ -n "${MCAGI_INSTALL_DIR:-}" ]; then
+    INSTALL_DIR="$MCAGI_INSTALL_DIR"
+elif [ -d "$SCRIPT_DIR/.git" ] && [ -d "$SCRIPT_DIR/backend" ]; then
+    INSTALL_DIR="$SCRIPT_DIR"
+else
+    INSTALL_DIR="$DEFAULT_INSTALL_DIR"
+fi
 ALIAS_LINE="alias mcagi=\"bash $INSTALL_DIR/start.sh\""
 if ! grep -q "mcagi" "$HOME/.bashrc" 2>/dev/null; then
     echo "$ALIAS_LINE" >> "$HOME/.bashrc"
@@ -296,9 +304,9 @@ echo -e "${MAGENTA}${BOLD}"
 echo "  ╔══════════════════════════════════════════════════╗"
 echo "  ║  🔮 INSTALLATION COMPLETE                       ║"
 echo "  ║                                                  ║"
-echo "  ║  Start:  cd $INSTALL_DIR"
-echo "  ║          bash start.sh"
-echo "  ║          bash start.sh server"
+echo "  ║  Start:  cd (see detected dir below)             ║"
+echo "  ║          bash start.sh         (chat mode)       ║"
+echo "  ║          bash start.sh server  (API server)      ║"
 echo "  ║                                                  ║"
 echo "  ║  Alias:  bash install_alias.sh                   ║"
 echo "  ║          Then just: mcagi                        ║"
@@ -313,4 +321,5 @@ echo "  ║                                                  ║"
 echo "  ║  Push code to GitHub:                            ║"
 echo "  ║    bash termux_sync.sh push                      ║"
 echo "  ╚══════════════════════════════════════════════════╝"
+echo "  Detected install dir: $INSTALL_DIR"
 echo -e "${NC}"
