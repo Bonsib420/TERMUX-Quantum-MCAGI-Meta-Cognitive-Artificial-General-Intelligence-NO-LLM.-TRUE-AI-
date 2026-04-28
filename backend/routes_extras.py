@@ -1300,81 +1300,53 @@ async def generate_dream(num_sentences: int = 3):
 
 @router.get("/cloud/status")
 async def cloud_status():
-    """Check Wolfram Cloud storage status (list objects)"""
+    """Check cloud storage status via CloudBrain"""
     try:
-        pass  # wolfram removed
-        status = _cloud_status()
-        return {"status": status}
+        from cloud_brain import CloudBrain
+        cb = CloudBrain()
+        return {"available": cb.available, "webdav": cb._webdav_active}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/cloud/save")
 async def cloud_save():
-    """Save current AI state to Wolfram Cloud"""
+    """Push brain state to cloud via CloudBrain (rclone)"""
     try:
-        pass  # wolfram removed
-        # Build a memory-like object from server state
-        class CloudMemory:
-            pass
-        mem = CloudMemory()
-        # Get metrics and stage
-        metrics = await state.cognitive_core.growth_tracker.calculate_metrics()
-        stage = await state.cognitive_core.growth_tracker.get_current_stage()
-        mem.growth = {**metrics, **stage}
-        # Get concepts (up to 500)
-        concepts_cursor = state.db.semantic_memory.find({}, {"concept": 1, "definition": 1, "relationships": 1, "_id": 0}).limit(500)
-        concepts_list = await concepts_cursor.to_list(500)
-        mem.concepts = {}
-        for c in concepts_list:
-            name = c.get("concept")
-            if name:
-                mem.concepts[name] = {k: v for k, v in c.items() if k != "concept"}
-        # Session state (rough estimate)
-        mem.session_state = {"total_interactions": metrics.get("total_interactions", 0)}
-        # Save
-        success = _cloud_save(mem)
+        from cloud_brain import CloudBrain
+        cb = CloudBrain()
+        success = cb.push_all(quiet=True)
         if success:
-            return {"status": "saved", "message": "State saved to Wolfram Cloud"}
+            return {"status": "saved", "message": "State pushed to cloud"}
         else:
-            raise HTTPException(status_code=500, detail="Cloud save failed")
+            raise HTTPException(status_code=500, detail="Cloud save failed — check rclone config")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/cloud/load")
 async def cloud_load():
-    """Load AI state from Wolfram Cloud (preview)"""
+    """Pull brain state from cloud via CloudBrain (rclone)"""
     try:
-        pass  # wolfram removed
-        data = _cloud_load()
-        if not data:
-            raise HTTPException(status_code=404, detail="No data found in cloud")
-        return {"status": "retrieved", "data": data}
+        from cloud_brain import CloudBrain
+        cb = CloudBrain()
+        success = cb.pull_all()
+        if success:
+            return {"status": "loaded", "message": "Brain pulled from cloud"}
+        else:
+            raise HTTPException(status_code=404, detail="Cloud pull failed — check rclone config")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/cloud/restore")
 async def cloud_restore():
-    """Restore AI state from Wolfram Cloud (overwrites local concepts)"""
+    """Pull and restore brain state from cloud via CloudBrain"""
     try:
-        pass  # wolfram removed
-        data = _cloud_load()
-        if not data:
-            raise HTTPException(status_code=404, detail="No data in cloud")
-        # Expect data to be a dict with 'concepts' and 'growth'
-        if isinstance(data, str):
-            data = json.loads(data)
-        concepts = data.get("concepts", {})
-        # Upsert concepts into semantic_memory
-        for name, attrs in concepts.items():
-            doc = {"concept": name}
-            doc.update(attrs)
-            await state.db.semantic_memory.update_one(
-                {"concept": name},
-                {"$set": doc},
-                upsert=True
-            )
-        # Note: we do not overwrite growth_metrics events; those are append-only.
-        return {"status": "restored", "concepts_restored": len(concepts)}
+        from cloud_brain import CloudBrain
+        cb = CloudBrain()
+        success = cb.pull_all()
+        if success:
+            return {"status": "restored", "message": "Brain restored from cloud"}
+        else:
+            raise HTTPException(status_code=404, detail="Cloud restore failed — check rclone config")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

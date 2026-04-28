@@ -50,7 +50,7 @@ def explain_orch_or(engine):
     orch = getattr(engine, 'orch_or', None)
     
     if has_orch and orch:
-        status = orch.get_state()
+        status = orch.get_status()
         lines.append(f"    Status: ACTIVE")
         lines.append(f"    Conscious moments: {status.get('conscious_moments', 0)}")
         lines.append(f"    Temperature: {status.get('last_temperature', 0):.3f}")
