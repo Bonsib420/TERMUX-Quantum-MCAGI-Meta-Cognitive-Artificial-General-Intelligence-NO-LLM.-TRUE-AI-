@@ -3,6 +3,14 @@
 Generate a PDF containing all Python source code from the MCAGI backend.
 Run this in Termux to create a complete code reference document.
 
+The PDF is both human-readable AND machine-extractable: every .py file
+is embedded as a PDF attachment. Recipients can extract the pristine
+source files using any PDF reader (Attachments panel) or via CLI:
+
+    python -c "from pypdf import PdfReader; \
+        r = PdfReader('quantum_mcagi_code.pdf'); \
+        [open(k,'wb').write(v[0]) for k,v in r.attachments.items()]"
+
 Usage:
     python code_to_pdf.py                         # defaults to backend/
     python code_to_pdf.py /path/to/backend/       # custom path
@@ -23,6 +31,12 @@ from reportlab.platypus import (
     Table, TableStyle, Preformatted
 )
 from reportlab.lib.enums import TA_LEFT, TA_CENTER
+
+try:
+    from pypdf import PdfWriter, PdfReader
+    HAS_PYPDF = True
+except ImportError:
+    HAS_PYPDF = False
 
 
 def get_python_files(directory):
@@ -159,6 +173,33 @@ def build_pdf(source_dir, output_path):
         "No LLM. No API. Pure algorithms. Built on Android/Termux.",
         subtitle_style
     ))
+
+    if HAS_PYPDF:
+        story.append(Spacer(1, 30))
+        extract_note = ParagraphStyle(
+            'ExtractNote', parent=styles['Normal'],
+            fontSize=9, textColor=HexColor('#0a3d62'),
+            alignment=TA_CENTER, spaceAfter=4,
+        )
+        story.append(Paragraph(
+            "This PDF contains embedded .py source files as attachments.",
+            extract_note
+        ))
+        story.append(Paragraph(
+            "Open Attachments panel in your PDF reader, or extract via CLI:",
+            extract_note
+        ))
+        extract_code = ParagraphStyle(
+            'ExtractCode', parent=styles['Code'],
+            fontName='Courier', fontSize=7, leading=10,
+            alignment=TA_CENTER, textColor=HexColor('#333'),
+        )
+        story.append(Paragraph(
+            'python -c "from pypdf import PdfReader; r = PdfReader(\'FILE.pdf\'); '
+            '[open(k,\'wb\').write(v[0]) for k,v in r.attachments.items()]"',
+            extract_code
+        ))
+
     story.append(PageBreak())
 
     # ── Table of Contents ──
@@ -228,6 +269,32 @@ def build_pdf(source_dir, output_path):
     # Build
     print(f"Building PDF...")
     doc.build(story)
+
+    # Embed raw .py files as PDF attachments for lossless extraction
+    if HAS_PYPDF:
+        print(f"Embedding {len(files)} source files as PDF attachments...")
+        reader = PdfReader(output_path)
+        writer = PdfWriter()
+        writer.append_pages_from_reader(reader)
+        writer.add_metadata(reader.metadata or {})
+
+        for f in files:
+            try:
+                with open(f['path'], 'rb') as fh:
+                    writer.add_attachment(f['name'], fh.read())
+            except Exception as e:
+                print(f"  Warning: could not embed {f['name']}: {e}")
+
+        with open(output_path, 'wb') as out:
+            writer.write(out)
+        print(f"Attachments embedded. Extract with:")
+        print(f"  python -c \"from pypdf import PdfReader; ")
+        print(f"    r = PdfReader('{os.path.basename(output_path)}'); ")
+        print(f"    [open(k,'wb').write(v[0]) for k,v in r.attachments.items()]\"")
+    else:
+        print("Note: install pypdf to embed source files as extractable attachments")
+        print("  pip install pypdf")
+
     size = os.path.getsize(output_path)
     print(f"Done: {output_path} ({size/1024/1024:.1f}MB)")
 
