@@ -1,8 +1,8 @@
 #!/data/data/com.termux/files/usr/bin/bash
 # ============================================================================
-# 🔮 QUANTUM MCAGI — TERMUX SETUP & TRANSFER SCRIPT
+# 🔮 QUANTUM MCAGI V⁰² — TERMUX SETUP & TRANSFER SCRIPT
 # ============================================================================
-# Complete installation of Quantum MCAGI on Termux (Android).
+# Complete installation of Quantum MCAGI V⁰² on Termux (Android).
 #
 # USAGE:
 #   Method 1 — Clone from GitHub (review first):
@@ -11,12 +11,12 @@
 #     bash termux_setup.sh
 #
 #   Method 2 — Run locally after cloning:
-#     cd ~/Quantum_MCAGI_NO_LLM
+#     cd ~/Quantum_MCAGI_NO_LLM_V⁰²
 #     bash termux_setup.sh
 #
 #   Method 3 — Transfer from PC via USB/SSH:
-#     scp -r ./backend user@phone:~/Quantum_MCAGI_NO_LLM/backend
-#     ssh user@phone 'bash ~/Quantum_MCAGI_NO_LLM/termux_setup.sh'
+#     scp -r ./backend user@phone:~/Quantum_MCAGI_NO_LLM_V⁰²/backend
+#     ssh user@phone 'bash ~/Quantum_MCAGI_NO_LLM_V⁰²/termux_setup.sh'
 #
 #   Optional:
 #     MCAGI_INSTALL_DIR=/path/to/project bash termux_setup.sh
@@ -61,7 +61,7 @@ echo -e "${NC}"
 # Config
 REPO_URL="https://github.com/Bonsib420/TERMUX-Quantum-MCAGI-Meta-Cognitive-Artificial-General-Intelligence-NO-LLM.-TRUE-AI-.git"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEFAULT_INSTALL_DIR="$HOME/Quantum_MCAGI_NO_LLM"
+DEFAULT_INSTALL_DIR="$HOME/Quantum_MCAGI_NO_LLM_V⁰²"
 if [ -n "${MCAGI_INSTALL_DIR:-}" ]; then
     INSTALL_DIR="$MCAGI_INSTALL_DIR"
 elif [ -d "$SCRIPT_DIR/.git" ] && [ -d "$SCRIPT_DIR/backend" ]; then
@@ -133,7 +133,7 @@ echo -e "${GREEN}  ✓ Repository ready at $INSTALL_DIR${NC}"
 # ============================================================================
 # STEP 3: Python dependencies
 # ============================================================================
-echo -e "${CYAN}[3/8] Installing Python dependencies (21 packages)...${NC}"
+echo -e "${CYAN}[3/8] Installing Python dependencies...${NC}"
 
 cd "$BACKEND_DIR"
 
@@ -229,7 +229,7 @@ cat > "$INSTALL_DIR/install_alias.sh" << 'ALIAS_EOF'
 #!/data/data/com.termux/files/usr/bin/bash
 # Add 'mcagi' alias to .bashrc
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEFAULT_INSTALL_DIR="$HOME/Quantum_MCAGI_NO_LLM"
+DEFAULT_INSTALL_DIR="$HOME/Quantum_MCAGI_NO_LLM_V⁰²"
 if [ -n "${MCAGI_INSTALL_DIR:-}" ]; then
     INSTALL_DIR="$MCAGI_INSTALL_DIR"
 elif [ -d "$SCRIPT_DIR/.git" ] && [ -d "$SCRIPT_DIR/backend" ]; then
@@ -291,9 +291,9 @@ except ImportError:
 # Test core backend modules
 sys.path.insert(0, '.')
 core_modules = ['algorithmic_core', 'quantum_markov', 'chat', 'shared_state',
-                'quantum_memory', 'hilbert_engine', 'hilbert_bridge',
-                'cistercian_math', 'batch_ingest', 'exam_system', 'code_to_pdf',
-                'rclone_provider', 'cloud_provider']
+                'quantum_memory', 'hilbert_engine', 'markov', 'markov_engine',
+                'cistercian_math', 'cloud_brain', 'exam_system', 'code_to_pdf',
+                'engine_api', 'bloom_engine', 'comprehension_engine']
 for mod in core_modules:
     try:
         __import__(mod)
@@ -311,7 +311,7 @@ if fail == 0:
 echo ""
 echo -e "${MAGENTA}${BOLD}"
 echo "  ╔══════════════════════════════════════════════════╗"
-echo "  ║  🔮 INSTALLATION COMPLETE                       ║"
+echo "  ║  🔮 QUANTUM MCAGI V⁰² INSTALLED                 ║"
 echo "  ║                                                  ║"
 echo "  ║  Start:  cd (see detected dir below)             ║"
 echo "  ║          bash start.sh         (chat mode)       ║"

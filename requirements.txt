@@ -1,5 +1,5 @@
-# Quantum MCAGI — Direct Dependencies Only
-# ==========================================
+# Quantum MCAGI V⁰² — Direct Dependencies Only
+# ================================================
 # Only packages directly imported by backend Python modules.
 # Transitive deps resolved automatically by pip.
 # PennyLane: pip install --no-deps PennyLane (pennylane-lightning needs scipy-openblas32, no Termux wheel)
@@ -7,21 +7,28 @@
 beautifulsoup4>=4.12
 duckduckgo_search>=5.0
 fastapi>=0.110
+flask>=3.0
+flask-cors>=4.0
 httpx>=0.27
 internetarchive>=4.0
 nltk>=3.8
 numpy>=1.26
+odfpy>=1.4
 openpyxl>=3.1
+pennylane>=0.35
 pillow>=10.0
 pydantic>=2.0
 pymongo>=4.5
+pypdf>=4.0
 PyPDF2>=3.0
 pytesseract>=0.3
 python-docx>=1.0
 python-dotenv>=1.0
 python-pptx>=0.6
+reportlab>=4.0
 requests>=2.31
 scipy>=1.11
 uvicorn>=0.25
+wikipedia>=1.4
 wolframalpha>=5.0
 wolframclient>=1.2

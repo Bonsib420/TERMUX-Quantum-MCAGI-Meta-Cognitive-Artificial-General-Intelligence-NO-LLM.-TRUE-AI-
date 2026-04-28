@@ -1,476 +1,892 @@
+#!/usr/bin/env python3
 """
-🎨 HIGH-QUALITY COMPLEXITY-GRADIENT IMAGE GENERATOR
-Generates professional-quality images from EASY to HARD.
-Features antialiasing, smooth curves, and detailed rendering.
+Pure MCAGI Procedural Image Generator v1.0
+Pure math + physics-based image generation. No API keys. Runs anywhere.
+Renders: black holes, nebulae, galaxies, quantum states, wormholes,
+supernovae, planets, fractals, neural patterns.
 """
-
-import random
+import numpy as np
+from PIL import Image, ImageDraw, ImageFilter
+from scipy import ndimage
+import re
 import math
-import base64
-from io import BytesIO
-from typing import List, Tuple, Optional
+import hashlib
+import logging
+logger = logging.getLogger("quantum_image_gen")
 
-try:
-    from PIL import Image, ImageDraw, ImageFilter, ImageChops
-except ImportError:
-    raise ImportError("Pillow is required: pip install pillow")
+def _seed_from_prompt(prompt: str) -> int:
+return int(hashlib.md5(prompt.encode()).hexdigest()[:8], 16)
 
+def _fbm_noise(shape, octaves=6, persistence=0.5, seed=42):
+rng = np.random.RandomState(seed)
+result = np.zeros(shape, dtype=np.float64)
+amplitude = 1.0
+total_amp = 0.0
+for i in range(octaves):
+freq = 2 ** i
+base_h = max(3, shape[0] // freq + 2)
+base_w = max(3, shape[1] // freq + 2)
+noise_layer = rng.rand(base_h, base_w)
+noise_layer = ndimage.gaussian_filter(noise_layer, sigma=0.8)
+from scipy.ndimage import zoom
+scaled = zoom(noise_layer, (shape[0] / noise_layer.shape[0],
+shape[1] / noise_layer.shape[1]),
+order=3)
+scaled = scaled[:shape[0], :shape[1]]
+result += scaled * amplitude
+total_amp += amplitude
+amplitude *= persistence
+return result / total_amp
 
-class HighQualityGenerator:
-    """
-    High-quality procedural image generator with smooth antialiasing.
-    Complexity: 0.0 (stick figures) → 1.0 (black holes)
-    """
-    
-    CONCEPT_PROFILES = {
-        # EASIEST
-        'stick figure': {'complexity': 0.05, 'colors': [(255, 255, 255), (220, 220, 220), (180, 180, 180)]},
-        'simple': {'complexity': 0.1, 'colors': [(255, 255, 255), (220, 220, 220)]},
-        'circle': {'complexity': 0.0, 'colors': [(255, 255, 255)]},
-        'line': {'complexity': 0.0, 'colors': [(255, 255, 255)]},
-        'basic': {'complexity': 0.1, 'colors': [(255, 255, 255)]},
-        'figure': {'complexity': 0.15, 'colors': [(255, 255, 255)]},
-        'human': {'complexity': 0.2, 'colors': [(255, 210, 160), (210, 160, 110)]},
-        
-        # MID
-        'quantum': {'complexity': 0.5, 'colors': [(0, 255, 100), (255, 0, 255), (0, 150, 255)]},
-        'wave': {'complexity': 0.4, 'colors': [(0, 191, 255), (30, 144, 255)]},
-        'field': {'complexity': 0.45, 'colors': [(100, 149, 237), (72, 61, 139)]},
-        'pattern': {'complexity': 0.35, 'colors': [(255, 105, 180), (138, 43, 226)]},
-        'geometric': {'complexity': 0.3, 'colors': [(255, 255, 0), (0, 255, 255)]},
-        'polygon': {'complexity': 0.25, 'colors': [(255, 165, 0), (0, 255, 0)]},
-        
-        # HARD
-        'gravity': {'complexity': 0.9, 'colors': [(25, 25, 112), (72, 61, 139), (255, 215, 0)]},
-        'accretion': {'complexity': 0.85, 'colors': [(255, 100, 0), (255, 165, 0), (255, 255, 0)]},
-        'spacetime': {'complexity': 0.75, 'colors': [(100, 100, 255), (200, 200, 255)]},
-        'warp': {'complexity': 0.7, 'colors': [(255, 0, 255), (100, 0, 100)]},
-        
-        # HARDEST
-        'black hole': {'complexity': 1.0, 'colors': [(0, 0, 0), (10, 10, 10), (255, 255, 0), (255, 165, 0), (255, 0, 0)]},
-        'event horizon': {'complexity': 0.98, 'colors': [(0, 0, 0), (10, 10, 10), (255, 255, 255)]},
-        'singularity': {'complexity': 1.0, 'colors': [(0, 0, 0), (20, 20, 20), (40, 40, 40)]},
-        'quantum gravity': {'complexity': 0.95, 'colors': [(0, 0, 0), (255, 0, 255), (128, 128, 128)]},
-        'wormhole': {'complexity': 0.92, 'colors': [(75, 0, 130), (138, 43, 226), (255, 255, 255)]},
-        
-        'default': {'complexity': 0.3, 'colors': [(100, 150, 200), (150, 100, 200)]}
-    }
-    
-    def __init__(self, seed: Optional[int] = None):
-        self.rng = random.Random(seed)
-    
-    def _parse_prompt(self, text: str) -> dict:
-        text_lower = text.lower()
-        words = text_lower.replace(',', ' ').split()
-        
-        found_concepts = []
-        complexity_values = []
-        
-        count = 1
-        numbers = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']
-        for i, num in enumerate(numbers, 1):
-            if num in words:
-                count = i
-                break
-        for word in words:
-            if word.isdigit():
-                count = int(word)
-                break
-        
-        for concept, profile in self.CONCEPT_PROFILES.items():
-            if concept in text_lower or any(concept in w for w in words):
-                found_concepts.append(concept)
-                complexity_values.append(profile['complexity'])
-        
-        target_complexity = max(complexity_values) if complexity_values else 0.3
-        
-        colors = self.CONCEPT_PROFILES['default']['colors']
-        if found_concepts:
-            main_concept = max(found_concepts, key=lambda c: self.CONCEPT_PROFILES[c]['complexity'])
-            colors = self.CONCEPT_PROFILES[main_concept]['colors']
-        
-        return {
-            'concepts': found_concepts,
-            'complexity': target_complexity,
-            'colors': colors,
-            'count': count
-        }
-    
-    def _lerp(self, a: float, b: float, t: float) -> float:
-        return a + (b - a) * t
-    
-    def _lerp_color(self, c1: Tuple, c2: Tuple, t: float) -> Tuple:
-        return tuple(int(self._lerp(c1[i], c2[i], t)) for i in range(3))
-    
-    def _draw_antialiased_line(self, draw: ImageDraw.ImageDraw, p1: Tuple, p2: Tuple, color: Tuple, width: int):
-        """Draw a smooth antialiased line."""
-        # Draw multiple times with slight offsets for antialiasing
-        for dx in [-0.5, 0, 0.5]:
-            for dy in [-0.5, 0, 0.5]:
-                adj_p1 = (p1[0] + dx, p1[1] + dy)
-                adj_p2 = (p2[0] + dx, p2[1] + dy)
-                draw.line([adj_p1, adj_p2], fill=color, width=width)
-    
-    def _draw_antialiased_ellipse(self, draw: ImageDraw.ImageDraw, bbox: List, color: Tuple, width: int = 0, fill: bool = False):
-        """Draw smooth ellipse with antialiasing."""
-        # enlarge slightly for antialiasing
-        enlarged_bbox = [
-            bbox[0] - 1, bbox[1] - 1,
-            bbox[2] + 1, bbox[3] + 1
-        ]
-        if fill:
-            draw.ellipse(enlarged_bbox, fill=color)
-        else:
-            draw.ellipse(enlarged_bbox, outline=color, width=width)
-    
-    def _draw_stick_figure(self, draw: ImageDraw.ImageDraw, x: int, y: int, size: int, color: Tuple, complexity: float):
-        """Draw a high-quality stick figure with smooth lines."""
-        head_radius = int(size * 0.28)
-        body_length = int(size * 0.55)
-        limb_width = max(2, int(4 * (1 - complexity) + 2))
-        
-        # NECK
-        neck_y = y + head_radius + 2
-        draw.line([(x, y + head_radius), (x, neck_y)], fill=color, width=limb_width)
-        
-        # SHOULDERS (slightly below neck)
-        shoulder_y = neck_y + int(size * 0.05)
-        shoulder_x_span = int(size * 0.35)
-        
-        # Shoulder joints (circles)
-        shoulder_size = max(3, int(limb_width * 1.2))
-        for sx in [x - shoulder_x_span, x + shoulder_x_span]:
-            self._draw_antialiased_ellipse(draw, [sx - shoulder_size, shoulder_y - shoulder_size, sx + shoulder_size, shoulder_y + shoulder_size], color, fill=True)
-        
-        # ARMS (with elbows)
-        elbow_y = shoulder_y + int(size * 0.12)
-        arm_length = int(size * 0.3)
-        
-        for side in [-1, 1]:
-            # Upper arm (shoulder to elbow)
-            self._draw_antialiased_line(draw, 
-                (x + side * shoulder_x_span, shoulder_y),
-                (x + side * (shoulder_x_span + arm_length * 0.3), elbow_y),
-                color, limb_width)
-            
-            # Lower arm (elbow to wrist)
-            wrist_y = elbow_y + int(size * 0.1)
-            wrist_x = x + side * (shoulder_x_span + arm_length)
-            self._draw_antialiased_line(draw,
-                (x + side * (shoulder_x_span + arm_length * 0.3), elbow_y),
-                (wrist_x, wrist_y),
-                color, limb_width)
-            
-            # Hand (small circle)
-            hand_radius = max(3, int(limb_width))
-            self._draw_antialiased_ellipse(draw, [wrist_x - hand_radius, wrist_y - hand_radius, wrist_x + hand_radius, wrist_y + hand_radius], color, fill=True)
-        
-        # TORSO (from shoulders to waist)
-        torso_top = shoulder_y
-        torso_bottom = shoulder_y + int(size * 0.25)
-        self._draw_antialiased_line(draw, (x, torso_top), (x, torso_bottom), color, max(3, limb_width + 1))
-        
-        # HIPS (pelvis)
-        hip_y = torso_bottom + 2
-        hip_radius = int(size * 0.08)
-        self._draw_antialiased_ellipse(draw, [x - hip_radius, hip_y - hip_radius, x + hip_radius, hip_y + hip_radius], color, fill=True)
-        
-        # LEGS (with knees)
-        knee_y = hip_y + int(size * 0.2)
-        ankle_y = hip_y + int(size * 0.35)
-        foot_size = int(size * 0.1)
-        
-        for side in [-1, 1]:
-            leg_outer_x = x + side * (hip_radius + 2)
-            knee_x = leg_outer_x + side * int(size * 0.08)
-            ankle_x = leg_outer_x + side * int(size * 0.05)
-            
-            # Upper leg
-            self._draw_antialiased_line(draw,
-                (leg_outer_x, hip_y),
-                (knee_x, knee_y),
-                color, limb_width)
-            
-            # Lower leg
-            self._draw_antialiased_line(draw,
-                (knee_x, knee_y),
-                (ankle_x, ankle_y),
-                color, limb_width)
-            
-            # Foot
-            foot_bbox = [
-                ankle_x + side * foot_size - (foot_size//2 if side == -1 else 0),
-                ankle_y - foot_size//3,
-                ankle_x + side * foot_size + (foot_size//2 if side == 1 else 0),
-                ankle_y + foot_size//2
-            ]
-            self._draw_antialiased_ellipse(draw, foot_bbox, color, fill=True)
-        
-        # HEAD DETAILS
-        # Face (simple)
-        eye_offset = head_radius // 3
-        eye_y = y - eye_offset
-        for ex in [x - eye_offset, x + eye_offset]:
-            eye_radius = max(2, head_radius // 6)
-            self._draw_antialiased_ellipse(draw, [ex - eye_radius, eye_y - eye_radius, ex + eye_radius, eye_y + eye_radius], color, fill=True)
-        
-        # Mouth (smile)
-        mouth_y = y + head_radius // 3
-        smile_radius = head_radius // 2
-        draw.arc([x - smile_radius, mouth_y - smile_radius//2, x + smile_radius, mouth_y + smile_radius//2], 200, 340, fill=color, width=max(1, limb_width//2))
-    
-    def _draw_black_hole(self, draw: ImageDraw.ImageDraw, x: int, y: int, size: int, color: Tuple, complexity: float, img: Image):
-        """High-quality black hole with full physics."""
-        w, h = img.size
-        
-        # EVENT HORIZON (perfect black circle)
-        event_radius = size // 2
-        draw.ellipse([x - event_radius, y - event_radius, x + event_radius, y + event_radius], fill=(0, 0, 0))
-        
-        # PHOTON SPHERE (bright thin ring)
-        photon_radius = int(event_radius * 1.05)
-        draw.ellipse([x - photon_radius, y - photon_radius, x + photon_radius, y + photon_radius], 
-                    outline=(255, 255, 220), width=2)
-        
-        # ACCRETION DISK (3D elliptical rings with smooth gradients)
-        disk_max_radius = int(size * 0.95)
-        disk_min_radius = int(event_radius * 1.25)
-        num_rings = 25
-        
-        for i in range(num_rings):
-            t = i / num_rings
-            radius = int(self._lerp(disk_min_radius, disk_max_radius, t**1.2))  # Quadratic for denser inner rings
-            height_scale = max(0.05, 1.0 - t * 0.85)
-            
-            # Temperature gradient: white -> yellow -> orange -> red
-            if t < 0.3:
-                # Inner: white-blue hot
-                disk_color = self._lerp_color((255, 255, 240), (255, 255, 150), t/0.3)
-            elif t < 0.6:
-                # Middle: yellow-orange
-                disk_color = self._lerp_color((255, 255, 150), (255, 150, 0), (t-0.3)/0.3)
-            else:
-                # Outer: red
-                disk_color = self._lerp_color((255, 150, 0), (180, 50, 0), (t-0.6)/0.4)
-            
-            bbox = [
-                x - radius,
-                int(y - radius * height_scale),
-                x + radius,
-                int(y + radius * height_scale)
-            ]
-            
-            # Thinner rings outward
-            ring_width = max(1, int(6 * (1 - t*0.7)))
-            # Use multiple arcs for better antialiasing
-            for angle_offset in [0, 1]:
-                draw.arc(bbox, 0 + angle_offset, 360 - angle_offset, fill=disk_color, width=ring_width)
-        
-        # GRAVITATIONAL LENSING (light distortion)
-        lens_radius = int(size * 1.6)
-        num_lens_spots = 60
-        
-        for _ in range(num_lens_spots):
-            angle = self.rng.random() * 2 * math.pi
-            # Closer to black hole = more distorted (non-uniform distribution)
-            dist_factor = self.rng.random() ** 0.7  # Clump near black hole
-            dist = int(event_radius + dist_factor * (lens_radius - event_radius))
-            
-            sx = int(x + math.cos(angle) * dist)
-            sy = int(y + math.sin(angle) * dist)
-            
-            brightness = int(150 + 105 * self.rng.random())
-            dot_size = self.rng.choices([1, 2, 3], weights=[0.4, 0.4, 0.2])[0]
-            
-            # Soft glow around bright spots
-            for r in range(dot_size + 2):
-                alpha = max(0, 150 - r * 60)
-                if alpha > 0:
-                    draw.ellipse([sx - r, sy - r, sx + r, sy + r], fill=(brightness, brightness, brightness, alpha))
-        
-        # RELATIVISTIC JETS
-        jet_length = int(size * 3.0)
-        jet_width = max(3, int(size * 0.06))
-        jet_color_base = (130, 180, 255)
-        
-        # Top jet
-        draw.ellipse([x - jet_width, y - event_radius - jet_length, 
-                     x + jet_width, y - event_radius], 
-                    fill=jet_color_base)
-        # Bottom jet
-        draw.ellipse([x - jet_width, y + event_radius, 
-                     x + jet_width, y + event_radius + jet_length], 
-                    fill=jet_color_base)
-        
-        # Jet particles
-        num_jet_particles = 30
-        for i in range(num_jet_particles):
-            t = i / num_jet_particles
-            # Top jet particle
-            jet_y = y - event_radius - int(jet_length * t)
-            jet_x_offset = self.rng.randint(-jet_width//3, jet_width//3)
-            particle_size = max(2, int(5 * (1-t)))
-            draw.ellipse([x + jet_x_offset - particle_size, jet_y - particle_size,
-                         x + jet_x_offset + particle_size, jet_y + particle_size],
-                        fill=(200, 220, 255))
-            
-            # Bottom jet particle
-            jet_y = y + event_radius + int(jet_length * t)
-            draw.ellipse([x + jet_x_offset - particle_size, jet_y - particle_size,
-                         x + jet_x_offset + particle_size, jet_y + particle_size],
-                        fill=(200, 220, 255))
-    
-    def _draw_stars(self, draw: ImageDraw.ImageDraw, w: int, h: int, complexity: float, color_main: Tuple):
-        """Draw high-quality star field with varied brightness and size."""
-        num_stars = int(100 + 400 * complexity)
-        
-        # Stars color varies: white, blue-ish, yellow-ish
-        star_colors = [(255, 255, 255), (200, 220, 255), (255, 250, 200), (200, 255, 200)]
-        
-        for _ in range(num_stars):
-            sx = self.rng.randint(0, w)
-            sy = self.rng.randint(0, h)
-            
-            # Size distribution: most stars small, few large
-            r = self.rng.choices([1, 1, 1, 2, 2, 3], weights=[0.5, 0.3, 0.1, 0.07, 0.03, 0.01])[0]
-            r = max(1, r)
-            
-            # Brightness varies by size
-            base_brightness = self.rng.randint(180, 255) if r > 1 else self.rng.randint(120, 200)
-            
-            # Slight color tint
-            base_color = self.rng.choice(star_colors)
-            color = tuple(min(255, int(base_color[i] * (base_brightness/255))) for i in range(3))
-            
-            # Draw star with soft glow if larger
-            if r >= 2:
-                # Outer glow
-                glow_radius = r + 1
-                glow_color = tuple(int(c * 0.3) for c in color)
-                draw.ellipse([sx - glow_radius, sy - glow_radius, sx + glow_radius, sy + glow_radius], fill=glow_color)
-            
-            draw.ellipse([sx - r, sy - r, sx + r, sy + r], fill=color)
-    
-    def _apply_glow(self, img: Image, intensity: float = 0.3):
-        """Apply a subtle bloom/glow effect."""
-        # Create a blurred version
-        glow = img.filter(ImageFilter.GaussianBlur(radius=3))
-        # Blend with screen mode for glow
-        return ImageChops.screen(img, glow)
-    
-    def _apply_noise(self, img: Image, intensity: float):
-        """Add subtle film grain."""
-        pixels = img.load()
-        w, h = img.size
-        noise_range = int(10 * intensity)
-        
-        for i in range(w):
-            for j in range(h):
-                if self.rng.random() < 0.15:  # 15% of pixels get noise
-                    offset = self.rng.randint(-noise_range, noise_range)
-                    r, g, b = pixels[i, j]
-                    pixels[i, j] = (
-                        max(0, min(255, r + offset)),
-                        max(0, min(255, g + offset)),
-                        max(0, min(255, b + offset))
-                    )
-    
-    def generate(self, prompt: str, width: int = 512, height: int = 512) -> str:
-        """
-        Generate high-quality image at a single complexity level.
-        """
-        params = self._parse_prompt(prompt)
-        complexity = params['complexity']
-        colors = params['colors']
-        count = params['count']
-        
-        # Seed for deterministic output
-        seed_val = hash(prompt) % (2**32)
-        self.rng.seed(seed_val)
-        
-        # Render at 2x resolution for quality, then downsample
-        render_scale = 2.0 if complexity >= 0.6 else 1.0
-        render_w = int(width * render_scale)
-        render_h = int(height * render_scale)
-        
-        # Create image with deep space background
-        bg_color = (8, 10, 18) if complexity > 0.3 else (12, 15, 25)
-        img = Image.new('RGB', (render_w, render_h), bg_color)
-        draw = ImageDraw.Draw(img)
-        
-        # Draw detailed star field
-        if complexity > 0.1:
-            self._draw_stars(draw, render_w, render_h, complexity, colors[0])
-        
-        # Determine what to draw
-        draw_black_holes = any(c in ['black hole', 'singularity', 'gravity', 'event horizon', 'accretion', 'wormhole'] 
-                              for c in params['concepts'])
-        draw_stick_figures = any(c in ['stick figure', 'simple', 'basic', 'figure', 'human', 'circle', 'line'] 
-                                for c in params['concepts'])
-        
-        if not draw_black_holes and not draw_stick_figures:
-            if complexity < 0.4:
-                draw_stick_figures = True
-            else:
-                draw_black_holes = True
-        
-        # Calculate positions
-        positions = []
-        if count == 1:
-            positions = [(render_w // 2, render_h // 2)]
-        else:
-            margin = render_w // (count + 1)
-            for i in range(count):
-                x = margin * (i + 1)
-                y = render_h // 2 + self.rng.randint(-render_h//10, render_h//10)
-                positions.append((x, y))
-        
-        # Scale for drawing
-        scale_factor = render_scale
-        
-        # Draw objects
-        for x, y in positions:
-            if draw_stick_figures:
-                self._draw_stick_figure(draw, x, y, 
-                                      size=int(80 * scale_factor),
-                                      color=self.rng.choice(colors),
-                                      complexity=complexity)
-            if draw_black_holes:
-                self._draw_black_hole(draw, x, y,
-                                     size=int(120 * scale_factor),
-                                     color=self.rng.choice(colors),
-                                     complexity=complexity,
-                                     img=img)
-        
-        # Post-processing
-        if complexity > 0.5:
-            img = self._apply_glow(img, intensity=0.2 + 0.3 * complexity)
-        
-        if complexity > 0.7:
-            self._apply_noise(img, intensity=0.05)
-        
-        # Downsample if we rendered at high res
-        if render_scale > 1.0:
-            img = img.resize((width, height), Image.Resampling.LANCZOS)
-        
-        # Final color correction (subtle saturation boost for vibrant colors)
-        if complexity > 0.3:
-            from PIL import ImageEnhance
-            enhancer = ImageEnhance.Color(img)
-            img = enhancer.enhance(1.1 + 0.2 * complexity)
-        
-        # Encode with high quality
-        buffered = BytesIO()
-        img.save(buffered, format="PNG", quality=95, optimize=True)
-        img_b64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
-        return f"data:image/png;base64,{img_b64}"
+def _radial_gradient(shape, cx=None, cy=None):
+h, w = shape
+if cx is None:
+cx = w / 2
+if cy is None:
+cy = h / 2
+y, x = np.mgrid[0:h, 0:w]
+r = np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
+r = r / max(r.max(), 1e-6)
+return r
 
+def _bloom(img_array, threshold=200, radius=8, intensity=0.6):
+bright = np.clip(img_array.astype(np.float64) - threshold, 0, 255)
+blurred = ndimage.gaussian_filter(bright, sigma=radius)
+result = img_array.astype(np.float64) + blurred * intensity
+return np.clip(result, 0, 255).astype(np.uint8)
 
-# Singleton
-_generator = None
+def _vignette(shape, strength=0.7):
+r = _radial_gradient(shape)
+v = 1.0 - (r ** 1.8) * strength
+return np.clip(v, 0, 1)
 
-def get_quantum_image_generator(seed: Optional[int] = None) -> HighQualityGenerator:
-    global _generator
-    if _generator is None:
-        _generator = HighQualityGenerator(seed)
-    return _generator
+def _star_field(shape, density=800, seed=42):
+rng = np.random.RandomState(seed)
+h, w = shape
+stars = np.zeros((h, w, 3), dtype=np.float64)
+n_stars = density
+xs = rng.randint(0, w, n_stars)
+ys = rng.randint(0, h, n_stars)
+brightnesses = rng.power(0.5, n_stars)
+temps = rng.uniform(3000, 20000, n_stars)
+for i in range(n_stars):
+x, y = xs[i], ys[i]
+b = brightnesses[i]
+t = temps[i]
+r_c, g_c, b_c = _blackbody_color(t)
+size = 1 if b < 0.7 else (2 if b < 0.9 else 3)
+lum = b * 255
+for dy in range(-size, size + 1):
+for dx in range(-size, size + 1):
+ny, nx = y + dy, x + dx
+if 0 <= ny < h and 0 <= nx < w:
+d = math.sqrt(dx * dx + dy * dy)
+falloff = max(0, 1.0 - d / (size + 0.5))
+falloff = falloff ** 1.5
+
+stars[ny, nx, 0] += lum * r_c * falloff
+stars[ny, nx, 1] += lum * g_c * falloff
+stars[ny, nx, 2] += lum * b_c * falloff
+return np.clip(stars, 0, 255)
+
+def _blackbody_color(temp):
+t = temp / 100.0
+if t <= 66:
+r = 1.0
+g = max(0, min(1, (99.4708025861 * math.log(t) - 161.1195681661) / 255.0)) if t > 1 else 0
+else:
+r = max(0, min(1, (329.698727446 * ((t - 60) ** -0.1332047592)) / 255.0))
+g = max(0, min(1, (288.1221695283 * ((t - 60) ** -0.0755148492)) / 255.0))
+if t >= 66:
+b = 1.0
+elif t <= 19:
+b = 0.0
+else:
+b = max(0, min(1, (138.5177312231 * math.log(t - 10) - 305.0447927307) / 255.0))
+return r, g, b
+
+def _color_map(value, palette):
+value = np.clip(value, 0, 1)
+n = len(palette) - 1
+idx = value * n
+low = np.floor(idx).astype(int)
+low = np.clip(low, 0, n - 1)
+high = np.clip(low + 1, 0, n)
+frac = idx - low
+result = np.zeros((*value.shape, 3), dtype=np.float64)
+for c in range(3):
+low_vals = np.array([palette[i][c] for i in range(len(palette))])
+result[..., c] = low_vals[low] * (1 - frac) + low_vals[high] * frac
+return result
+
+NEBULA_PALETTES = {
+'fire': [(0, 0, 0), (80, 10, 5), (180, 40, 10), (255, 120, 20), (255, 200, 80), (255, 255, 200)],
+'ice': [(0, 0, 10), (10, 20, 60), (30, 60, 140), (80, 140, 200), (160, 210, 255), (230, 245, 255)],
+'cosmic': [(0, 0, 5), (40, 5, 60), (100, 20, 120), (160, 40, 140), (200, 80, 180), (255, 180, 255)],
+'emerald': [(0, 5, 0), (10, 40, 20), (20, 100, 50), (60, 180, 80), (120, 230, 140), (200, 255, 220)],
+'plasma': [(0, 0, 0), (60, 0, 80), (120, 0, 160), (200, 60, 120), (255, 140, 60), (255, 240, 180)],
+'void': [(0, 0, 0), (15, 5, 30), (30, 10, 50), (50, 15, 70), (80, 30, 100), (120, 50, 140)],
+}
+
+def render_black_hole(w, h, seed, params=None):
+params = params or {}
+rng = np.random.RandomState(seed)
+img = np.zeros((h, w, 3), dtype=np.float64)
+stars = _star_field((h, w), density=1200, seed=seed)
+cx, cy = w / 2, h / 2
+bh_radius = min(w, h) * 0.15
+photon_ring = bh_radius * 1.5
+accretion_outer = bh_radius * 3.5
+accretion_inner = bh_radius * 1.8
+y, x = np.mgrid[0:h, 0:w]
+dx = (x - cx).astype(np.float64)
+dy = (y - cy).astype(np.float64)
+r = np.sqrt(dx ** 2 + dy ** 2)
+theta = np.arctan2(dy, dx)
+lensing_strength = 2.5
+lens_factor = np.where(r > bh_radius,
+1.0 + lensing_strength * (bh_radius / np.maximum(r, 1)) ** 2,
+0.0)
+lensed_x = (cx + dx * lens_factor).astype(int)
+lensed_y = (cy + dy * lens_factor).astype(int)
+lensed_x = np.clip(lensed_x, 0, w - 1)
+lensed_y = np.clip(lensed_y, 0, h - 1)
+for c in range(3):
+img[..., c] = stars[lensed_y, lensed_x, c]
+disk_mask = (r > accretion_inner) & (r < accretion_outer)
+tilt = params.get('tilt', 0.3)
+disk_y = dy * math.cos(tilt * math.pi)
+disk_r = np.sqrt(dx ** 2 + disk_y ** 2)
+thin_disk = np.exp(-((dy * math.cos(tilt * math.pi)) ** 2) / (2 * (bh_radius * 0.15) ** 2))
+thin_disk *= ((disk_r > accretion_inner) & (disk_r < accretion_outer)).astype(float)
+disk_temp = np.clip(1.0 - (disk_r - accretion_inner) / (accretion_outer - accretion_inner), 0, 1)
+disk_temp = disk_temp ** 0.6
+doppler = 1.0 + 0.4 * np.sin(theta)
+disk_temp_shifted = np.clip(disk_temp * doppler, 0, 1)
+noise_disk = _fbm_noise((h, w), octaves=4, seed=seed + 1)
+disk_detail = 0.6 + 0.4 * noise_disk
+for c, base in enumerate([(255, 180, 60), (120, 60, 20), (40, 20, 5)]):
+hot_color = np.array([255, 220, 180])[c]
+cool_color = np.array([180, 60, 10])[c]
+
+disk_color = cool_color + (hot_color - cool_color) * disk_temp_shifted
+img[..., c] += disk_color * thin_disk * disk_detail * 1.5
+ring_mask = np.exp(-((r - photon_ring) ** 2) / (2 * (bh_radius * 0.05) ** 2))
+for c, val in enumerate([255, 240, 200]):
+img[..., c] += val * ring_mask * 0.8
+event_horizon = np.where(r < bh_radius, 0.0, 1.0)
+fade = np.clip((r - bh_radius * 0.8) / (bh_radius * 0.2), 0, 1)
+for c in range(3):
+img[..., c] *= fade
+jets = params.get('jets', True)
+if jets:
+jet_width = bh_radius * 0.08
+jet_length = min(h, w) * 0.4
+for sign in [-1, 1]:
+jet_y_center = cy + sign * np.arange(0, jet_length)
+for jy in jet_y_center.astype(int):
+if 0 <= jy < h:
+dist_from_bh = abs(jy - cy)
+intensity = max(0, 1.0 - dist_from_bh / jet_length) ** 1.5
+spread = jet_width * (1 + dist_from_bh / jet_length)
+for jx in range(max(0, int(cx - spread)), min(w, int(cx + spread))):
+dx_j = abs(jx - cx)
+profile = math.exp(-(dx_j ** 2) / (2 * (spread * 0.3) ** 2))
+img[jy, jx, 0] += 100 * intensity * profile
+img[jy, jx, 1] += 140 * intensity * profile
+img[jy, jx, 2] += 255 * intensity * profile
+vig = _vignette((h, w), 0.5)
+for c in range(3):
+img[..., c] *= vig
+img = np.clip(img, 0, 255).astype(np.uint8)
+img = _bloom(img, threshold=180, radius=6, intensity=0.5)
+return img
+
+def render_nebula(w, h, seed, params=None):
+params = params or {}
+palette_name = params.get('palette', 'cosmic')
+palette = NEBULA_PALETTES.get(palette_name, NEBULA_PALETTES['cosmic'])
+rng = np.random.RandomState(seed)
+stars = _star_field((h, w), density=800, seed=seed)
+img = stars.copy()
+y_grid, x_grid = np.mgrid[0:h, 0:w]
+cloud_base = np.zeros((h, w), dtype=np.float64)
+n_centers = rng.randint(3, 7)
+for i in range(n_centers):
+cx = rng.uniform(w * 0.1, w * 0.9)
+cy = rng.uniform(h * 0.1, h * 0.9)
+spread_x = rng.uniform(w * 0.15, w * 0.4)
+spread_y = rng.uniform(h * 0.15, h * 0.4)
+amp = rng.uniform(0.3, 1.0)
+angle = rng.uniform(0, math.pi)
+cos_a, sin_a = math.cos(angle), math.sin(angle)
+dx = (x_grid - cx)
+dy = (y_grid - cy)
+rx = dx * cos_a + dy * sin_a
+ry = -dx * sin_a + dy * cos_a
+blob = np.exp(-(rx ** 2) / (2 * spread_x ** 2) - (ry ** 2) / (2 * spread_y ** 2))
+cloud_base += blob * amp
+cloud_base = cloud_base / (cloud_base.max() + 1e-8)
+detail = _fbm_noise((h, w), octaves=7, persistence=0.55, seed=seed + 10)
+fine = _fbm_noise((h, w), octaves=5, persistence=0.6, seed=seed + 20)
+warp_u = _fbm_noise((h, w), octaves=4, seed=seed + 300)
+warp_v = _fbm_noise((h, w), octaves=4, seed=seed + 310)
+warp_s = min(w, h) * 0.1
+wx = np.clip((x_grid + (warp_u - 0.5) * warp_s).astype(int), 0, w - 1)
+wy = np.clip((y_grid + (warp_v - 0.5) * warp_s).astype(int), 0, h - 1)
+combined = cloud_base[wy, wx] * (0.4 + 0.6 * detail)
+combined *= (0.6 + 0.4 * fine)
+combined = (combined - combined.min()) / (combined.max() - combined.min() + 1e-8)
+combined = combined ** 0.9
+nebula_colors = _color_map(combined, palette)
+density = np.clip(combined * 1.8 - 0.15, 0, 1)
+for c in range(3):
+img[..., c] = img[..., c] * (1 - density * 0.9) + nebula_colors[..., c] * density
+secondary_map = {'fire': 'plasma', 'ice': 'cosmic', 'cosmic': 'plasma',
+'emerald': 'ice', 'plasma': 'fire', 'void': 'cosmic'}
+sec_palette = NEBULA_PALETTES[secondary_map.get(palette_name, 'cosmic')]
+sec_noise = _fbm_noise((h, w), octaves=5, seed=seed + 800)
+sec_density = np.clip(sec_noise - 0.4, 0, 1) * combined * 0.35
+sec_colors = _color_map(sec_noise, sec_palette)
+for c in range(3):
+img[..., c] += sec_colors[..., c] * sec_density
+fil = _fbm_noise((h, w), octaves=8, persistence=0.7, seed=seed + 400)
+filaments = np.exp(-(np.abs(fil - 0.5) * 30)) * 0.8
+filaments *= (combined > 0.1).astype(float)
+for c in range(3):
+
+img[..., c] += filaments * palette[-1][c] * 0.5
+bright_noise = _fbm_noise((h, w), octaves=3, seed=seed + 500)
+hot = (bright_noise > 0.7).astype(float) * (combined > 0.35).astype(float)
+hot = ndimage.gaussian_filter(hot, sigma=min(w, h) * 0.012)
+for c in range(3):
+img[..., c] += hot * 240 * (palette[-1][c] / 255.0)
+n_stars_embedded = rng.randint(3, 8)
+for _ in range(n_stars_embedded):
+sx, sy = rng.randint(0, w), rng.randint(0, h)
+if combined[min(sy, h - 1), min(sx, w - 1)] > 0.25:
+sr = rng.uniform(min(w, h) * 0.008, min(w, h) * 0.025)
+glow = np.exp(-((x_grid - sx) ** 2 + (y_grid - sy) ** 2) / (2 * sr ** 2))
+for c in range(3):
+img[..., c] += glow * 255 * rng.uniform(0.5, 1.0)
+vig = _vignette((h, w), 0.5)
+for c in range(3):
+img[..., c] *= vig
+img = np.clip(img, 0, 255).astype(np.uint8)
+img = _bloom(img, threshold=130, radius=14, intensity=0.5)
+return img
+
+def render_galaxy(w, h, seed, params=None):
+params = params or {}
+rng = np.random.RandomState(seed)
+img = np.zeros((h, w, 3), dtype=np.float64)
+stars_bg = _star_field((h, w), density=500, seed=seed)
+img += stars_bg
+cx, cy = w / 2, h / 2
+y, x = np.mgrid[0:h, 0:w]
+dx = (x - cx).astype(np.float64)
+dy = (y - cy).astype(np.float64)
+tilt = params.get('tilt', 0.6)
+dy_tilted = dy / max(math.cos(tilt), 0.3)
+r = np.sqrt(dx ** 2 + dy_tilted ** 2)
+theta = np.arctan2(dy_tilted, dx)
+galaxy_r = min(w, h) * 0.35
+n_arms = params.get('arms', 2)
+arm_tightness = 0.4
+arm_pattern = np.zeros((h, w), dtype=np.float64)
+for arm in range(n_arms):
+arm_offset = arm * 2 * math.pi / n_arms
+spiral_angle = theta - arm_tightness * np.log(np.maximum(r, 1)) - arm_offset
+arm_dist = np.abs(np.sin(spiral_angle))
+arm_width = 0.15 + 0.1 * (r / galaxy_r)
+arm_intensity = np.exp(-(arm_dist ** 2) / (2 * arm_width ** 2))
+arm_intensity *= np.exp(-r / galaxy_r)
+arm_pattern += arm_intensity
+arm_pattern = np.clip(arm_pattern, 0, 1)
+noise = _fbm_noise((h, w), octaves=5, seed=seed + 10)
+arm_pattern *= (0.6 + 0.4 * noise)
+core_glow = np.exp(-r ** 2 / (2 * (galaxy_r * 0.15) ** 2))
+palette = [(255, 200, 150), (200, 150, 255), (150, 180, 255)]
+for c in range(3):
+core_c = [255, 240, 200][c]
+arm_c = palette[c % len(palette)][c]
+img[..., c] += core_glow * core_c * 1.2
+img[..., c] += arm_pattern * arm_c * 0.8
+n_gal_stars = 3000
+for _ in range(n_gal_stars):
+angle = rng.uniform(0, 2 * math.pi)
+radius = rng.exponential(galaxy_r * 0.3)
+arm_idx = rng.randint(0, n_arms)
+spiral_offset = arm_tightness * math.log(max(radius, 1)) + arm_idx * 2 * math.pi / n_arms
+angle = spiral_offset + rng.normal(0, 0.2)
+sx = int(cx + radius * math.cos(angle))
+sy = int(cy + radius * math.sin(angle) * math.cos(tilt))
+if 0 <= sx < w and 0 <= sy < h:
+brightness = rng.uniform(50, 255) * math.exp(-radius / galaxy_r)
+temp = rng.uniform(4000, 15000)
+rc, gc, bc = _blackbody_color(temp)
+img[sy, sx, 0] += brightness * rc
+img[sy, sx, 1] += brightness * gc
+img[sy, sx, 2] += brightness * bc
+vig = _vignette((h, w), 0.5)
+for c in range(3):
+img[..., c] *= vig
+img = np.clip(img, 0, 255).astype(np.uint8)
+img = _bloom(img, threshold=150, radius=8, intensity=0.5)
+return img
+
+def render_quantum_state(w, h, seed, params=None):
+params = params or {}
+
+rng = np.random.RandomState(seed)
+img = np.zeros((h, w, 3), dtype=np.float64)
+y, x = np.mgrid[0:h, 0:w]
+cx, cy = w / 2, h / 2
+dx = (x - cx) / (w / 2)
+dy = (y - cy) / (h / 2)
+r = np.sqrt(dx ** 2 + dy ** 2)
+n_modes = rng.randint(3, 7)
+psi_real = np.zeros((h, w), dtype=np.float64)
+psi_imag = np.zeros((h, w), dtype=np.float64)
+for _ in range(n_modes):
+kx = rng.uniform(-8, 8)
+ky = rng.uniform(-8, 8)
+phase = rng.uniform(0, 2 * math.pi)
+amp = rng.uniform(0.5, 1.5)
+psi_real += amp * np.cos(kx * dx * math.pi + ky * dy * math.pi + phase)
+psi_imag += amp * np.sin(kx * dx * math.pi + ky * dy * math.pi + phase)
+prob = psi_real ** 2 + psi_imag ** 2
+prob = prob / (prob.max() + 1e-8)
+phase = np.arctan2(psi_imag, psi_real)
+phase_norm = (phase + math.pi) / (2 * math.pi)
+phase_palette = [
+(0, 60, 255), (0, 200, 200), (0, 255, 60),
+(255, 255, 0), (255, 100, 0), (255, 0, 100),
+(200, 0, 255), (0, 60, 255)
+]
+phase_colors = _color_map(phase_norm, phase_palette)
+envelope = np.exp(-r ** 2 / 0.8)
+prob *= envelope
+for c in range(3):
+img[..., c] = phase_colors[..., c] * prob * 1.5
+stars = _star_field((h, w), density=200, seed=seed)
+for c in range(3):
+img[..., c] += stars[..., c] * (1 - prob * 0.8)
+interference = np.cos(prob * 20 * math.pi) * 0.5 + 0.5
+for c in range(3):
+img[..., c] *= (0.7 + 0.3 * interference)
+contour_lines = np.abs(np.sin(prob * 15 * math.pi))
+contour_lines = (contour_lines < 0.05).astype(float) * prob * 0.3
+for c in range(3):
+img[..., c] += contour_lines * 200
+vig = _vignette((h, w), 0.4)
+for c in range(3):
+img[..., c] *= vig
+img = np.clip(img, 0, 255).astype(np.uint8)
+img = _bloom(img, threshold=140, radius=6, intensity=0.4)
+return img
+
+def render_wormhole(w, h, seed, params=None):
+params = params or {}
+img = np.zeros((h, w, 3), dtype=np.float64)
+cx, cy = w / 2, h / 2
+y, x = np.mgrid[0:h, 0:w]
+dx = (x - cx).astype(np.float64)
+dy = (y - cy).astype(np.float64)
+r = np.sqrt(dx ** 2 + dy ** 2)
+theta = np.arctan2(dy, dx)
+throat_radius = min(w, h) * 0.08
+tunnel_depth = 15.0
+depth = np.where(r > throat_radius,
+tunnel_depth * (throat_radius / np.maximum(r, 1)) ** 0.8,
+tunnel_depth)
+tunnel_pattern = np.sin(depth * 3 + theta * 4) * 0.5 + 0.5
+noise = _fbm_noise((h, w), octaves=5, seed=seed)
+tunnel_pattern *= (0.5 + 0.5 * noise)
+ring_dist = np.abs(r - throat_radius * 2)
+ring_glow = np.exp(-ring_dist ** 2 / (2 * (throat_radius * 0.3) ** 2))
+warp_factor = np.where(r > throat_radius,
+(throat_radius / np.maximum(r, 1)) ** 1.5,
+1.0)
+edge_glow = np.exp(-((r - throat_radius) ** 2) / (2 * (throat_radius * 0.15) ** 2))
+palette = [(0, 0, 20), (20, 40, 120), (80, 100, 200), (150, 180, 255), (220, 240, 255)]
+tunnel_colors = _color_map(tunnel_pattern * warp_factor, palette)
+for c in range(3):
+img[..., c] = tunnel_colors[..., c]
+for c, val in enumerate([200, 220, 255]):
+
+img[..., c] += ring_glow * val * 0.6
+for c, val in enumerate([100, 200, 255]):
+img[..., c] += edge_glow * val * 1.2
+inner_mask = (r < throat_radius * 0.6).astype(float)
+dest_stars = _star_field((h, w), density=400, seed=seed + 999)
+dest_nebula = _fbm_noise((h, w), octaves=4, seed=seed + 888)
+fade_in = np.clip(1.0 - r / (throat_radius * 0.6), 0, 1) * inner_mask
+for c in range(3):
+dest_color = [80, 40, 120][c]
+img[..., c] += (dest_stars[..., c] * 0.5 + dest_nebula * dest_color * 0.3) * fade_in
+stars = _star_field((h, w), density=800, seed=seed)
+outer_mask = np.clip((r - throat_radius * 3) / (throat_radius * 2), 0, 1)
+for c in range(3):
+img[..., c] += stars[..., c] * outer_mask
+vig = _vignette((h, w), 0.5)
+for c in range(3):
+img[..., c] *= vig
+img = np.clip(img, 0, 255).astype(np.uint8)
+img = _bloom(img, threshold=150, radius=8, intensity=0.5)
+return img
+
+def render_supernova(w, h, seed, params=None):
+params = params or {}
+rng = np.random.RandomState(seed)
+img = np.zeros((h, w, 3), dtype=np.float64)
+stars = _star_field((h, w), density=800, seed=seed)
+img += stars
+cx, cy = w / 2, h / 2
+y, x = np.mgrid[0:h, 0:w]
+dx = (x - cx).astype(np.float64)
+dy = (y - cy).astype(np.float64)
+r = np.sqrt(dx ** 2 + dy ** 2)
+theta = np.arctan2(dy, dx)
+blast_radius = min(w, h) * 0.35
+core_radius = min(w, h) * 0.03
+core_glow = np.exp(-r ** 2 / (2 * core_radius ** 2))
+for c, val in enumerate([255, 255, 240]):
+img[..., c] += core_glow * val * 2.0
+n_rays = rng.randint(12, 24)
+for i in range(n_rays):
+ray_angle = i * 2 * math.pi / n_rays + rng.uniform(-0.1, 0.1)
+ray_width = rng.uniform(0.03, 0.08)
+ray_length = blast_radius * rng.uniform(0.5, 1.0)
+angle_diff = np.abs(np.mod(theta - ray_angle + math.pi, 2 * math.pi) - math.pi)
+ray_mask = np.exp(-(angle_diff ** 2) / (2 * ray_width ** 2))
+ray_mask *= np.exp(-r / ray_length)
+ray_mask *= (r > core_radius * 2).astype(float)
+ray_temp = rng.uniform(5000, 30000)
+rc, gc, bc = _blackbody_color(ray_temp)
+intensity = rng.uniform(150, 255)
+img[..., 0] += ray_mask * intensity * rc
+img[..., 1] += ray_mask * intensity * gc
+img[..., 2] += ray_mask * intensity * bc
+shell_r = blast_radius * 0.7
+shell_width = blast_radius * 0.1
+shell = np.exp(-((r - shell_r) ** 2) / (2 * shell_width ** 2))
+shell_noise = _fbm_noise((h, w), octaves=6, seed=seed + 50)
+shell *= (0.4 + 0.6 * shell_noise)
+for c, val in enumerate([200, 100, 50]):
+img[..., c] += shell * val
+inner_shell_r = blast_radius * 0.4
+inner_shell = np.exp(-((r - inner_shell_r) ** 2) / (2 * (shell_width * 0.7) ** 2))
+for c, val in enumerate([100, 180, 255]):
+img[..., c] += inner_shell * val * 0.5
+vig = _vignette((h, w), 0.5)
+for c in range(3):
+img[..., c] *= vig
+img = np.clip(img, 0, 255).astype(np.uint8)
+img = _bloom(img, threshold=140, radius=12, intensity=0.7)
+return img
+
+def render_planet(w, h, seed, params=None):
+params = params or {}
+rng = np.random.RandomState(seed)
+img = np.zeros((h, w, 3), dtype=np.float64)
+stars = _star_field((h, w), density=600, seed=seed)
+img += stars
+cx, cy = w / 2, h / 2
+planet_r = min(w, h) * 0.3
+y, x = np.mgrid[0:h, 0:w]
+dx = (x - cx).astype(np.float64)
+
+dy = (y - cy).astype(np.float64)
+r = np.sqrt(dx ** 2 + dy ** 2)
+planet_mask = (r <= planet_r).astype(float)
+norm_r = r / planet_r
+nx = dx / np.maximum(r, 1e-6)
+ny = dy / np.maximum(r, 1e-6)
+nz = np.sqrt(np.maximum(1 - norm_r ** 2, 0))
+light_dir = np.array([0.5, -0.3, 0.8])
+light_dir /= np.linalg.norm(light_dir)
+shading = nx * light_dir[0] + ny * light_dir[1] + nz * light_dir[2]
+shading = np.clip(shading, 0, 1) * planet_mask
+planet_type = params.get('type', rng.choice(['rocky', 'gas', 'ice', 'lava']))
+if planet_type == 'gas':
+band_noise = _fbm_noise((h, w), octaves=6, seed=seed + 10)
+bands = np.sin((dy / planet_r) * 15 + band_noise * 3) * 0.5 + 0.5
+colors = _color_map(bands, [
+(180, 140, 80), (200, 160, 100), (160, 120, 60),
+(220, 180, 120), (140, 100, 50), (200, 160, 90)
+])
+spot_r = planet_r * 0.15
+spot_cx, spot_cy = cx + planet_r * 0.2, cy + planet_r * 0.1
+spot_dist = np.sqrt((x - spot_cx) ** 2 + (y - spot_cy) ** 2)
+spot = np.exp(-(spot_dist ** 2) / (2 * spot_r ** 2)) * planet_mask
+colors[..., 0] += spot * 80
+colors[..., 1] -= spot * 30
+elif planet_type == 'ice':
+surface = _fbm_noise((h, w), octaves=7, seed=seed + 20)
+colors = _color_map(surface, [
+(180, 210, 230), (200, 230, 250), (220, 240, 255),
+(160, 200, 240), (140, 180, 220)
+])
+cracks = _fbm_noise((h, w), octaves=8, persistence=0.7, seed=seed + 30)
+crack_lines = (np.abs(cracks - 0.5) < 0.02).astype(float)
+for c in range(3):
+colors[..., c] += crack_lines * 60
+elif planet_type == 'lava':
+surface = _fbm_noise((h, w), octaves=6, seed=seed + 40)
+colors = _color_map(surface, [
+(40, 20, 10), (80, 30, 10), (60, 25, 10),
+(100, 40, 15), (50, 20, 8)
+])
+lava = _fbm_noise((h, w), octaves=4, seed=seed + 50)
+lava_mask = (lava > 0.65).astype(float)
+lava_mask = ndimage.gaussian_filter(lava_mask, sigma=2)
+colors[..., 0] += lava_mask * 200
+colors[..., 1] += lava_mask * 80
+colors[..., 2] += lava_mask * 10
+else:
+surface = _fbm_noise((h, w), octaves=7, seed=seed + 60)
+colors = _color_map(surface, [
+(60, 80, 40), (80, 100, 50), (100, 120, 60),
+(140, 130, 100), (120, 110, 80), (80, 90, 45)
+])
+ocean = (surface < 0.4).astype(float)
+for c, val in enumerate([30, 60, 140]):
+colors[..., c] = colors[..., c] * (1 - ocean) + val * ocean
+for c in range(3):
+img[..., c] = img[..., c] * (1 - planet_mask) + colors[..., c] * shading * planet_mask
+atmo_dist = np.abs(r - planet_r)
+atmo_glow = np.exp(-(atmo_dist ** 2) / (2 * (planet_r * 0.05) ** 2))
+atmo_glow *= (r > planet_r * 0.95).astype(float)
+atmo_colors = {'gas': (200, 180, 120), 'ice': (150, 200, 255),
+'lava': (255, 100, 30), 'rocky': (100, 150, 255)}
+ac = atmo_colors.get(planet_type, (100, 150, 255))
+for c in range(3):
+img[..., c] += atmo_glow * ac[c] * 0.6
+vig = _vignette((h, w), 0.4)
+for c in range(3):
+img[..., c] *= vig
+img = np.clip(img, 0, 255).astype(np.uint8)
+img = _bloom(img, threshold=180, radius=6, intensity=0.3)
+return img
+
+def render_fractal(w, h, seed, params=None):
+params = params or {}
+rng = np.random.RandomState(seed)
+cx = rng.uniform(-0.8, 0.3)
+cy = rng.uniform(-0.6, 0.6)
+zoom_level = rng.uniform(0.5, 3.0)
+scale = 2.0 / (zoom_level * min(w, h))
+y_coords, x_coords = np.mgrid[0:h, 0:w]
+x0 = (x_coords - w / 2) * scale + cx
+y0 = (y_coords - h / 2) * scale + cy
+z_real = np.zeros((h, w), dtype=np.float64)
+z_imag = np.zeros((h, w), dtype=np.float64)
+iterations = np.zeros((h, w), dtype=np.float64)
+max_iter = 256
+mask = np.ones((h, w), dtype=bool)
+
+for i in range(max_iter):
+zr2 = z_real ** 2
+zi2 = z_imag ** 2
+escaped = (zr2 + zi2 > 4) & mask
+iterations[escaped] = i + 1 - np.log2(np.log2(np.sqrt(zr2[escaped] + zi2[escaped])))
+mask[escaped] = False
+if not mask.any():
+break
+z_imag[mask] = 2 * z_real[mask] * z_imag[mask] + y0[mask]
+z_real[mask] = zr2[mask] - zi2[mask] + x0[mask]
+iterations[mask] = max_iter
+norm_iter = iterations / max_iter
+norm_iter = np.sqrt(norm_iter)
+palette_choice = params.get('palette', rng.choice(['cosmic', 'fire', 'ice']))
+palette = NEBULA_PALETTES.get(palette_choice, NEBULA_PALETTES['cosmic'])
+colors = _color_map(norm_iter, palette)
+interior = (iterations >= max_iter)
+colors[interior] = [0, 0, 0]
+img = np.clip(colors, 0, 255).astype(np.uint8)
+img = _bloom(img, threshold=200, radius=4, intensity=0.3)
+return img
+
+def render_neural(w, h, seed, params=None):
+params = params or {}
+rng = np.random.RandomState(seed)
+img = np.zeros((h, w, 3), dtype=np.float64)
+bg = _fbm_noise((h, w), octaves=5, seed=seed)
+bg = bg ** 2
+for c, val in enumerate([15, 5, 25]):
+img[..., c] = bg * val
+n_nodes = params.get('nodes', rng.randint(15, 40))
+nodes = []
+for _ in range(n_nodes):
+nodes.append((rng.randint(w * 0.1, w * 0.9),
+rng.randint(h * 0.1, h * 0.9),
+rng.uniform(5, 20)))
+pil_img = Image.fromarray(np.clip(img, 0, 255).astype(np.uint8))
+draw = ImageDraw.Draw(pil_img)
+for i, (x1, y1, r1) in enumerate(nodes):
+for j, (x2, y2, r2) in enumerate(nodes):
+if i >= j:
+continue
+dist = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+max_dist = min(w, h) * 0.4
+if dist < max_dist and rng.random() < 0.4:
+alpha = int(max(20, 150 * (1 - dist / max_dist)))
+color_choice = rng.choice(['cyan', 'violet', 'white'])
+if color_choice == 'cyan':
+c = (0, alpha, alpha)
+elif color_choice == 'violet':
+c = (alpha // 2, 0, alpha)
+else:
+c = (alpha // 2, alpha // 2, alpha // 2)
+draw.line([(x1, y1), (x2, y2)], fill=c, width=1)
+mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
+n_pulses = rng.randint(0, 3)
+for p in range(n_pulses):
+t = rng.uniform(0.2, 0.8)
+px = int(x1 + t * (x2 - x1))
+py = int(y1 + t * (y2 - y1))
+pr = rng.randint(2, 5)
+draw.ellipse([px - pr, py - pr, px + pr, py + pr],
+fill=(100, 200, 255, 200))
+for x, y, radius in nodes:
+for ring_r in [radius * 1.5, radius]:
+draw.ellipse([x - ring_r, y - ring_r, x + ring_r, y + ring_r],
+outline=(80, 40, 140), width=1)
+draw.ellipse([x - radius * 0.6, y - radius * 0.6,
+x + radius * 0.6, y + radius * 0.6],
+fill=(160, 100, 255))
+inner_r = radius * 0.3
+draw.ellipse([x - inner_r, y - inner_r, x + inner_r, y + inner_r],
+fill=(220, 200, 255))
+img = np.array(pil_img).astype(np.float64)
+vig = _vignette((h, w), 0.5)
+for c in range(3):
+img[..., c] *= vig
+img = np.clip(img, 0, 255).astype(np.uint8)
+img = _bloom(img, threshold=120, radius=10, intensity=0.6)
+return img
+
+def render_consciousness(w, h, seed, params=None):
+params = params or {}
+rng = np.random.RandomState(seed)
+
+img = np.zeros((h, w, 3), dtype=np.float64)
+stars = _star_field((h, w), density=300, seed=seed)
+img += stars * 0.3
+cx, cy = w / 2, h / 2
+y, x = np.mgrid[0:h, 0:w]
+dx = (x - cx).astype(np.float64) / (w / 2)
+dy = (y - cy).astype(np.float64) / (h / 2)
+r = np.sqrt(dx ** 2 + dy ** 2)
+theta = np.arctan2(dy, dx)
+n_tubes = rng.randint(5, 12)
+for t in range(n_tubes):
+tube_angle = t * 2 * math.pi / n_tubes + rng.uniform(-0.2, 0.2)
+tube_len = rng.uniform(0.3, 0.8)
+tube_width = 0.02 + rng.uniform(0, 0.01)
+cos_a = math.cos(tube_angle)
+sin_a = math.sin(tube_angle)
+proj = dx * cos_a + dy * sin_a
+perp = np.abs(-dx * sin_a + dy * cos_a)
+tube_mask = np.exp(-(perp ** 2) / (2 * tube_width ** 2))
+tube_mask *= (proj > 0.05).astype(float) * (proj < tube_len).astype(float)
+wave = np.sin(proj * 30 + rng.uniform(0, 2 * math.pi)) * 0.5 + 0.5
+tube_mask *= (0.3 + 0.7 * wave)
+hue = rng.uniform(0, 1)
+if hue < 0.33:
+tc = (100, 200, 255)
+elif hue < 0.66:
+tc = (200, 100, 255)
+else:
+tc = (100, 255, 200)
+for c in range(3):
+img[..., c] += tube_mask * tc[c] * 0.6
+core_r = 0.12
+core = np.exp(-r ** 2 / (2 * core_r ** 2))
+pulse = np.sin(r * 40) * 0.3 + 0.7
+core *= pulse
+for c, val in enumerate([255, 200, 255]):
+img[..., c] += core * val * 0.8
+n_rings = 5
+for i in range(n_rings):
+ring_r = 0.15 + i * 0.12
+ring = np.exp(-((r - ring_r) ** 2) / (2 * 0.008 ** 2))
+alpha = 0.4 * (1 - i / n_rings)
+for c, val in enumerate([150, 100, 255]):
+img[..., c] += ring * val * alpha
+coherence_noise = _fbm_noise((h, w), octaves=5, seed=seed + 77)
+decoherence = np.clip(r - 0.4, 0, 1) * coherence_noise
+for c in range(3):
+img[..., c] *= (1 - decoherence * 0.5)
+vig = _vignette((h, w), 0.5)
+for c in range(3):
+img[..., c] *= vig
+img = np.clip(img, 0, 255).astype(np.uint8)
+img = _bloom(img, threshold=120, radius=10, intensity=0.6)
+return img
+
+SCENE_KEYWORDS = {
+'black_hole': ['black hole', 'event horizon', 'singularity', 'gravitational', 'accretion',
+'photon ring', 'schwarzschild', 'kerr', 'spacetime curvature'],
+'nebula': ['nebula', 'nebulae', 'gas cloud', 'stellar nursery', 'emission',
+'interstellar', 'cosmic dust', 'pillars', 'orion', 'carina', 'eagle'],
+'galaxy': ['galaxy', 'spiral', 'milky way', 'andromeda', 'galactic',
+'barred spiral', 'elliptical', 'star system'],
+'quantum_state': ['quantum', 'wavefunction', 'superposition', 'entangle',
+'probability', 'schrodinger', 'qubit', 'quantum state',
+'wave function', 'quantum field'],
+'wormhole': ['wormhole', 'einstein-rosen', 'bridge', 'portal', 'tunnel',
+'spacetime tunnel', 'traversable'],
+'supernova': ['supernova', 'explosion', 'stellar death', 'nova', 'burst',
+'star explod', 'detonation', 'stellar explosion', 'gamma ray'],
+'planet': ['planet', 'world', 'terrestrial', 'jovian', 'earth',
+'mars', 'jupiter', 'saturn', 'venus', 'exoplanet', 'moon'],
+'fractal': ['fractal', 'mandelbrot', 'julia', 'recursive', 'self-similar',
+'chaos', 'strange attractor', 'infinite', 'iteration'],
+'neural': ['neural', 'brain', 'neuron', 'synapse', 'network',
+'microtubule', 'axon', 'dendrite', 'cortex', 'cognitive'],
+'consciousness': ['consciousness', 'awareness', 'orch-or', 'penrose',
+'hameroff', 'tubulin', 'orchestrated', 'subjective',
+'qualia', 'mind', 'sentien'],
+}
+RENDERERS = {
+'black_hole': render_black_hole,
+'nebula': render_nebula,
+'galaxy': render_galaxy,
+'quantum_state': render_quantum_state,
+'wormhole': render_wormhole,
+
+'supernova': render_supernova,
+'planet': render_planet,
+'fractal': render_fractal,
+'neural': render_neural,
+'consciousness': render_consciousness,
+}
+
+def _detect_scene(prompt: str) -> tuple:
+prompt_lower = prompt.lower()
+scores = {}
+for scene, keywords in SCENE_KEYWORDS.items():
+score = 0
+for kw in keywords:
+if kw in prompt_lower:
+score += len(kw)
+if score > 0:
+scores[scene] = score
+if not scores:
+return 'nebula', {}
+best = max(scores, key=scores.get)
+params = {}
+if best == 'black_hole':
+if 'merg' in prompt_lower:
+params['merging'] = True
+if 'jet' in prompt_lower:
+params['jets'] = True
+elif best == 'nebula':
+for name in NEBULA_PALETTES:
+if name in prompt_lower:
+params['palette'] = name
+if 'fire' in prompt_lower or 'red' in prompt_lower or 'hot' in prompt_lower:
+params['palette'] = 'fire'
+elif 'ice' in prompt_lower or 'blue' in prompt_lower or 'cold' in prompt_lower:
+params['palette'] = 'ice'
+elif 'green' in prompt_lower or 'emerald' in prompt_lower:
+params['palette'] = 'emerald'
+elif 'purple' in prompt_lower or 'violet' in prompt_lower:
+params['palette'] = 'cosmic'
+elif 'dark' in prompt_lower or 'void' in prompt_lower:
+params['palette'] = 'void'
+elif best == 'planet':
+if 'gas' in prompt_lower or 'jupiter' in prompt_lower:
+params['type'] = 'gas'
+elif 'ice' in prompt_lower or 'frozen' in prompt_lower:
+params['type'] = 'ice'
+elif 'lava' in prompt_lower or 'volcanic' in prompt_lower:
+params['type'] = 'lava'
+elif 'rocky' in prompt_lower or 'mars' in prompt_lower:
+params['type'] = 'rocky'
+elif best == 'galaxy':
+if 'barred' in prompt_lower:
+params['arms'] = 2
+return best, params
+
+def _render_merging_black_holes(w, h, seed, params=None):
+img = np.zeros((h, w, 3), dtype=np.float64)
+stars = _star_field((h, w), density=1000, seed=seed)
+separation = min(w, h) * 0.2
+cx1, cy1 = w / 2 - separation * 0.5, h / 2
+cx2, cy2 = w / 2 + separation * 0.5, h / 2
+y, x = np.mgrid[0:h, 0:w]
+for (bcx, bcy, bseed) in [(cx1, cy1, seed), (cx2, cy2, seed + 500)]:
+dx = (x - bcx).astype(np.float64)
+dy = (y - bcy).astype(np.float64)
+r = np.sqrt(dx ** 2 + dy ** 2)
+theta = np.arctan2(dy, dx)
+bh_r = min(w, h) * 0.08
+photon_r = bh_r * 1.5
+accr_outer = bh_r * 2.5
+accr_inner = bh_r * 1.5
+lens = np.where(r > bh_r, 1.0 + 2.0 * (bh_r / np.maximum(r, 1)) ** 2, 0.0)
+lx = np.clip((bcx + dx * lens).astype(int), 0, w - 1)
+ly = np.clip((bcy + dy * lens).astype(int), 0, h - 1)
+for c in range(3):
+img[..., c] += stars[ly, lx, c] * 0.5
+thin_disk = np.exp(-(dy ** 2) / (2 * (bh_r * 0.12) ** 2))
+disk_valid = ((r > accr_inner) & (r < accr_outer)).astype(float)
+thin_disk *= disk_valid
+disk_temp = np.clip(1.0 - (r - accr_inner) / (accr_outer - accr_inner), 0, 1) ** 0.6
+doppler = 1.0 + 0.3 * np.sin(theta)
+for c, (hot, cool) in enumerate([(255, 180), (200, 50), (150, 10)]):
+disk_c = cool + (hot - cool) * disk_temp * doppler
+img[..., c] += disk_c * thin_disk * 1.2
+ring = np.exp(-((r - photon_r) ** 2) / (2 * (bh_r * 0.04) ** 2))
+for c, val in enumerate([255, 230, 180]):
+img[..., c] += ring * val * 0.6
+
+fade = np.clip((r - bh_r * 0.8) / (bh_r * 0.2), 0, 1)
+for c in range(3):
+img[..., c] *= fade
+mid_x, mid_y = w / 2, h / 2
+bridge_dx = (x - mid_x).astype(np.float64)
+bridge_dy = (y - mid_y).astype(np.float64)
+bridge_r = np.sqrt(bridge_dx ** 2 + bridge_dy ** 2)
+bridge = np.exp(-(bridge_dy ** 2) / (2 * (min(h, w) * 0.03) ** 2))
+bridge *= (np.abs(bridge_dx) < separation * 0.6).astype(float)
+bridge *= np.exp(-bridge_r / (separation * 0.8))
+gw_waves = np.sin(bridge_r / (min(w, h) * 0.03) * math.pi) * 0.5 + 0.5
+bridge *= gw_waves
+for c, val in enumerate([200, 150, 255]):
+img[..., c] += bridge * val * 0.4
+vig = _vignette((h, w), 0.5)
+for c in range(3):
+img[..., c] *= vig
+img = np.clip(img, 0, 255).astype(np.uint8)
+img = _bloom(img, threshold=150, radius=8, intensity=0.6)
+return img
+
+def generate_image(prompt: str, width: int = 512, height: int = 512,
+variation_seed: int = None) -> Image.Image:
+seed = _seed_from_prompt(prompt)
+if variation_seed is not None:
+seed = (seed + variation_seed) % (2 ** 31)
+scene, params = _detect_scene(prompt)
+if scene == 'black_hole' and params.get('merging'):
+img_array = _render_merging_black_holes(width, height, seed, params)
+else:
+renderer = RENDERERS.get(scene, render_nebula)
+img_array = renderer(width, height, seed, params)
+return Image.fromarray(img_array)
+
+def get_available_scenes():
+return list(RENDERERS.keys())
+
+if __name__ == "__main__":
+import sys
+prompt = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "two black holes merging"
+print(f"Generating: {prompt}")
+img = generate_image(prompt, 768, 768)
+out_path = "test_render.png"
+img.save(out_path)
+print(f"Saved to {out_path}")
+
