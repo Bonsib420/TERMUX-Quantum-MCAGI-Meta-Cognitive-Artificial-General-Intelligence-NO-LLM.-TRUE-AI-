@@ -103,8 +103,13 @@ class LocalMemory:
 
     def _save(self, filename: str, data):
         filepath = self.data_dir / filename
-        with open(filepath, 'w') as f:
-            json.dump(data, f, indent=2)
+        try:
+            from system_safety import atomic_write_json
+            atomic_write_json(str(filepath), data, indent=2)
+        except ImportError:
+            # Fallback if system_safety unavailable for any reason
+            with open(filepath, 'w') as f:
+                json.dump(data, f, indent=2)
 
     def save_all(self):
         self._save("conversations.json", self.conversations[-500:])
@@ -343,3 +348,26 @@ class LocalMemory:
         self.growth = self._default_growth()
         self.analyzer_scores = []
         self.save_all()
+
+    def get_status(self) -> dict:
+        """Return status dict for /status command."""
+        g = self.growth
+        kt = g.get("knowledge_track", {})
+        ct = g.get("communication_track", {})
+        return {
+            "growth": {
+                "stage": g.get("stage", 0),
+                "name": g.get("name", "Unknown"),
+                "total_interactions": g.get("total_interactions", 0),
+                "total_concepts": g.get("total_concepts", 0),
+                "total_questions_asked": g.get("total_questions_asked", 0),
+                "total_insights": g.get("total_insights", 0),
+                "knowledge_track": kt,
+                "communication_track": ct,
+            },
+            "concepts": {
+                "total": len(self.concepts),
+                "top_strength": self.get_top_concepts(15),
+            },
+            "recent_exchanges": len(self.conversations),
+        }

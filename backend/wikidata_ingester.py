@@ -1,7 +1,4 @@
-"""
-Wikidata Knowledge Ingester
-Pulls structured entity facts from Wikidata and stores in knowledge_graph.json
-"""
+"""\nWikidata Knowledge Ingester\nPulls structured entity facts from Wikidata and stores in knowledge_graph.json\n"""
 import json, urllib.request, urllib.parse, os, re, time, time
 
 DATA_DIR = os.path.expanduser('~/.quantum-mcagi')
@@ -224,3 +221,4 @@ if __name__ == '__main__':
 
     kg = load_kg()
     print(f"\nKnowledge graph: {len(kg)} entities")
+

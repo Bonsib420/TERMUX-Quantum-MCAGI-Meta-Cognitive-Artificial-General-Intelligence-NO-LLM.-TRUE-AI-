@@ -741,8 +741,6 @@ class ResponseComposer:
             ]
         else:
             openers = [
-                f"I've developed a rich web of understanding around {topic}.",
-                f"The landscape of {topic} has become familiar enough that I can spot what's missing.",
                 f"Deep engagement with {topic} has led me to see it as part of a larger architecture.",
             ]
         
@@ -773,9 +771,7 @@ class ResponseComposer:
         else:
             joined = ', '.join(related_names[:-1]) + f', and {related_names[-1]}'
             templates = [
-                f"This sits at a crossroads with {joined}.",
                 f"Multiple threads converge here: {joined}.",
-                f"The connections to {joined} suggest this is a nexus point.",
             ]
         
         return random.choice(templates)
@@ -997,6 +993,19 @@ class QuantumLanguageEngine:
         self.question_gen = QuestionGenerator(self.extractor)
         self.composer = ResponseComposer(self.markov, self.extractor)
         self.coherence = CoherenceScorer()
+        # Tier 2: function-word dossier engine (graceful no-op if module missing)
+        self.fwe = None
+        try:
+            from function_word_engine import FunctionWordEngine
+            self.fwe = FunctionWordEngine(stopwords_set=ConceptExtractor.STOPWORDS)
+            _fwe_path = os.path.expanduser("~/.quantum-mcagi/function_words.json")
+            try:
+                if os.path.exists(_fwe_path):
+                    self.fwe.load(_fwe_path)
+            except Exception:
+                pass
+        except ImportError:
+            self.fwe = None
         try:
             from orch_or_integration import OrchORLanguageBridge
             self.orch_bridge = OrchORLanguageBridge()
@@ -1099,10 +1108,16 @@ class QuantumLanguageEngine:
         )
     
     def learn_from_text(self, text: str):
-        """Feed text to the Markov chain and concept extractor to improve generation."""
+        """Feed text to BOTH tiers: content (markov/extractor/coherence) and function (fwe)."""
         self.markov.train(text)
         self.extractor.update_corpus_stats(text)
         self.coherence.update(text)
+        # Tier 2: feed FunctionWordEngine if available
+        if self.fwe is not None:
+            try:
+                self.fwe.update_from_text(text)
+            except Exception:
+                pass
     
     def save_state(self, directory: str):
         """Persist learned state."""
@@ -1117,6 +1132,13 @@ class QuantumLanguageEngine:
         }
         with open(os.path.join(directory, 'corpus_stats.json'), 'w') as f:
             json.dump(stats, f)
+        # Tier 2: persist FunctionWordEngine dossier
+        if getattr(self, 'fwe', None) is not None:
+            try:
+                _fwe_path = os.path.expanduser("~/.quantum-mcagi/function_words.json")
+                self.fwe.save(_fwe_path)
+            except Exception:
+                pass
         # Save engine metadata
         from datetime import datetime, timezone
         engine_meta = {

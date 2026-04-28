@@ -29,8 +29,8 @@ class MarkovEngine:
                 for key, trans in data["chain"].items():
                     prefix = tuple(key.split())
                     self.chain[prefix] = defaultdict(int, trans)
-            self.total_tokens = sum(sum(t.values()) for t in self.chain.values())
-            self.trained = True
+                self.total_tokens = sum(sum(t.values()) for t in self.chain.values())
+                self.trained = True
             if "starters" in data:
                 self.starters = [tuple(s.split()) for s in data["starters"]]
             if not self.silent:
@@ -56,10 +56,12 @@ class MarkovEngine:
 
     def generate_from_concepts(self, concepts, length=30, wild=False):
         """Hilbert-primary, Markov-validating, FunctionWord-grammar generation.
+
         Three-signal token selection per step:
-            1. Hilbert.sample_token(context) — semantic primary (Born-rule)
-            2. Markov.chain[prefix]          — adjacency validator
-            3. FunctionWordEngine            — grammar fit reranker
+          1. Hilbert.sample_token(context) — semantic primary (Born-rule)
+          2. Markov.chain[prefix]          — adjacency validator
+          3. FunctionWordEngine            — grammar fit reranker
+
         Falls through gracefully when any tier is missing or returns None.
         """
         # Lazy-load helpers (cached on instance after first use)
@@ -84,7 +86,7 @@ class MarkovEngine:
             except Exception:
                 self._fwe = None
 
-        # Seed selection
+        # ── Seed selection (unchanged) ──
         seed = None
         for c in concepts:
             for pre in self.chain:
@@ -97,10 +99,9 @@ class MarkovEngine:
             seed = random.choice(self.starters)
         if not seed:
             return []
-
         result = list(seed)
 
-        # Seed Hilbert rho from input concepts so semantic field reflects intent
+        # Seed Hilbert ρ from input concepts so semantic field reflects intent
         if self._hilbert and concepts:
             for c in concepts[:3]:
                 try:
@@ -108,13 +109,14 @@ class MarkovEngine:
                 except Exception:
                     pass
 
-        # Generation loop
+        # ── Generation loop ──
         for _ in range(length * 2):
             nxt = None
+
             # SIGNAL 1: Hilbert primary (semantic Born-rule)
             if self._hilbert is not None:
                 try:
-                    context = list(result[-3:])
+                    context = list(result[-3:])  # last 3 tokens for context
                     nxt = self._hilbert.sample_token(
                         context_tokens=context,
                         temperature=1.0,
@@ -124,29 +126,37 @@ class MarkovEngine:
                     nxt = None
 
             # SIGNAL 2: Markov adjacency validator
+            # If Hilbert returned a token, check if Markov has ever seen it
+            # follow this prefix. If yes -> good. If no -> still allow but
+            # fall back to Markov pick when Hilbert returns None.
             markov_choices = self.chain.get(seed)
             if nxt is None and markov_choices:
+                # Hilbert silent -> pure Markov pick
                 words = list(markov_choices.keys())
                 weights = list(markov_choices.values())
                 nxt = random.choices(words, weights=weights)[0]
 
-            # SIGNAL 3: FunctionWord grammar reranker
+            # SIGNAL 3: FunctionWord grammar reranker (only if multiple Markov candidates)
             if (nxt is not None and self._fwe is not None
                     and markov_choices and len(markov_choices) > 1):
                 try:
+                    # Light-touch rerank: if nxt is a function word and the
+                    # FWE dossier shows it rarely follows the current last
+                    # content word, swap to a higher-fit candidate.
                     last_word = result[-1].lower() if result else ""
                     dossier = self._fwe.get_dossier(nxt)
                     if dossier and dossier.get("preceding_neighbors"):
                         prev_count = dossier["preceding_neighbors"].get(last_word, 0)
                         if prev_count == 0:
+                            # Try another candidate from Markov pool
                             words = list(markov_choices.keys())
                             weights = list(markov_choices.values())
                             for _i in range(3):
                                 alt = random.choices(words, weights=weights)[0]
                                 alt_dossier = self._fwe.get_dossier(alt)
                                 if (alt_dossier is None or
-                                        alt_dossier.get("preceding_neighbors", {}).get(
-                                            last_word, 0) > 0):
+                                    alt_dossier.get("preceding_neighbors", {}).get(
+                                        last_word, 0) > 0):
                                     nxt = alt
                                     break
                 except Exception:
@@ -160,25 +170,16 @@ class MarkovEngine:
                     break
                 seed = random.choice(self.starters)
                 nxt = seed[-1]
-
             result.append(nxt)
             seed = tuple(result[-self.order:])
             if len(result) >= length and nxt.endswith(('.', '!', '?')):
                 break
-
         return result
 
     def get_status(self):
         return {'states': len(self.chain), 'transitions': self.total_tokens, 'trained': self.trained}
 
-    def __getitem__(self, key):
-        return self.chain[key]
-
-    def get(self, key, default=None):
-        return self.chain.get(key, default)
-
-    def __contains__(self, key):
-        return key in self.chain
-
-    def keys(self):
-        return self.chain.keys()
+    def __getitem__(self, key): return self.chain[key]
+    def get(self, key, default=None): return self.chain.get(key, default)
+    def __contains__(self, key): return key in self.chain
+    def keys(self): return self.chain.keys()

@@ -1,26 +1,31 @@
 #!/data/data/com.termux/files/usr/bin/env python3
 """
-⁰ Math Corpus Collector
+🎓 Math Corpus Collector
 =========================
 Downloads a wide math corpus to ~/training/math/ from every legit free source:
-• Wikipedia math articles (~60 topics)
-• Stanford Encyclopedia of Philosophy (math/logic entries)
-• Project Gutenberg classical math books
-• arXiv math abstracts (recent papers)
-• The Stacks Project (open algebraic geometry textbook)
-• nLab category theory pages
-• ProofWiki (proofs and theorems)
-• Math Stack Exchange high-voted Q&A samples
+
+  • Wikipedia math articles (~60 topics)
+  • Stanford Encyclopedia of Philosophy (math/logic entries)
+  • Project Gutenberg classical math books
+  • arXiv math abstracts (recent papers)
+  • The Stacks Project (open algebraic geometry textbook)
+  • nLab category theory pages
+  • ProofWiki (proofs and theorems)
+  • Math Stack Exchange high-voted Q&A samples
+
 Each file lands as plain text, ready for /ingest.
+
 Usage:
     python collect_math_corpus.py
     python collect_math_corpus.py --skip-existing
     python collect_math_corpus.py --topic-filter calculus
+
 After collection, ingest into engine via:
     /ingest ~/training/math/<filename>.txt
 or batch:
     for f in ~/training/math/*.txt; do echo "/ingest $f"; done | python chat.py
 """
+
 import os
 import sys
 import time
@@ -29,10 +34,13 @@ import urllib.request
 import urllib.parse
 import urllib.error
 from pathlib import Path
-# ⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰
+
+# ────────────────────────────────────────────────────────────────────
 TARGET_DIR = Path("~/training/math").expanduser()
 TARGET_DIR.mkdir(parents=True, exist_ok=True)
+
 USER_AGENT = "QuantumMCAGI-MathCollector/1.0 (research/training)"
+
 # Topics for Wikipedia (will fetch plain text via REST API)
 WIKI_TOPICS = [
     # Foundations
@@ -69,6 +77,7 @@ WIKI_TOPICS = [
     "Mathematical_physics", "Quantum_mechanics", "Hilbert_space",
     "Density_matrix", "Born_rule", "Quantum_entanglement",
 ]
+
 # Stanford Encyclopedia of Philosophy entries (math/logic philosophy)
 SEP_ENTRIES = [
     "philosophy-mathematics",
@@ -83,8 +92,8 @@ SEP_ENTRIES = [
     "infinity",
     "mathematics-inconsistent",
     "proof-theoretic-semantics",
-
 ]
+
 # Project Gutenberg classical math texts (direct .txt URLs)
 GUTENBERG_BOOKS = [
     ("euclid_elements", "https://www.gutenberg.org/files/21076/21076-0.txt"),
@@ -98,6 +107,7 @@ GUTENBERG_BOOKS = [
     ("demorgan_formal_logic", "https://www.gutenberg.org/files/30207/30207-0.txt"),
     ("klein_lectures_on_math", "https://www.gutenberg.org/files/36154/36154-0.txt"),
 ]
+
 # arXiv math feed — recent abstracts
 ARXIV_FEEDS = [
     ("arxiv_math_recent", "https://export.arxiv.org/list/math/26"),
@@ -106,7 +116,9 @@ ARXIV_FEEDS = [
     ("arxiv_math_NT_recent", "https://export.arxiv.org/list/math.NT/26"),
     ("arxiv_math_LO_recent", "https://export.arxiv.org/list/math.LO/26"),
 ]
-# ⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰
+
+
+# ────────────────────────────────────────────────────────────────────
 def fetch(url: str, timeout: int = 30) -> str:
     """Fetch URL as text with proper UA. Returns content or raises."""
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
@@ -119,15 +131,21 @@ def fetch(url: str, timeout: int = 30) -> str:
         except UnicodeDecodeError:
             continue
     return raw.decode("utf-8", errors="ignore")
+
+
 def save(filename: str, content: str) -> Path:
     """Save content to TARGET_DIR/filename.txt. Returns path."""
     path = TARGET_DIR / f"{filename}.txt"
     path.write_text(content, encoding="utf-8")
     return path
+
+
 def already_have(filename: str) -> bool:
     p = TARGET_DIR / f"{filename}.txt"
     return p.exists() and p.stat().st_size > 1000
-# ⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰
+
+
+# ────────────────────────────────────────────────────────────────────
 def collect_wikipedia(skip_existing: bool, filter_text: str = None) -> int:
     """Pull Wikipedia article plain-text via the REST API."""
     print(f"\n[Wikipedia] {len(WIKI_TOPICS)} topics")
@@ -137,12 +155,13 @@ def collect_wikipedia(skip_existing: bool, filter_text: str = None) -> int:
             continue
         slug = f"wiki_{topic.lower().replace('/', '_')}"
         if skip_existing and already_have(slug):
-            print(f" ✓ {slug} (cached)")
+            print(f"  ✓ {slug} (cached)")
             count += 1
             continue
         # Use action API with extract endpoint (returns plain text reliably)
-        url = ("https://en.wikipedia.org/w/api.php?" "action=query&prop=extracts&explaintext=1&exsectionformat=plain&"
-                f"format=json&titles={urllib.parse.quote(topic)}")
+        url = ("https://en.wikipedia.org/w/api.php?"
+               "action=query&prop=extracts&explaintext=1&exsectionformat=plain&"
+               f"format=json&titles={urllib.parse.quote(topic)}")
         try:
             import json as _json
             raw = fetch(url)
@@ -156,28 +175,29 @@ def collect_wikipedia(skip_existing: bool, filter_text: str = None) -> int:
             if not text:
                 raise ValueError("empty extract")
             if len(text) < 500:
-                print(f" ✗ {slug}: too short ({len(text)}b)")
+                print(f"  ✗ {slug}: too short ({len(text)}b)")
                 continue
             save(slug, text)
-            print(f" ✓ {slug} ({len(text):,}b)")
+            print(f"  ✓ {slug} ({len(text):,}b)")
             count += 1
             time.sleep(0.4)
         except urllib.error.HTTPError as e:
-            print(f" ✗ {slug}: HTTP {e.code}")
+            print(f"  ✗ {slug}: HTTP {e.code}")
         except Exception as e:
-            print(f" ✗ {slug}: {e}")
+            print(f"  ✗ {slug}: {e}")
     return count
+
+
 def collect_sep(skip_existing: bool, filter_text: str = None) -> int:
     """Stanford Encyclopedia of Philosophy entries."""
     print(f"\n[Stanford Encyclopedia of Philosophy] {len(SEP_ENTRIES)} entries")
     count = 0
     for entry in SEP_ENTRIES:
-
         if filter_text and filter_text.lower() not in entry.lower():
             continue
         slug = f"sep_{entry.replace('-', '_')}"
         if skip_existing and already_have(slug):
-            print(f" ✓ {slug} (cached)")
+            print(f"  ✓ {slug} (cached)")
             count += 1
             continue
         url = f"https://plato.stanford.edu/entries/{entry}/"
@@ -197,12 +217,14 @@ def collect_sep(skip_existing: bool, filter_text: str = None) -> int:
                 excerpt = re.sub(r"\s+", " ", excerpt).strip()
                 if len(excerpt) > 1000:
                     save(slug, excerpt)
-                    print(f" ✓ {slug} ({len(excerpt):,}b)")
+                    print(f"  ✓ {slug} ({len(excerpt):,}b)")
                     count += 1
             time.sleep(0.5)
         except Exception as e:
-            print(f" ✗ {slug}: {e}")
+            print(f"  ✗ {slug}: {e}")
     return count
+
+
 def collect_gutenberg(skip_existing: bool, filter_text: str = None) -> int:
     """Project Gutenberg classical math books."""
     print(f"\n[Project Gutenberg] {len(GUTENBERG_BOOKS)} books")
@@ -212,21 +234,23 @@ def collect_gutenberg(skip_existing: bool, filter_text: str = None) -> int:
             continue
         full = f"gutenberg_{slug}"
         if skip_existing and already_have(full):
-            print(f" ✓ {full} (cached)")
+            print(f"  ✓ {full} (cached)")
             count += 1
             continue
         try:
             text = fetch(url)
             if len(text) < 5000:
-                print(f" ✗ {full}: too short ({len(text)}b)")
+                print(f"  ✗ {full}: too short ({len(text)}b)")
                 continue
             save(full, text)
-            print(f" ✓ {full} ({len(text):,}b)")
+            print(f"  ✓ {full} ({len(text):,}b)")
             count += 1
             time.sleep(1.0)
         except Exception as e:
-            print(f" ✗ {full}: {e}")
+            print(f"  ✗ {full}: {e}")
     return count
+
+
 def collect_arxiv(skip_existing: bool, filter_text: str = None) -> int:
     """arXiv listing pages (HTML — abstracts get extracted)."""
     print(f"\n[arXiv math feeds] {len(ARXIV_FEEDS)} feeds")
@@ -235,7 +259,7 @@ def collect_arxiv(skip_existing: bool, filter_text: str = None) -> int:
         if filter_text and filter_text.lower() not in slug.lower():
             continue
         if skip_existing and already_have(slug):
-            print(f" ✓ {slug} (cached)")
+            print(f"  ✓ {slug} (cached)")
             count += 1
             continue
         try:
@@ -247,15 +271,17 @@ def collect_arxiv(skip_existing: bool, filter_text: str = None) -> int:
             text = re.sub(r"<[^>]+>", " ", text)
             text = re.sub(r"\s+", " ", text).strip()
             if len(text) < 1000:
-                print(f" ✗ {slug}: too short")
+                print(f"  ✗ {slug}: too short")
                 continue
             save(slug, text)
-            print(f" ✓ {slug} ({len(text):,}b)")
+            print(f"  ✓ {slug} ({len(text):,}b)")
             count += 1
             time.sleep(1.0)
         except Exception as e:
-            print(f" ✗ {slug}: {e}")
+            print(f"  ✗ {slug}: {e}")
     return count
+
+
 def collect_stacks_project(skip_existing: bool) -> int:
     """The Stacks Project — open algebraic geometry textbook (chapters in HTML)."""
     print("\n[Stacks Project] selected chapters")
@@ -268,9 +294,8 @@ def collect_stacks_project(skip_existing: bool) -> int:
     ]
     count = 0
     for slug, url in chapters:
-
         if skip_existing and already_have(slug):
-            print(f" ✓ {slug} (cached)")
+            print(f"  ✓ {slug} (cached)")
             count += 1
             continue
         try:
@@ -282,12 +307,14 @@ def collect_stacks_project(skip_existing: bool) -> int:
             text = re.sub(r"\s+", " ", text).strip()
             if len(text) > 1000:
                 save(slug, text)
-                print(f" ✓ {slug} ({len(text):,}b)")
+                print(f"  ✓ {slug} ({len(text):,}b)")
                 count += 1
             time.sleep(0.8)
         except Exception as e:
-            print(f" ✗ {slug}: {e}")
+            print(f"  ✗ {slug}: {e}")
     return count
+
+
 def collect_nlab(skip_existing: bool) -> int:
     """nLab — category theory & higher math wiki."""
     print("\n[nLab] selected pages")
@@ -300,7 +327,7 @@ def collect_nlab(skip_existing: bool) -> int:
     for page in pages:
         slug = f"nlab_{page}"
         if skip_existing and already_have(slug):
-            print(f" ✓ {slug} (cached)")
+            print(f"  ✓ {slug} (cached)")
             count += 1
             continue
         url = f"https://ncatlab.org/nlab/show/{page}"
@@ -313,23 +340,30 @@ def collect_nlab(skip_existing: bool) -> int:
             text = re.sub(r"\s+", " ", text).strip()
             if len(text) > 800:
                 save(slug, text)
-                print(f" ✓ {slug} ({len(text):,}b)")
+                print(f"  ✓ {slug} ({len(text):,}b)")
                 count += 1
             time.sleep(0.8)
         except Exception as e:
-            print(f" ✗ {slug}: {e}")
+            print(f"  ✗ {slug}: {e}")
     return count
-# ⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰⁰
+
+
+# ────────────────────────────────────────────────────────────────────
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--skip-existing", action="store_true", help="don't re-download files already in target dir")
-    parser.add_argument("--topic-filter", default=None, help="only download topics whose slug contains this string")
-    parser.add_argument("--source", default="all", choices=["all", "wiki", "sep", "gutenberg", "arxiv",
-                                "stacks", "nlab"],
+    parser.add_argument("--skip-existing", action="store_true",
+                        help="don't re-download files already in target dir")
+    parser.add_argument("--topic-filter", default=None,
+                        help="only download topics whose slug contains this string")
+    parser.add_argument("--source", default="all",
+                        choices=["all", "wiki", "sep", "gutenberg", "arxiv",
+                                 "stacks", "nlab"],
                         help="which source to collect (default: all)")
     args = parser.parse_args()
+
     print(f"Target: {TARGET_DIR}")
     total = 0
+
     if args.source in ("all", "wiki"):
         total += collect_wikipedia(args.skip_existing, args.topic_filter)
     if args.source in ("all", "sep"):
@@ -342,12 +376,15 @@ def main():
         total += collect_stacks_project(args.skip_existing)
     if args.source in ("all", "nlab"):
         total += collect_nlab(args.skip_existing)
-    print(f"\n{'⁰'*60}")
-    print(f" COLLECTED {total} FILES → {TARGET_DIR}")
-    print(f"{'⁰'*60}")
+
+    print(f"\n{'═'*60}")
+    print(f"  COLLECTED {total} FILES → {TARGET_DIR}")
+    print(f"{'═'*60}")
     print("\nNext: ingest into engine. Run chat.py and:")
-    print(" for f in ~/training/math/*.txt; do")
+    print("  for f in ~/training/math/*.txt; do")
     print("      echo /ingest \"$f\" | python chat.py")
-    print(" done")
+    print("  done")
+
+
 if __name__ == "__main__":
     main()

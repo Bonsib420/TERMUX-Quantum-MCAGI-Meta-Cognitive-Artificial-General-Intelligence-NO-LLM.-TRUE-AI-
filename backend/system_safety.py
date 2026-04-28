@@ -1,13 +1,14 @@
 """
-System Safety Module
+🛡️ System Safety Module
 ========================
 Comprehensive runtime protection for Quantum MCAGI:
-  1. atomic_write(path, content)       - write-to-temp-then-rename, crash-safe
-  2. atomic_write_json(path, obj)      - same for JSON dicts
-  3. atomic_save_npz(path, **arrs)     - same for numpy .npz state files
-  4. MemoryTracker                     - logs RSS/VMS, detects unbounded growth
-  5. Watchdog                          - periodic auto-save + cloud sync hook
-  6. measure_lightning_leak()          - runs N quantum circuits, reports memory delta
+
+  1. atomic_write(path, content)     — write-to-temp-then-rename, crash-safe
+  2. atomic_write_json(path, obj)    — same for JSON dicts
+  3. atomic_save_npz(path, **arrs)   — same for numpy .npz state files
+  4. MemoryTracker                   — logs RSS/VMS, detects unbounded growth
+  5. Watchdog                        — periodic auto-save + cloud sync hook
+  6. measure_lightning_leak()        — runs N quantum circuits, reports memory delta
 
 Drop-in replacement for normal file writes. The atomic writes here CAN NOT
 leave a half-written file behind under any failure mode (power loss, SIGKILL,
@@ -51,7 +52,7 @@ except ImportError:
     np = None
 
 try:
-    import resource  # POSIX only - Termux has it
+    import resource  # POSIX only — Termux has it
     HAS_RESOURCE = True
 except ImportError:
     HAS_RESOURCE = False
@@ -60,9 +61,9 @@ except ImportError:
 logger = logging.getLogger("system_safety")
 
 
-# ======================================================================
-#                  ATOMIC WRITES
-# ======================================================================
+# ════════════════════════════════════════════════════════════════════
+#                       ATOMIC WRITES
+# ════════════════════════════════════════════════════════════════════
 
 def atomic_write(path: str, content: str, encoding: str = "utf-8") -> None:
     """
@@ -150,9 +151,9 @@ def atomic_save_npz(path: str, **arrays) -> None:
         raise
 
 
-# ======================================================================
-#                  MEMORY TRACKING
-# ======================================================================
+# ════════════════════════════════════════════════════════════════════
+#                       MEMORY TRACKING
+# ════════════════════════════════════════════════════════════════════
 
 def _get_rss_mb() -> float:
     """Current resident-set size in MB. POSIX only."""
@@ -167,7 +168,7 @@ def _get_rss_mb() -> float:
 
 class MemoryTracker:
     """
-    Logs memory snapshots. Detects unbounded growth - if RSS climbs above
+    Logs memory snapshots. Detects unbounded growth — if RSS climbs above
     a threshold or grows by more than X% between snapshots, warns.
     """
 
@@ -189,12 +190,14 @@ class MemoryTracker:
             "objects": len(gc.get_objects()),
         }
         self.snapshots.append(snap)
+
         # Warn on absolute threshold
         if rss_mb > self.warn_absolute_mb:
             logger.warning(
                 f"[{self.name}] RSS {rss_mb:.1f} MB exceeds threshold "
                 f"{self.warn_absolute_mb} MB at '{label}'"
             )
+
         # Warn on growth from previous snapshot
         if len(self.snapshots) >= 2:
             prev = self.snapshots[-2]
@@ -203,9 +206,10 @@ class MemoryTracker:
                 if growth > self.warn_growth_pct:
                     logger.warning(
                         f"[{self.name}] RSS grew {growth:.1f}% "
-                        f"({prev['rss_mb']:.1f}->{rss_mb:.1f} MB) "
+                        f"({prev['rss_mb']:.1f}→{rss_mb:.1f} MB) "
                         f"between '{prev['label']}' and '{label}'"
                     )
+
         return snap
 
     def report(self) -> str:
@@ -215,22 +219,22 @@ class MemoryTracker:
         lines = [f"[{self.name}] memory report:"]
         for s in self.snapshots:
             lines.append(
-                f" {s['label']:30s} RSS={s['rss_mb']:>8.1f} MB "
+                f"  {s['label']:30s}  RSS={s['rss_mb']:>8.1f} MB  "
                 f"objs={s['objects']:>9d}"
             )
         first, last = self.snapshots[0], self.snapshots[-1]
         delta_rss = last["rss_mb"] - first["rss_mb"]
         delta_objs = last["objects"] - first["objects"]
         lines.append(
-            f" -- delta over {len(self.snapshots)} snapshots: "
-            f"RSS={delta_rss:+.1f} MB objs={delta_objs:+d}"
+            f"  ── Δ over {len(self.snapshots)} snapshots: "
+            f"RSS={delta_rss:+.1f} MB  objs={delta_objs:+d}"
         )
         return "\n".join(lines)
 
 
-# ======================================================================
-#                  WATCHDOG / HEARTBEAT
-# ======================================================================
+# ════════════════════════════════════════════════════════════════════
+#                       WATCHDOG / HEARTBEAT
+# ════════════════════════════════════════════════════════════════════
 
 class Watchdog:
     """
@@ -275,7 +279,7 @@ class Watchdog:
                                         name="watchdog")
         self._thread.start()
         logger.info(f"watchdog started: save every {self.interval}s, "
-                     f"cloud every {self.cloud_every} saves")
+                    f"cloud every {self.cloud_every} saves")
 
     def stop(self) -> None:
         self._stop.set()
@@ -284,9 +288,9 @@ class Watchdog:
         logger.info("watchdog stopped")
 
 
-# ======================================================================
-#                  LIGHTNING LEAK DETECTION
-# ======================================================================
+# ════════════════════════════════════════════════════════════════════
+#                       LIGHTNING LEAK DETECTION
+# ════════════════════════════════════════════════════════════════════
 
 def measure_lightning_leak(n_circuits: int = 1000, n_qubits: int = 4,
                            backend: str = "lightning.qubit") -> Dict:

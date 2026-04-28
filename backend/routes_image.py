@@ -1,9 +1,4 @@
-"""
-🎨 Image Generation Routes - Advanced Physics-Based Procedural Generation
-==========================================================
-High-quality, realistic cosmic and scientific visualizations.
-Pure math + physics + quantum computing. No external APIs.
-"""
+"""\n🎨 Image Generation Routes - Advanced Physics-Based Procedural Generation\n==========================================================\nHigh-quality, realistic cosmic and scientific visualizations.\nPure math + physics + quantum computing. No external APIs.\n"""
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -93,10 +88,12 @@ async def generate_image(req: ImageRequest):
         import traceback
         error_trace = traceback.format_exc()
         logger.error(f"Image generation failed: {e}\n{error_trace}")
+
         raise HTTPException(status_code=500, detail={
             "error": str(e),
             "type": type(e).__name__,
             "traceback": error_trace.split('\n')[-10:]
+
         })
 
 

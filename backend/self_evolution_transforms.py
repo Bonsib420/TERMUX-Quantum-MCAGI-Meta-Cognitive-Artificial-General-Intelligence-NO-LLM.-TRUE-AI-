@@ -1,8 +1,4 @@
-"""
-🧬 Self-Evolution Engine — Transforms Module
-=============================================
-Code transformation operations: docstrings, bare excepts, unused imports.
-"""
+"""\n🧬 Self-Evolution Engine — Transforms Module\n=============================================\nCode transformation operations: docstrings, bare excepts, unused imports.\n"""
 
 import re
 from typing import Tuple, Optional
@@ -17,20 +13,24 @@ class TransformMixin:
 
         if 'class' in target:
             pattern = rf'(class {re.escape(name)}[^:]*:)\n(\s+)(?!""")'
+
             match = re.search(pattern, code)
             if match:
                 indent = match.group(2)
                 replacement = f'{match.group(1)}\n{indent}"""{name} - Auto-documented by self-evolution."""\n{indent}'
+
                 new_code = code[:match.start()] + replacement + code[match.end():]
                 if new_code != code:
                     return new_code, f"Added docstring to {target}"
 
         elif 'function' in target:
             pattern = rf'(def {re.escape(name)}\([^)]*\)[^:]*:)\n(\s+)(?!""")'
+
             match = re.search(pattern, code)
             if match:
                 indent = match.group(2)
                 replacement = f'{match.group(1)}\n{indent}"""{name} - Auto-documented by self-evolution."""\n{indent}'
+
                 new_code = code[:match.start()] + replacement + code[match.end():]
                 if new_code != code:
                     return new_code, f"Added docstring to {target}"
@@ -40,6 +40,7 @@ class TransformMixin:
     def _fix_bare_except(self, code: str, target: str) -> Tuple[str, Optional[str]]:
         """Replace bare except: with except Exception:"""
         lines = code.split('\n')
+
         changed = False
 
         for i, line in enumerate(lines):
@@ -51,18 +52,17 @@ class TransformMixin:
 
         if changed:
             return '\n'.join(lines), f"Replaced bare except with except Exception in {target}"
+
         return code, None
 
     def _remove_unused_import(self, code: str, target: str) -> Tuple[str, Optional[str]]:
-        """Remove an unused import line from the code.
-        Only removes simple 'import X' lines where X is truly unused.
-        Does NOT touch 'from X import Y' lines (too risky - Y may be used).
-        """
+        """Remove an unused import line from the code.\nOnly removes simple 'import X' lines where X is truly unused.\nDoes NOT touch 'from X import Y' lines (too risky - Y may be used).\n"""
         import_str = target.replace('import ', '').strip()
         if not import_str:
             return code, None
 
         lines = code.split('\n')
+
         import_line_idx = None
         imported_names = []
 
@@ -87,6 +87,7 @@ class TransformMixin:
         other_lines = lines[:import_line_idx] + lines[import_line_idx + 1:]
         other_code = '\n'.join(other_lines)
 
+
         all_unused = True
         for name in imported_names:
             pattern = rf'\b{re.escape(name)}\b'
@@ -99,3 +100,4 @@ class TransformMixin:
 
         lines.pop(import_line_idx)
         return '\n'.join(lines), f"Removed unused import: {import_str}"
+

@@ -338,3 +338,14 @@ if __name__ == '__main__':
             print()
         else:
             print(f"Input: {t} → not detected as math")
+
+def process_math(text, show_ascii=False):
+    """Top-level entry: scan for math, evaluate, format. Returns string or None."""
+    detected = detect_math(text)
+    if not detected:
+        return None
+    ev = evaluate_math(detected)
+    if not ev:
+        return None
+    return format_math_response(ev, show_ascii=show_ascii)
+

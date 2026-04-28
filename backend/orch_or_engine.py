@@ -17,7 +17,7 @@ except ImportError:
     HAS_NUMPY = False
 
 try:
-    from pennylane_quantum import PennyLaneQuantumEngine
+    from pennylane_wrapper import PennyLaneQuantumEngine
     HAS_PENNYLANE = True
 except ImportError:
     HAS_PENNYLANE = False

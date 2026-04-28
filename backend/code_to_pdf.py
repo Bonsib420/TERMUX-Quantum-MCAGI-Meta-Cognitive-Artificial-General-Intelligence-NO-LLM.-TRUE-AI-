@@ -19,7 +19,6 @@ Usage:
 
 import os
 import sys
-import time
 from datetime import datetime
 
 from reportlab.lib.pagesizes import letter
@@ -30,7 +29,7 @@ from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, PageBreak,
     Table, TableStyle, Preformatted
 )
-from reportlab.lib.enums import TA_LEFT, TA_CENTER
+from reportlab.lib.enums import TA_CENTER
 
 try:
     from pypdf import PdfWriter, PdfReader
@@ -63,11 +62,11 @@ def get_python_files(directory):
 
 def escape_xml(text):
     """Escape text for ReportLab XML."""
-    return (text
-            .replace('&', '&amp;')
-            .replace('<', '&lt;')
-            .replace('>', '&gt;')
-            .replace('"', '&quot;'))
+    text = text.replace('&', '&amp;')
+    text = text.replace('<', '&lt;')
+    text = text.replace('>', '&gt;')
+    text = text.replace('"', '&quot;')
+    return text
 
 
 def build_pdf(source_dir, output_path):
@@ -91,7 +90,6 @@ def build_pdf(source_dir, output_path):
 
     styles = getSampleStyleSheet()
 
-    # Custom styles
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Title'],
@@ -141,16 +139,9 @@ def build_pdf(source_dir, output_path):
         backColor=HexColor('#f5f5f5'),
     )
 
-    toc_style = ParagraphStyle(
-        'TOC',
-        parent=styles['Normal'],
-        fontSize=9,
-        leading=14,
-    )
-
     story = []
 
-    # ── Title Page ──
+    # Title Page
     story.append(Spacer(1, 100))
     story.append(Paragraph("Quantum MCAGI", title_style))
     story.append(Paragraph("Complete Source Code", ParagraphStyle(
@@ -202,7 +193,7 @@ def build_pdf(source_dir, output_path):
 
     story.append(PageBreak())
 
-    # ── Table of Contents ──
+    # Table of Contents
     story.append(Paragraph("Table of Contents", styles['Heading1']))
     story.append(Spacer(1, 10))
 
@@ -232,11 +223,10 @@ def build_pdf(source_dir, output_path):
     story.append(toc_table)
     story.append(PageBreak())
 
-    # ── Code Files ──
+    # Code Files
     for i, f in enumerate(files, 1):
         print(f"  [{i}/{len(files)}] {f['name']} ({f['lines']} lines)")
 
-        # File header
         story.append(Paragraph(
             f"{i}. {escape_xml(f['name'])}",
             file_header_style
@@ -246,27 +236,22 @@ def build_pdf(source_dir, output_path):
             file_meta_style
         ))
 
-        # Read and format code
         try:
             with open(f['path'], 'r', encoding='utf-8', errors='ignore') as fh:
                 code = fh.read()
         except Exception as e:
             code = f"# Error reading file: {e}"
 
-        # Escape for XML and use Preformatted for code
         escaped = escape_xml(code)
-
-        # Split into chunks if very long (reportlab can choke on huge paragraphs)
+        code_lines = escaped.split("\n")
         max_lines = 500
-        lines = escaped.split('\n')
 
-        for chunk_start in range(0, len(lines), max_lines):
-            chunk = '\n'.join(lines[chunk_start:chunk_start + max_lines])
+        for chunk_start in range(0, len(code_lines), max_lines):
+            chunk = "\n".join(code_lines[chunk_start:chunk_start + max_lines])
             story.append(Preformatted(chunk, code_style))
 
         story.append(PageBreak())
 
-    # Build
     print(f"Building PDF...")
     doc.build(story)
 
@@ -300,11 +285,12 @@ def build_pdf(source_dir, output_path):
 
 
 if __name__ == '__main__':
-    source = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser('~/Quantum_MCAGI_NO_LLM/backend')
-    output = sys.argv[2] if len(sys.argv) > 2 else os.path.expanduser('~/storage/downloads/quantum_mcagi_code_v4.pdf')
+    source = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser('~/Quantum_MCAGI_NO_LLM_V⁰²/backend')
+    output = sys.argv[2] if len(sys.argv) > 2 else os.path.expanduser('~/storage/downloads/quantum_mcagi_code.pdf')
 
     if not os.path.isdir(source):
         print(f"Directory not found: {source}")
         sys.exit(1)
 
     build_pdf(source, output)
+

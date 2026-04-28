@@ -118,10 +118,7 @@ class ExamQuestionGenerator:
     """Generates exam questions from the system's actual knowledge."""
 
     def __init__(self, engine, intake_tracker: IntakeTracker):
-        """
-        engine: QuantumLanguageEngine instance
-        intake_tracker: IntakeTracker instance
-        """
+        """\nengine: QuantumLanguageEngine instance\nintake_tracker: IntakeTracker instance\n"""
         self.engine = engine
         self.tracker = intake_tracker
 
@@ -551,7 +548,8 @@ class ExamRunner:
 
     def run_exam(self, stage: int, num_questions: int = 20) -> dict:
         """Run a full stage advancement exam."""
-        print(f"\n  ╔══ STAGE {stage} ADVANCEMENT EXAM ══════════════════════")
+        print(f"\n╔══ STAGE {stage} ADVANCEMENT EXAM ══════════════════════")
+
         print(f"  ║ Questions: {num_questions}")
         print(f"  ║ Pass threshold: {self.PASS_THRESHOLD * 100:.0f}%")
         print(f"  ║ Testing against ingested knowledge...")
@@ -597,6 +595,7 @@ class ExamRunner:
 
         print(f"  ╚═══════════════════════════════════════════════════\n")
 
+
         exam_result = {
             'stage': stage,
             'timestamp': datetime.now().isoformat(),
@@ -633,7 +632,8 @@ class ExamRunner:
 
     def show_status(self):
         """Show exam readiness and history."""
-        print(f"\n  ═══ EXAM STATUS ═══")
+        print(f"\n═══ EXAM STATUS ═══")
+
 
         history = self.tracker.intake.get('exam_history', [])
         if history:
@@ -649,7 +649,8 @@ class ExamRunner:
 
         # Show intake summary
         intake = self.tracker.get_all_intake()
-        print(f"\n  Knowledge ingested: {len(intake)} sources")
+        print(f"\nKnowledge ingested: {len(intake)} sources")
+
         domains = self.tracker.get_all_domains()
         if domains:
             print(f"  Domains: {', '.join(domains)}")
@@ -666,7 +667,8 @@ class ExamRunner:
             return
 
         last = history[-1]
-        print(f"\n  ═══ EXAM REVIEW — Stage {last['stage']} ═══")
+        print(f"\n═══ EXAM REVIEW — Stage {last['stage']} ═══")
+
         print(f"  Score: {last['score']*100:.1f}% ({last['passed']}/{last['questions']})")
 
         for detail in last.get('details', []):

@@ -134,3 +134,35 @@ def get_personality_engine(db=None) -> PersonalityEngine:
     if _personality_engine is None:
         _personality_engine = PersonalityEngine(db)
     return _personality_engine
+
+# Growth stage constants (added for memory.py compatibility)
+GROWTH_STAGES = [
+    (0, "Nascent"),
+    (1, "Awakening"),
+    (2, "Inquisitive"),
+    (3, "Reflective"),
+    (4, "Emergent"),
+    (5, "Transcendent"),
+    (6, "Meta-Cognitive"),
+]
+
+KNOWLEDGE_THRESHOLDS = {
+    0: {"connections": 0, "avg_degree": 0, "domains": 0, "diameter": 0},
+    1: {"connections": 5, "avg_degree": 0.5, "domains": 2, "diameter": 1},
+    2: {"connections": 15, "avg_degree": 1.0, "domains": 5, "diameter": 2},
+    3: {"connections": 40, "avg_degree": 1.5, "domains": 10, "diameter": 3},
+    4: {"connections": 80, "avg_degree": 2.0, "domains": 15, "diameter": 4},
+    5: {"connections": 150, "avg_degree": 2.5, "domains": 20, "diameter": 5},
+    6: {"connections": 300, "avg_degree": 3.0, "domains": 30, "diameter": 6},
+}
+
+COMMUNICATION_THRESHOLDS = {
+    0: {"avg_score": 0.0, "min_samples": 0},
+    1: {"avg_score": 0.2, "min_samples": 5},
+    2: {"avg_score": 0.4, "min_samples": 15},
+    3: {"avg_score": 0.6, "min_samples": 40},
+    4: {"avg_score": 0.75, "min_samples": 80},
+    5: {"avg_score": 0.85, "min_samples": 150},
+    6: {"avg_score": 0.95, "min_samples": 300},
+}
+# (paste the block above)

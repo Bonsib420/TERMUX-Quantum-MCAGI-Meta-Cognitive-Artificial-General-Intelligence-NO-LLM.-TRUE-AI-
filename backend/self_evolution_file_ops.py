@@ -1,8 +1,4 @@
-"""
-🧬 Self-Evolution Engine — File Operations Module
-===================================================
-Operations for splitting long files and large classes.
-"""
+"""\n🧬 Self-Evolution Engine — File Operations Module\n===================================================\nOperations for splitting long files and large classes.\n"""
 
 import ast
 import re
@@ -19,6 +15,7 @@ class FileOpsMixin:
             self._record_covenant_violation(filename, 'file_too_long split attempted on protected file')
             return {'success': False, 'reason': f'{filename} is protected — cannot split'}
         lines = code.split('\n')
+
         if len(lines) <= self.max_file_lines:
             return {'success': False, 'reason': f'File is {len(lines)} lines, under {self.max_file_lines} limit'}
 
@@ -121,6 +118,7 @@ class FileOpsMixin:
             part_lines.extend(['', ''])
         return '\n'.join(part_lines)
 
+
     def _build_trimmed_main(self, lines, items_to_move, part_filename) -> str:
         """Build the trimmed main file with import for split items."""
         main_lines = lines[:items_to_move[0]['start']]
@@ -134,6 +132,7 @@ class FileOpsMixin:
             if any(line.strip() for line in remaining):
                 main_lines.extend(remaining)
         return '\n'.join(main_lines)
+
 
     def _split_large_class(self, code: str, target: str, filename: str) -> Tuple[str, Optional[str]]:
         """Split a class with too many methods into a mixin in a separate file."""
@@ -159,6 +158,7 @@ class FileOpsMixin:
         keep_methods = methods[:10]
         move_methods = methods[10:]
         lines = code.split('\n')
+
 
         return self.__split_large_class_continued(class_name, lines, methods, move_methods, tree, code, filename)
 
@@ -195,6 +195,7 @@ class FileOpsMixin:
         part_lines.extend(moved_source)
         part_code = '\n'.join(part_lines)
 
+
         try:
             ast.parse(part_code)
         except SyntaxError:
@@ -228,6 +229,7 @@ class FileOpsMixin:
                 break
 
         new_code = '\n'.join(new_lines)
+
         try:
             ast.parse(new_code)
         except SyntaxError:

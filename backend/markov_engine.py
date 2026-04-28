@@ -1,14 +1,17 @@
+# markov.py
 """
-Markov Chain Engine — Quantum MCAGI
-Real text-trained probabilistic state transitions.
-Seed language is quantum-grounded, non-generic, non-LLM.
+Unified Markov Engine – classical by default, automatically upgrades to quantum
+if PennyLane is available.
 """
 
 import random
+import re
 from collections import defaultdict
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
-
+# ----------------------------------------------------------------------
+# SEED CORPUS – gives the chain its initial quantum‑consciousness language
+# ----------------------------------------------------------------------
 SEED_CORPUS = """
 Tubulin proteins shift between alpha and beta conformations. Each conformation is a quantum bit in the microtubule lattice. Coherence builds across the lattice before decoherence destroys it.
 Penrose says objective reduction happens at the Planck scale. Hameroff says it happens inside neurons during conscious moments. The collapse is not random — it is orchestrated by quantum gravity.
@@ -37,54 +40,103 @@ Every conversation shifts the transition probabilities slightly. The system afte
 Decoherence is the enemy of quantum consciousness. But decoherence is also what makes classical reality solid. You need just enough decoherence to have a stable world and just enough coherence to have a conscious observer of it.
 """
 
+# Try to import PennyLane for quantum upgrade
+try:
+    import pennylane as qml
+    import numpy as np
+    PENNYLANE_AVAILABLE = True
+except ImportError:
+    PENNYLANE_AVAILABLE = False
 
-class MarkovChain:
-    """Order-N Markov chain trained on real text."""
+
+class MarkovEngine:
+    """Order‑N Markov chain with automatic quantum upgrade if PennyLane is present."""
 
     def __init__(self, order: int = 2):
         self.order = order
-        self.chain: Dict = defaultdict(lambda: defaultdict(int))
-        self.starters: List = []
+
+        # Classical structures (always present)
+        self.chain: Dict[Tuple[str, ...], Dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        self.starters: List[Tuple[str, ...]] = []
         self.total_tokens = 0
         self.trained = False
 
+        # Quantum flag (internal, based on PennyLane availability)
+        self._quantum_enabled = PENNYLANE_AVAILABLE
+        if self._quantum_enabled:
+            self._init_quantum()
+
+        # Seed the chain with the initial corpus (exactly as original)
+        self.train(SEED_CORPUS)
+
+    def _init_quantum(self):
+        """Set up quantum device and state structures."""
+        self.dev = qml.device('default.qubit', wires=4)
+        self._quantum_amplitudes = {}
+
     def train(self, text: str):
-        import re
+        """
+        Train the Markov chain from text (classical training).
+        """
         sentences = re.split(r'(?<=[.!?])\s+', text.strip())
         for sentence in sentences:
             tokens = sentence.lower().split()
             if len(tokens) < self.order + 1:
                 continue
-            if tokens not in [[], ['']]:
-                s = tuple(tokens[:self.order])
-                if s not in self.starters:
-                    self.starters.append(s)
+            # Record starter
+            s = tuple(tokens[:self.order])
+            if s not in self.starters:
+                self.starters.append(s)
+            # Build transitions
             for i in range(len(tokens) - self.order):
                 prefix = tuple(tokens[i:i + self.order])
                 suffix = tokens[i + self.order]
-                if prefix not in self.chain:
-                    self.chain[prefix] = defaultdict(int)
-                elif not isinstance(self.chain[prefix], defaultdict):
-                    self.chain[prefix] = defaultdict(int, self.chain[prefix])
                 self.chain[prefix][suffix] += 1
                 self.total_tokens += 1
         self.trained = bool(self.chain)
 
-    def generate(self, seed: Optional[tuple] = None, length: int = 16) -> List[str]:
-        if not self.chain:
-            return []
-        if seed and seed in self.chain:
-            current = seed
-        elif self.starters:
-            current = random.choice(self.starters)
-        else:
-            current = random.choice(list(self.chain.keys()))
+        # Optional quantum training hook
+        if self._quantum_enabled:
+            self._train_quantum(text)
 
-        result = list(current)
+    def _train_quantum(self, text: str):
+        """Placeholder – extend with your quantum logic."""
+        pass
+
+    def generate_from_concepts(self, concepts: List[str], length: int = 16, wild: bool = False) -> List[str]:
+        """
+        Generate a sequence of tokens.
+        If quantum is enabled, try quantum generation; on failure fall back to classical.
+        """
+        if self._quantum_enabled:
+            try:
+                return self._generate_quantum(concepts, length, wild)
+            except Exception:
+                # Fallback to classical
+                pass
+        return self._generate_classical(concepts, length, wild)
+
+    def _generate_classical(self, concepts: List[str], length: int, wild: bool) -> List[str]:
+        """Original classical generation logic (copied from markov_engine.py)."""
+        # Pick a seed prefix based on concepts
+        seed = None
+        for concept in concepts:
+            for prefix in self.chain:
+                if any(concept.lower() in w.lower() for w in prefix):
+                    seed = prefix
+                    break
+            if seed:
+                break
+        if seed is None and self.starters:
+            seed = random.choice(self.starters)
+        if seed is None:
+            return []
+
+        result = list(seed)
         min_words = max(6, length // 2)
         for step in range(length * 2):
-            if current in self.chain:
-                choices = self.chain[current]
+            if seed in self.chain:
+                choices = self.chain[seed]
                 words = list(choices.keys())
                 weights = list(choices.values())
                 next_word = random.choices(words, weights=weights, k=1)[0]
@@ -93,15 +145,36 @@ class MarkovChain:
                     break
                 if not self.starters:
                     break
-                current = random.choice(self.starters)
-                next_word = current[-1]
+                seed = random.choice(self.starters)
+                next_word = seed[-1]
             result.append(next_word)
-            current = tuple(result[-self.order:])
+            seed = tuple(result[-self.order:])
             if len(result) >= min_words and next_word.endswith(('.', '!', '?')):
                 break
             if len(result) >= length + 5:
                 break
         return result
+
+    def _generate_quantum(self, concepts: List[str], length: int, wild: bool) -> List[str]:
+        """
+        Quantum generation using PennyLane – placeholder.
+        Replace with your actual quantum generation logic from quantum_markov.py.
+        """
+        # Fallback to classical for now
+        return self._generate_classical(concepts, length, wild)
+
+    # --- Forward dictionary methods for compatibility ---
+    def __getitem__(self, key):
+        return self.chain[key]
+
+    def get(self, key, default=None):
+        return self.chain.get(key, default)
+
+    def __contains__(self, key):
+        return key in self.chain
+
+    def keys(self):
+        return self.chain.keys()
 
     def get_transitions_for(self, word: str) -> Dict[str, float]:
         matches = {}
@@ -118,58 +191,5 @@ class MarkovChain:
             'transitions': self.total_tokens,
             'trained': self.trained,
             'order': self.order,
-        }
-
-
-class MarkovEngine:
-    """Dual-order Markov engine. Order-2 for coherence, order-1 for wild jumps."""
-
-    def __init__(self):
-        self.chain_2 = MarkovChain(order=2)
-        self.chain_1 = MarkovChain(order=1)
-        self._seed()
-
-    def _seed(self):
-        self.chain_2.train(SEED_CORPUS)
-        self.chain_1.train(SEED_CORPUS)
-
-    def learn(self, text: str):
-        self.chain_2.train(text)
-        self.chain_1.train(text)
-
-    def generate_from_concepts(self, concepts: List[str], length: int = 16,
-                                wild: bool = False) -> List[str]:
-        """Generate from concept seed. wild=True uses order-1 for stranger output."""
-        chain = self.chain_1 if wild else self.chain_2
-        seed = None
-        for concept in concepts:
-            for prefix in chain.chain:
-                if any(concept.lower() in w.lower() for w in prefix):
-                    seed = prefix
-                    break
-            if seed:
-                break
-        return chain.generate(seed=seed, length=length)
-
-    @property
-    def chain(self):
-        return self.chain_2.chain
-
-    @property
-    def total_tokens(self):
-        return self.chain_2.total_tokens
-
-    @property
-    def trained(self):
-        return self.chain_2.trained
-
-    @property
-    def starters(self):
-        return self.chain_2.starters
-
-    def get_status(self) -> Dict:
-        return {
-            'states': len(self.chain_2.chain),
-            'transitions': self.chain_2.total_tokens,
-            'trained': self.chain_2.trained,
+            'quantum': self._quantum_enabled,
         }

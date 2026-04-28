@@ -1,8 +1,4 @@
-"""
-🔮 Extras Routes
-==================
-Covenant, safety, dictionary, dream, personality, quotes, text analysis, prebo.
-"""
+"""\n🔮 Extras Routes\n==================\nCovenant, safety, dictionary, dream, personality, quotes, text analysis, prebo.\n"""
 
 from fastapi import APIRouter, HTTPException, Response, Body, UploadFile, File
 from pydantic import BaseModel
@@ -74,11 +70,7 @@ async def get_growth_notifications():
 
 @router.get("/covenant/status")
 async def get_covenant_status():
-    """
-    ARTICLE 1 - Covenant Status
-    
-    Get current covenant compliance status.
-    """
+    """\nARTICLE 1 - Covenant Status\n\nGet current covenant compliance status.\n"""
     try:
         status = await state.covenant_manager.get_covenant_status()
         return status
@@ -151,9 +143,7 @@ async def reset_safety_settings():
 
 @router.get("/dictionary/lookup/{word}")
 async def lookup_word(word: str):
-    """
-    Look up a word in dictionaries and add to semantic memory
-    """
+    """\nLook up a word in dictionaries and add to semantic memory\n"""
     try:
         result = await state.dictionary.lookup_and_store(word)
         return result
@@ -162,9 +152,7 @@ async def lookup_word(word: str):
 
 @router.post("/dictionary/batch-load")
 async def batch_load_dictionary(limit: int = 100):
-    """
-    Load common words into dictionary (background task)
-    """
+    """\nLoad common words into dictionary (background task)\n"""
     try:
         result = await state.dictionary.batch_load_common_words(limit)
         return result
@@ -543,12 +531,7 @@ async def get_cistercian_numeral(number: int, size: int = 80, color: str = "#FFF
 
 @router.get("/cistercian/data")
 async def get_cistercian_data(number: int):
-    """
-    Get Cistercian numeral shape data as JSON.
-
-    Returns:
-        JSON with line segments, triangles, and digit breakdown
-    """
+    """\nGet Cistercian numeral shape data as JSON.\n\nReturns:\nJSON with line segments, triangles, and digit breakdown\n"""
     try:
         from cistercian_numerals import generate_cistercian_numeral
         data = generate_cistercian_numeral(number)
@@ -797,6 +780,7 @@ def _initialize_algorithmic():
         logger.info("🧠 Training Markov chain on training corpus...")
         _markov_generator = MarkovTextGenerator(max_order=3)
         _markov_generator.train(PHILOSOPHY_CORPUS + "\n" + PHYSICS_CORPUS)
+
         _algorithmic_initialized = True
         logger.info("✅ Algorithmic core ready (Markov generator trained)")
     except Exception as e:
@@ -950,7 +934,8 @@ async def bm25_search(
 
         retriever = BM25()
         # Add sentences from training corpus
-        paragraphs = (PHILOSOPHY_CORPUS + PHYSICS_CORPUS).split('\n\n')
+        paragraphs = (PHILOSOPHY_CORPUS + PHYSICS_CORPUS).split('\n')
+
         for i, para in enumerate(paragraphs[:20]):  # Limit for demo
             if para.strip():
                 retriever.add_document(f"doc_{i}", para.strip(), metadata={"text": para.strip()})
@@ -1106,6 +1091,7 @@ async def calculate_pmi(
             from training_corpus import PHILOSOPHY_CORPUS, PHYSICS_CORPUS
             pmi_calc.train(PHILOSOPHY_CORPUS + "\n" + PHYSICS_CORPUS)
 
+
         score = pmi_calc.score(word1.lower(), word2.lower())
 
         return {
@@ -1138,6 +1124,7 @@ async def generate_dream(num_sentences: int = 3):
             generator = MarkovTextGenerator(max_order=3)
             generator.train(PHILOSOPHY_CORPUS + "\n" + PHYSICS_CORPUS)
 
+
             # Generate dream-like text
             seeds = ["consciousness", "quantum", "dream", "reality", "infinite"]
             import random
@@ -1165,6 +1152,7 @@ async def generate_dream(num_sentences: int = 3):
 
             return {
                 "dream": "\n".join(dreams),
+
                 "concepts_used": list(concepts_used),
                 "method": "entanglement_synthesis"
             }
@@ -1216,10 +1204,7 @@ async def upload_file(file: UploadFile = File(...), conversation_id: Optional[st
 
 @router.get("/growth/evolution")
 async def get_evolution_status():
-    """
-    Get self-evolution status and history.
-    Returns the latest cognitive growth stage from growth_metrics events.
-    """
+    """\nGet self-evolution status and history.\nReturns the latest cognitive growth stage from growth_metrics events.\n"""
     try:
         import shared_state as state
         if hasattr(state, 'db'):
@@ -1273,6 +1258,7 @@ async def generate_dream(num_sentences: int = 3):
             generator = MarkovTextGenerator(max_order=3)
             generator.train(PHILOSOPHY_CORPUS + "\n" + PHYSICS_CORPUS)
 
+
             # Generate dream-like text
             seeds = ["consciousness", "quantum", "dream", "reality", "infinite"]
             seed = [random.choice(seeds)]
@@ -1299,6 +1285,7 @@ async def generate_dream(num_sentences: int = 3):
 
             return {
                 "dream": "\n".join(dreams),
+
                 "concepts_used": list(concepts_used),
                 "method": "entanglement_synthesis"
             }
@@ -1451,10 +1438,7 @@ async def research_history(limit: int = 20):
 
 @router.get("/dev/context")
 async def get_dev_context():
-    """
-    Generate current project context as markdown — ready to paste into Claude.
-    Reads PROJECT_CONTEXT.md and appends live metrics from the database.
-    """
+    """\nGenerate current project context as markdown — ready to paste into Claude.\nReads PROJECT_CONTEXT.md and appends live metrics from the database.\n"""
     try:
         import pathlib
         
@@ -1466,9 +1450,12 @@ async def get_dev_context():
         
         # Append live metrics if database is available
         live_section = []
-        live_section.append("\n\n---\n")
+        live_section.append("\n---\n")
+
         live_section.append("## 📊 Live Metrics Snapshot\n")
+
         live_section.append(f"*Generated: {datetime.now(timezone.utc).isoformat()}*\n")
+
         
         try:
             total_concepts = await state.db.semantic_memory.count_documents({})
@@ -1492,6 +1479,7 @@ async def get_dev_context():
         live_section.append("")
         
         exported_text = static_context + "\n".join(live_section)
+
         
         return {
             "format": "markdown",
@@ -1503,10 +1491,7 @@ async def get_dev_context():
 
 @router.get("/dev/changelog")
 async def get_dev_changelog():
-    """
-    Return the development changelog section from PROJECT_CONTEXT.md.
-    Useful for quickly checking what changed recently.
-    """
+    """\nReturn the development changelog section from PROJECT_CONTEXT.md.\nUseful for quickly checking what changed recently.\n"""
     try:
         import pathlib
         
@@ -1523,6 +1508,7 @@ async def get_dev_changelog():
         
         # Find the next ## heading after the changelog
         next_section = content.find("\n## ", changelog_start + 1)
+
         if next_section == -1:
             changelog = content[changelog_start:]
         else:

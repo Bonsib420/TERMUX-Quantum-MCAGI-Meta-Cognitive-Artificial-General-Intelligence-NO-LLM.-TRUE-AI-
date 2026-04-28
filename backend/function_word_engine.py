@@ -1,19 +1,23 @@
 """
-Function Word Engine — Tier-2 of the two-tier meaning system.
+Function Word Engine — Tier‑2 of the two‑tier meaning system.
+
 For stopwords / function words, this engine builds a structural dossier:
-- frequency
-- typical preceding words (what tends to come before)
-- typical following words (what tends to come after)
-- sentence-position distribution (start, middle, end)
-- inferred grammatical "job"
-This runs alongside the content-word tier (ConceptExtractor) and makes
-the black-box Markov transitions inspectable.
+  • frequency
+  • typical preceding words (what tends to come before)
+  • typical following words (what tends to come after)
+  • sentence‑position distribution (start, middle, end)
+  • inferred grammatical "job"
+
+This runs alongside the content‑word tier (ConceptExtractor) and makes
+the black‑box Markov transitions inspectable.
+
 API:
-engine = FunctionWordEngine(stopwords_set)
-engine.update_from_sentence(list_of_words)
-dossier = engine.get_dossier("the")
-engine.save(path) / engine.load(path)
+  engine = FunctionWordEngine(stopwords_set)
+  engine.update_from_sentence(list_of_words)
+  dossier = engine.get_dossier("the")
+  engine.save(path) / engine.load(path)
 """
+
 import json
 import os
 from collections import defaultdict, Counter
@@ -38,7 +42,7 @@ class FunctionWordEngine:
         self.total_function_words = 0
 
     def update_from_sentence(self, words: List[str]):
-        """Update statistics from a single sentence (list of words, lower-cased)."""
+        """Update statistics from a single sentence (list of words, lower‑cased)."""
         for i, word in enumerate(words):
             w_low = word.lower()
             if w_low not in self.stopwords:
@@ -46,6 +50,7 @@ class FunctionWordEngine:
             entry = self.stats[w_low]
             entry['freq'] += 1
             self.total_function_words += 1
+
             # Preceding word
             if i > 0:
                 prev = words[i-1].lower()
@@ -64,6 +69,7 @@ class FunctionWordEngine:
 
     def update_from_text(self, text: str):
         """Split text into sentences and update from each sentence."""
+        # Simple sentence split
         sentences = [s.strip() for s in text.split('.') if s.strip()]
         for sent in sentences:
             words = sent.split()
@@ -87,7 +93,7 @@ class FunctionWordEngine:
         }
 
     def _infer_job(self, word: str) -> str:
-        """Return a simple rule-based description of the word's grammatical job."""
+        """Return a simple rule‑based description of the word's grammatical job."""
         if word in ('the', 'a', 'an'):
             return "Determiner: precedes noun phrases."
         if word in ('in', 'on', 'at', 'by', 'for', 'with', 'from', 'to'):

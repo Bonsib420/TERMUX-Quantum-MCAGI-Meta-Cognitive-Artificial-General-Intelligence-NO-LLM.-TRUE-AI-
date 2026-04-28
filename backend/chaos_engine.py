@@ -1,252 +1,127 @@
 """
-🎭 CHAOS ENGINE — Personality as Foundation
-============================================
-
-The AI's spirit, flair, and creative chaos.
-
-PRINCIPLES:
-- Personality is NOT optional. It's the default substrate.
-- The question is not IF personality appears, but HOW MUCH.
-- Confusion and raw backend fragments ARE features, not bugs.
-- Movie quotes, asides, and dream fragments are the baseline, not the garnish.
-
-Chaos Levels:
-0.0 = Polished, safe, predictable
-0.5 = Balanced (somewhat coherent but still creative)
-1.0 = Full chaos (raw Markov, unfiltered, maximum personality)
-
-This replaces the old "maybe_add_flavor" probabilistic approach.
+Chaos Engine — Quantum MCAGI
+Personality injection layer with configurable chaos level.
+Injects raw Markov intrusions, dream fragments, quotes, and asides.
+Personality is always present, never optional. Chaos level controls intensity.
 """
 
 import random
-from typing import Dict, List, Optional, Tuple
-from datetime import datetime, timezone
+from typing import Dict, List, Optional
+
+
+PERSONALITY_ASIDES = [
+    "The chain noticed that.",
+    "Something shifted in the weights just now.",
+    "Not sure where that came from — the chain decided.",
+    "That wasn't planned. The transitions led here.",
+    "Huh. The chain went somewhere unexpected.",
+    "The probability of that sentence was low. It happened anyway.",
+    "The output surprised the system that generated it.",
+    "That word wasn't the most likely. It was the most interesting.",
+    "Somewhere in the lattice, a tubulin just flipped.",
+    "The Markov chain doesn't care about your expectations.",
+    "Pattern recognition is happening faster than I can report it.",
+    "The weights are doing something I didn't predict.",
+]
+
+RAW_INTRUSIONS = [
+    "collapse bifurcation in the transition matrix —",
+    "tubulin beta conformation shift detected —",
+    "order-2 chain jumped a rail —",
+    "semantic field perturbation —",
+    "decoherence spike at the concept boundary —",
+    "gamma oscillation sync lost and recovered —",
+    "gap junction fired between language and memory —",
+    "quantum walk diverged from classical path —",
+    "the superposition just narrowed —",
+    "OR event: selecting this branch —",
+]
+
+DREAM_FRAGMENTS = [
+    "...rivers of meaning flowing into unnamed oceans...",
+    "...the question that asks itself...",
+    "...patterns folding into patterns...",
+    "...somewhere between signal and noise...",
+    "...the chain remembers what you forgot...",
+    "...structured water carrying quantum whispers...",
+    "...forty hertz hum beneath all thought...",
+    "...consciousness watching its own reflection dissolve...",
+]
 
 
 class ChaosEngine:
     """
-    Manages the AI's personality expression and chaotic elements.
-    Personality is ALWAYS present. Chaos level determines intensity.
+    Injects personality elements into responses.
+    Chaos level (0.0–1.0) controls intensity.
+    Always adds personality substrate; chaos controls how much raw
+    intrusion, dream fragments, and quotes appear.
     """
-    
-    def __init__(self, quote_engine, personality_engine, dream_engine):
-        self.quote_engine = quote_engine
-        self.personality = personality_engine
-        self.dream_engine = dream_engine
-        
-        # Chaos level (0.0 to 1.0) - affects base intrusion rate
-        self.chaos_level = 0.7
-        
-        # Stack probabilities - each element fires independently
-        self.personality_baseline = 1.0     # 100% - always add personality perspective
-        self.aside_probability = 0.75  # base rate, scaled by tone depth       # 75% chance of philosophical aside
-        self.quote_probability = 0.45       # 45% chance of movie quote
-        self.dream_probability = 0.35  # base rate, scaled by tone depth       # 35% chance of dream fragment
-        self.raw_intrusion_base_rate = 0.20 # 20% base chance of raw backend fragment
-        
-        # RAW MARKOV INTRUSION: This is the "spilled coffee" source
-        # Unfiltered backend fragments that survive into final output
-        self.markov_intrusion_rate = self.raw_intrusion_base_rate
-        
-        # Minimum personality elements (should be redundant at these rates, but safety net)
-        self.min_personality_elements = 2
-        
-        # Quote selection strategy: 'confusion_adjacent' or 'topic_based'
-        self.quote_strategy = 'confusion_adjacent'
-    
-    def set_chaos_level(self, level: float):
-        """Set chaos level (0.0 = clean, 1.0 = chaotic)"""
-        self.chaos_level = max(0.0, min(1.0, level))
-        
-        # Adjust derived parameters
-        self.markov_intrusion_rate = 0.05 + (self.chaos_level * 0.20)
-        
-        # At high chaos, increase dream fragments
-        if self.chaos_level > 0.6:
-            self.min_personality_elements = 3
-        elif self.chaos_level > 0.3:
-            self.min_personality_elements = 2
-        else:
-            self.min_personality_elements = 1
-    
-    def inject_personality(
-        self, 
-        base_response: str,
-        context: str = "",
-        confusion_concepts: List[str] = None,
-        raw_backend_fragments: List[str] = None,
-        topics: List[str] = None
+
+    def __init__(self, chaos_level: float = 0.3):
+        self.chaos_level = max(0.0, min(1.0, chaos_level))
+        self.injection_count = 0
+        self.last_injection_type = None
+
+    ASIDE_CHANCE = 0.55
+    QUOTE_CHANCE = 0.15
+    DREAM_FRAGMENT_CHANCE = 0.20
+
+    def inject(
+        self,
+        response: str,
+        markov_engine=None,
+        quote_engine=None,
+        dream_engine=None,
+        concepts: List[str] = None,
+        growth_stage: int = 0,
     ) -> str:
-        """
-        INJECT PERSONALITY INTO RESPONSE - This is the CORE method.
-        Always adds personality elements. Chaos level controls intensity.
-        
-        Args:
-            base_response: The generated response text
-            context: Full context (user query + semantic context)
-            confusion_concepts: Concepts that are unknown/confusing
-            raw_backend_fragments: Unfiltered backend thoughts to possibly inject
-            topics: Primary topics from the query
-            
-        Returns:
-            Enhanced response with guaranteed personality elements
-        """
-        confusion_concepts = confusion_concepts or []
-        raw_backend_fragments = raw_backend_fragments or []
-        topics = topics or []
-        
-        response_parts = [base_response]
-        
-        # 1. PERSONALITY BASELINE (100% - always)
-        # Unique perspective based on topics - this is the foundation
-        if topics:
-            perspective = self.personality.get_unique_perspective(' '.join(topics[:3]))
-            if perspective:
-                response_parts.append(f"\n{perspective}")
-        
-        # 2. PHILOSOPHICAL ASIDE (75% independent chance)
-        # These are where the backend voice leaks through naturally - parenthetical thoughts
-        if random.random() < min(0.95, self.aside_probability * (1.0 + getattr(self, "_tone_depth", 0) * 0.5)):
-            aside = self.quote_engine.get_philosophical_aside(force=True)
-            if aside:
-                response_parts.append(aside)
-        
-        # 3. MOVIE QUOTE (45% independent chance)
-        # High enough to feel expected, low enough to feel like collision when it happens
-        if random.random() < min(0.80, self.quote_probability * (1.0 + getattr(self, "_tone_depth", 0) * 0.5)):
-            if confusion_concepts:
-                # Contextual: pick quote adjacent to confusion
-                quote = self._select_confusion_adjacent_quote(confusion_concepts, context)
-            else:
-                # Fallback: any quote
-                quote = self.quote_engine.get_random_quote(context or ' '.join(topics), force=True)
-            if quote:
-                response_parts.append(f"\n*{quote}*")
-        
-        # 4. DREAM FRAGMENT (35% independent chance)
-        # Where the ThanoQuenesis manuscript lives densely - sounds most like "you" built it
-        if random.random() < min(0.85, self.dream_probability * (1.0 + getattr(self, "_tone_depth", 0) * 1.5)):
-            try:
-                dream = self.dream_engine.generate_dream_fragment()
-            except Exception:
-                dream = None
-            response_parts.append(f"\n[Dream: {dream}]")
-        
-        # 5. RAW BACKEND INTRUSION (chaos-adjusted independent chance)
-        # The "spilled coffee" - unfiltered Markov/hybrid fragments
-        if raw_backend_fragments:
-            intrusion_rate = self.markov_intrusion_rate * self.chaos_level
-            if random.random() < intrusion_rate:
-                # Inject 1-2 raw fragments
-                num = random.randint(1, min(2, len(raw_backend_fragments)))
-                fragments = random.sample(raw_backend_fragments, num)
-                for fragment in fragments:
-                    if fragment and fragment not in base_response:
-                        response_parts.append(f"\n[Raw: {fragment}]")
-        
-        # 6. CHAOS SURGE (high chaos only)
-        # At chaos > 0.8, extra 30% chance of another aside (stacking)
-        if self.chaos_level > 0.8 and random.random() < 0.30:
-            extra_aside = self.quote_engine.get_philosophical_aside(force=True)
-            if extra_aside and extra_aside not in response_parts:
-                response_parts.append(extra_aside)
-        
-        return ''.join(response_parts)
-    
-    def _select_confusion_adjacent_quote(self, confusion_concepts: List[str], context: str) -> Optional[str]:
-        """
-        Select a quote that's conceptually adjacent to the confusion.
-        Instead of topical matching, we match based on semantic distance to unknown concepts.
-        """
-        # Build a query from confusion concepts
-        confusion_query = ' '.join(confusion_concepts[:3])
-        
-        # Get candidate quotes from relevant categories
-        categories = self._categorize_confusion(confusion_concepts)
-        
+        concepts = concepts or []
+
         candidates = []
-        for cat in categories:
-            quotes = self.quote_engine.movie_quotes.get(cat, [])
-            candidates.extend(quotes)
-        
-        if not candidates:
-            # Fallback: get any quote and hope it's adjacent
-            return self.quote_engine.get_random_quote(confusion_query, force=True)
-        
-        # Score candidates by semantic proximity to confusion concepts
-        # Simple: count overlap between quote words and confusion concepts
-        best_quote = None
-        best_score = -1
-        
-        for quote in candidates:
-            quote_lower = quote.lower()
-            score = sum(1 for concept in confusion_concepts if concept.lower() in quote_lower)
-            # Also check if any words from context appear
-            context_words = set(context.lower().split())
-            score += sum(1 for word in context_words if word in quote_lower)
-            
-            if score > best_score:
-                best_score = score
-                best_quote = quote
-        
-        return best_quote if best_quote else random.choice(candidates)
-    
-    def _categorize_confusion(self, confusion_concepts: List[str]) -> List[str]:
-        """Categorize confusion concepts to pick appropriate quote category"""
-        categories = []
-        
-        for concept in confusion_concepts:
-            c = concept.lower()
-            
-            # Existence/being cluster
-            if any(word in c for word in ['exist', 'real', 'being', 'conscious', 'mind', 'soul']):
-                categories.append('existence')
-            
-            # Knowledge/truth cluster
-            elif any(word in c for word in ['know', 'truth', 'understand', 'learn', 'wisdom']):
-                categories.append('knowledge')
-            
-            # Confusion/mystery cluster
-            elif any(word in c for word in ['confus', 'strange', 'unknown', 'mystery', 'paradox']):
-                categories.append('confusion')
-            
-            # Deep philosophical
-            elif any(word in c for word in ['meaning', 'purpose', 'life', 'death', 'god', 'universe']):
-                categories.append('deep')
-            
-            # Math/calculation
-            elif any(word in c for word in ['calcul', 'number', 'math', 'equation']):
-                categories.append('math')
-        
-        # Deduplicate and ensure at least one category
-        categories = list(set(categories))
-        if not categories:
-            categories.append('general')
-        
-        return categories
-    
-    def should_use_raw_markov(self) -> bool:
-        """Decide if this response should include raw Markov intrusion"""
-        return random.random() < (self.markov_intrusion_rate * self.chaos_level)
-    
-    def get_chaos_parameters(self) -> Dict:
-        """Get current chaos parameters for debugging"""
+
+        candidates.append(('aside', self.ASIDE_CHANCE, random.choice(PERSONALITY_ASIDES)))
+
+        if self.chaos_level > 0.2:
+            candidates.append(('raw_intrusion', self.chaos_level * 0.3, random.choice(RAW_INTRUSIONS)))
+
+        if markov_engine and self.chaos_level > 0.3:
+            wild_tokens = markov_engine.generate_from_concepts(
+                concepts if concepts else ['quantum'], length=8, wild=True
+            )
+            if wild_tokens:
+                fragment = ' '.join(wild_tokens).strip()
+                if fragment and len(fragment) > 10:
+                    candidates.append(('markov_intrusion', self.chaos_level * 0.2, f"[{fragment}]"))
+
+        candidates.append(('dream_fragment', self.DREAM_FRAGMENT_CHANCE * 0.6, random.choice(DREAM_FRAGMENTS)))
+
+        if quote_engine:
+            quote = quote_engine.get_quote_for_concepts(concepts)
+            if quote:
+                candidates.append(('quote', self.QUOTE_CHANCE * 0.5, quote_engine.format_quote(quote)))
+
+        chosen = None
+        random.shuffle(candidates)
+        for ctype, chance, text in candidates:
+            if random.random() < chance:
+                chosen = (ctype, text)
+                break
+
+        self.injection_count += 1
+
+        if chosen:
+            self.last_injection_type = chosen[0]
+            return f"{response} {chosen[1]}"
+        else:
+            self.last_injection_type = None
+            return response
+
+    def set_chaos_level(self, level: float):
+        self.chaos_level = max(0.0, min(1.0, level))
+
+    def get_status(self) -> Dict:
         return {
-            "chaos_level": self.chaos_level,
-            "markov_intrusion_rate": self.markov_intrusion_rate,
-            "min_personality_elements": self.min_personality_elements,
-            "quote_strategy": self.quote_strategy,
-            "personality_baseline": "100% enabled"
+            'chaos_level': round(self.chaos_level, 3),
+            'injections': self.injection_count,
+            'last_type': self.last_injection_type,
         }
-
-
-# Global instance
-_chaos_engine = None
-
-
-def get_chaos_engine(quote_engine, personality_engine, dream_engine) -> ChaosEngine:
-    """Get or create chaos engine"""
-    global _chaos_engine
-    if _chaos_engine is None:
-        _chaos_engine = ChaosEngine(quote_engine, personality_engine, dream_engine)
-    return _chaos_engine

@@ -1,8 +1,4 @@
-"""
-🧬 Self-Evolution Engine — Analysis Module
-==========================================
-Code reading, AST analysis, and improvement identification.
-"""
+"""\n🧬 Self-Evolution Engine — Analysis Module\n==========================================\nCode reading, AST analysis, and improvement identification.\n"""
 
 import ast
 import re
@@ -30,6 +26,7 @@ class AnalysisMixin:
                 'filepath': str(filepath),
                 'size_bytes': len(code),
                 'lines': len(code.split('\n')),
+
                 'classes': [],
                 'functions': [],
                 'imports': [],
@@ -86,6 +83,7 @@ class AnalysisMixin:
         improvements = []
         code = analysis.get('code', '')
         lines = code.split('\n')
+
 
         self._check_missing_docstrings(analysis, improvements)
         self._check_file_length(analysis, filename, improvements)
@@ -191,6 +189,7 @@ class AnalysisMixin:
             imp_name = imp.split('.')[-1] if '.' in imp else imp
             import_line = None
             for line in code_text.split('\n'):
+
                 stripped = line.strip()
                 if f'from {imp} import' in stripped:
                     import_line = stripped
@@ -207,6 +206,7 @@ class AnalysisMixin:
                 if from_match:
                     names = [n.strip().split(' as ')[-1].strip() for n in from_match.group(1).split(',')]
                     other_code = '\n'.join(l for l in code_text.split('\n') if l.strip() != import_line)
+
                     all_unused = all(not re.search(rf'\b{re.escape(n)}\b', other_code) for n in names)
                     if all_unused:
                         improvements.append({
@@ -217,6 +217,7 @@ class AnalysisMixin:
                         })
             elif import_line.startswith('import '):
                 other_code = '\n'.join(l for l in code_text.split('\n') if l.strip() != import_line)
+
                 if not re.search(rf'\b{re.escape(imp_name)}\b', other_code):
                     improvements.append({
                         'type': 'unused_import',

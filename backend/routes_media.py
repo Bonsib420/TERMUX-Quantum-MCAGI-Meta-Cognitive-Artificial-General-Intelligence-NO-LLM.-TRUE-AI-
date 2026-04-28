@@ -1,8 +1,4 @@
-"""
-🔮 Media Routes
-================
-Voice TTS/transcription and image analysis/generation.
-"""
+"""\n🔮 Media Routes\n================\nVoice TTS/transcription and image analysis/generation.\n"""
 
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from pydantic import BaseModel
@@ -35,10 +31,7 @@ class ImageGenRequest(BaseModel):
 
 @router.post("/voice/tts")
 async def text_to_speech(request: TTSRequest):
-    """
-    Text-to-Speech endpoint
-    Returns text formatted for browser's Web Speech API
-    """
+    """\nText-to-Speech endpoint\nReturns text formatted for browser's Web Speech API\n"""
     try:
         # Clean the text for speech
         text = request.text.strip()
@@ -58,10 +51,7 @@ async def text_to_speech(request: TTSRequest):
 
 @router.post("/voice/transcribe")
 async def transcribe_audio(audio: UploadFile = File(...)):
-    """
-    Speech-to-Text endpoint (placeholder)
-    Would integrate with Whisper or similar
-    """
+    """\nSpeech-to-Text endpoint (placeholder)\nWould integrate with Whisper or similar\n"""
     try:
         # Save audio temporarily
         audio_path = f"/tmp/audio_{uuid.uuid4().hex}.webm"
@@ -183,6 +173,7 @@ async def generate_image_svg(request: ImageGenRequest):
         
         svg_lines.append('</svg>')
         svg_content = '\n'.join(svg_lines)
+
         
         image_base64 = base64.b64encode(svg_content.encode('utf-8')).decode('utf-8')
         filename = f"quantum_{uuid.uuid4().hex[:8]}.svg"
