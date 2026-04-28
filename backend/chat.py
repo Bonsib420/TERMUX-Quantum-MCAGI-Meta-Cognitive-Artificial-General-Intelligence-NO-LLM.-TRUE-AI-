@@ -591,16 +591,9 @@ class LocalMemory:
 
 
 def save_everything(memory, engine, state_dir):
-    """Save all state to disk."""
+    """Save all state to disk (local only — use /backup or /cloud-save for cloud sync)."""
     memory.save_all()
     engine.save_state(state_dir)
-    try:
-        if HAS_CLOUD:
-            cb = CloudBrain()
-            if cb.available:
-                cb.push_all(quiet=True)
-    except Exception as e:
-        print(f"  Cloud save skipped: {e}")
 
 
 EVOLUTION_ENABLED = True  # Killswitch
@@ -1127,7 +1120,8 @@ def run_chat(verbose=False):
                 continue
             elif cmd[0] == '/cloud-save':
                 if HAS_CLOUD:
-                    print("  ☁ Pushing brain to cloud...")
+                    print("  ☁ Saving state and pushing to cloud...")
+                    save_everything(memory, engine, state_dir)
                     cb = CloudBrain()
                     if cb.available:
                         success = cb.push_all(quiet=False)
@@ -1153,10 +1147,12 @@ def run_chat(verbose=False):
                         success = cb.pull_all()
                         if success:
                             print("  ☁ Brain loaded from cloud")
-                            # Reload memory from disk after pull
                             memory.conversations = memory._load("conversations.json", [])
                             memory.concepts = memory._load("concepts.json", {})
                             memory.growth = memory._load("growth.json", memory.growth)
+                            memory.session_state = memory._load("session_state.json", memory.session_state)
+                            memory._engine_ref = engine
+                            engine.load_state(state_dir)
                             print(f"  ☁ Concepts: {len(memory.concepts)}, Interactions: {memory.growth.get('total_interactions', 0)}")
                         else:
                             print("  ☁ Pull failed")
@@ -1176,6 +1172,9 @@ def run_chat(verbose=False):
                             memory.conversations = memory._load("conversations.json", [])
                             memory.concepts = memory._load("concepts.json", {})
                             memory.growth = memory._load("growth.json", memory.growth)
+                            memory.session_state = memory._load("session_state.json", memory.session_state)
+                            memory._engine_ref = engine
+                            engine.load_state(state_dir)
                             print(f"  ☁ Concepts: {len(memory.concepts)}, Interactions: {memory.growth.get('total_interactions', 0)}")
                         else:
                             print("  ☁ Pull failed")
