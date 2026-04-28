@@ -1,19 +1,11 @@
-"""
-🎬 QUOTE ENGINE MODULE
-======================
-Movie quotes, philosophical asides, and concept entanglement
-for the Quantum AI's unique personality.
-"""
+"""\n🎬 QUOTE ENGINE MODULE\n======================\nMovie quotes, philosophical asides, and concept entanglement\nfor the Quantum AI's unique personality.\n"""
 
 import random
 from typing import Dict, List, Optional, Tuple
 
 
 class QuoteEngine:
-    """
-    Handles movie quotes, philosophical asides, and dream synthesis.
-    The chaotic wisdom component of Quantum AI.
-    """
+    """\nHandles movie quotes, philosophical asides, and dream synthesis.\nThe chaotic wisdom component of Quantum AI.\n"""
     
     def __init__(self):
         self.movie_quotes = self._build_movie_quotes()
@@ -186,10 +178,7 @@ class QuoteEngine:
         return random.choice(self.philosophical_asides)
     
     def synthesize_dream_insight(self) -> str:
-        """
-        Dream Engine: Entangle two random concepts and generate a philosophical insight.
-        This is the MCAGI-style concept synthesis.
-        """
+        """\nDream Engine: Entangle two random concepts and generate a philosophical insight.\nThis is the MCAGI-style concept synthesis.\n"""
         concept1 = random.choice(self.concepts)
         concept2 = random.choice([c for c in self.concepts if c != concept1])
         template = random.choice(self.entanglement_templates)
@@ -211,7 +200,8 @@ class QuoteEngine:
         # Maybe add a movie quote
         quote = self.get_random_quote(context or response)
         if quote:
-            response = f"{response}\n\n*\"{quote}\"*"
+            response = f"{response}\n*\"{quote}\"*"
+
         
         # Maybe add a philosophical aside
         aside = self.get_philosophical_aside()
@@ -233,7 +223,8 @@ class QuoteEngine:
         """
         if random.random() < probability:
             insight = self.synthesize_dream_insight()
-            response = f"{response}\n\n[Dream Fragment: {insight}]"
+            response = f"{response}\n[Dream Fragment: {insight}]"
+
         
         return response
 

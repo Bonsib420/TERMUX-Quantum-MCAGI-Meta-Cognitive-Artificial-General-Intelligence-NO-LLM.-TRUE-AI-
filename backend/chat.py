@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Quantum MCAGI — Local Chat (Termux)
+Quantum MCAGI -- Local Chat (Termux)
 Standalone chat interface. No MongoDB, no FastAPI, no server.
 Runs the real communication engine directly in your terminal.
 
@@ -23,12 +23,10 @@ Commands:
     /feed [CAT]   - Batch-fetch URLs from research_feeds.json (or /feed all)
     /export       - Export full conversation as markdown (file + terminal)
     /copy-last    - Print last AI response in a bordered box for easy copy
-    /cloud-save   - Save ALL state to cloud (Google Drive via rclone + local)
-    /cloud-load   - Load & merge ALL state from cloud (concepts, Markov, growth)
-    /cloud-pull   - Pull full brain snapshot from all cloud providers
-    /cloud-status - Show cloud provider status
-    /rclone-setup - Check rclone installation and Google Drive connection
-    /rclone-status- Show what's stored on Google Drive via rclone
+    /cloud-save   - Push brain state to Google Drive via rclone
+    /cloud-load   - Pull brain state from Google Drive via rclone
+    /cloud-status - Show cloud sync status
+    /backup       - Full brain backup to cloud
     /quit         - Save and exit
 """
 
@@ -43,6 +41,21 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from quantum_language_engine import QuantumLanguageEngine
+try:
+    from evaluation_engine import get_evaluation_engine
+    HAS_EVAL = True
+except ImportError:
+    HAS_EVAL = False
+try:
+    from algorithmic_brain import get_advanced_engine
+    HAS_ADVANCED = True
+except ImportError:
+    HAS_ADVANCED = False
+try:
+    from exam_system import ExamRunner, IntakeTracker, detect_domain
+    HAS_EXAM = True
+except ImportError:
+    HAS_EXAM = False
 try:
     from self_evolution_core import SelfEvolutionEngine
     HAS_EVOLUTION = True
@@ -62,12 +75,12 @@ except ImportError:
     HAS_RESEARCH = False
 
 try:
-    from rclone_provider import rclone_check, rclone_save, rclone_load, rclone_list, _rclone_available
-    HAS_RCLONE = _rclone_available()
+    from cloud_brain import CloudBrain
+    HAS_CLOUD = True
 except ImportError:
-    HAS_RCLONE = False
+    HAS_CLOUD = False
 
-# Optional imports — degrade gracefully
+# Optional imports -- degrade gracefully
 try:
     from hybrid_generator import create_hybrid_generator
     HAS_HYBRID = True
@@ -123,41 +136,23 @@ except ImportError:
     HAS_LIBRARY = False
 
 try:
-    from cistercian_math import detect_math, evaluate_math, format_math_response
+    from cistercian_math import detect_math, evaluate_math, format_math_response, render_cistercian_ascii
     HAS_CISTERCIAN_MATH = True
 except ImportError:
     HAS_CISTERCIAN_MATH = False
 
 try:
-    from quantum_memory import get_qram, load_concepts_into_qram, reset_quantum_memory
-    from quantum_memory import query_qram, search_qram, superposition_query, get_qram_status
+    from quantum_memory import get_quantum_memory, reset_quantum_memory, PENNYLANE_QRAM_AVAILABLE
     HAS_QRAM = True
 except ImportError:
     HAS_QRAM = False
-
-try:
-    from hilbert_bridge import init_hilbert_bridge, get_bridge_status, save_hilbert_state
-    HAS_HILBERT_BRIDGE = True
-except ImportError:
-    HAS_HILBERT_BRIDGE = False
-
-try:
-    from batch_ingest import batch_ingest_directory, batch_ingest_files, format_ingest_stats
-    HAS_BATCH_INGEST = True
-except ImportError:
-    HAS_BATCH_INGEST = False
-
-try:
-    from exam_system import get_exam_system, format_exam_results
-    HAS_EXAM = True
-except ImportError:
-    HAS_EXAM = False
+    PENNYLANE_QRAM_AVAILABLE = False
 
 
 class LocalMemory:
     """JSON-file backed memory for local chat."""
 
-    # Lightweight domain classifier — maps keywords to knowledge domains.
+    # Lightweight domain classifier -- maps keywords to knowledge domains.
     # Used to populate concept metadata so distinct_domains count works
     # and growth stages can advance.
     DOMAIN_KEYWORDS = {
@@ -224,7 +219,7 @@ class LocalMemory:
         return best_domain if best_score > 0 else 'general'
 
     # All 12 tracks must be met simultaneously to advance.
-    # High watermark protection on diameter and avg_degree — earned progress never regresses.
+    # High watermark protection on diameter and avg_degree -- earned progress never regresses.
     GROWTH_STAGES = [
         {"stage": 0, "name": "Nascent", "threshold": {
             "connections": 0, "concepts": 0, "min_avg_degree": 0, "min_diameter": 0, "min_domains": 0,
@@ -280,7 +275,7 @@ class LocalMemory:
             "total_questions_asked": 0,
             "total_insights": 0,
         })
-        # High watermark protection — earned topology progress never regresses
+        # High watermark protection -- earned topology progress never regresses
         self._hwm_avg_degree = self.growth.get("hwm_avg_degree", 0.0)
         self._hwm_diameter = self.growth.get("hwm_diameter", 0)
         # Ensure advancement tracking field exists
@@ -333,6 +328,9 @@ class LocalMemory:
             "questions": questions,
         })
         self.growth["total_interactions"] += 1
+        if hasattr(self, "_engine_ref") and hasattr(self._engine_ref, "markov"):
+            self.growth["markov_states"] = len(self._engine_ref.markov.chain)
+            self.growth["markov_transitions"] = self._engine_ref.markov.total_tokens
         self.growth["total_questions_asked"] += len(questions)
         self.session_state["total_lifetime_interactions"] = self.session_state.get(
             "total_lifetime_interactions", 0) + 1
@@ -368,10 +366,13 @@ class LocalMemory:
                 if c1 != c2 and c1 in self.concepts and c2 in self.concepts:
                     # Add c2 to c1's relationships if not already present
                     if c2 not in self.concepts[c1]["relationships"]:
-                        self.concepts[c1]["relationships"].append(c2)
+                        self.concepts[c1]["relationships"] = list(self.concepts[c1].get("relationships", [])) if isinstance(self.concepts[c1].get("relationships"), dict) else self.concepts[c1].get("relationships", []); self.concepts[c1]["relationships"].append(c2)
                     # Add c1 to c2's relationships (undirected graph)
-                    if c1 not in self.concepts[c2]["relationships"]:
-                        self.concepts[c2]["relationships"].append(c1)
+                    rels2 = self.concepts[c2].get("relationships", [])
+                    if isinstance(rels2, dict): rels2 = list(rels2.keys())
+                    if c1 not in rels2:
+                        rels2.append(c1)
+                        self.concepts[c2]["relationships"] = rels2
 
         # Detect insights: response mentions 2+ known concepts
         response_lower = response.lower()
@@ -471,17 +472,17 @@ class LocalMemory:
 
     def get_current_stage(self):
         """Compute current growth stage from all 12 metric tracks.
-        High watermark protection on diameter and avg_degree — earned progress never regresses."""
+        High watermark protection on diameter and avg_degree -- earned progress never regresses."""
         metrics = {
             "total_concepts": self.growth.get("total_concepts", 0),
             "total_connections": self.count_connections(),
             "total_questions": self.growth.get("total_questions_asked", 0),
             "total_insights": self.growth.get("total_insights", 0),
             "total_interactions": self.growth.get("total_interactions", 0),
-            "distinct_domains": 0,
-            "markov_states": 0,
-            "transitions": 0,
-            "comm_score": 0,
+            "distinct_domains": min(len(self.concepts) // 10, 30) if self.concepts else 0,
+            "markov_states": self.growth.get("markov_states", 0),
+            "transitions": self.growth.get("markov_transitions", 0),
+            "comm_score": self.growth.get("communication_track", {}).get("avg_score", 0),
         }
         topology = self.check_graph_topology()
 
@@ -505,15 +506,6 @@ class LocalMemory:
         metrics["distinct_domains"] = len(domains_set)
 
         # Markov chain stats (states and transitions from the language engine)
-        try:
-            from quantum_language_engine import QuantumLanguageEngine
-            lang = QuantumLanguageEngine()
-            if lang.markov and lang.markov.trained:
-                metrics["markov_states"] = len(lang.markov.chain)
-                metrics["transitions"] = lang.markov.total_tokens
-        except Exception:
-            pass
-
         # Communication score: composite of vocabulary breadth + response variety
         if metrics["markov_states"] > 0:
             import math
@@ -599,13 +591,9 @@ class LocalMemory:
 
 
 def save_everything(memory, engine, state_dir):
-    """Save all state to disk."""
+    """Save all state to disk (local only — use /backup or /cloud-save for cloud sync)."""
     memory.save_all()
     engine.save_state(state_dir)
-    if getattr(engine, "_has_orch_or", False):
-        memory.save_orch_or(engine.orch_or)
-    if HAS_HILBERT_BRIDGE:
-        save_hilbert_state()
 
 
 EVOLUTION_ENABLED = True  # Killswitch
@@ -616,13 +604,24 @@ def run_chat(verbose=False):
     print("  Quantum MCAGI - Local Chat")
     print("  Real algorithms. No templates. No LLM.")
     print("  /status  /learn FILE  /save  /load  /quit")
-    print("  /export [N]  /copy-last  — share conversations")
+    print("  /export [N]  /copy-last  -- share conversations")
+    print("  /cloud-save  /cloud-load  /cloud-status  /backup")
+    print("  /help -- show all commands")
     print()
+
+    # Cloud brain startup pull
+    if HAS_CLOUD:
+        try:
+            cb = CloudBrain()
+            cb.startup_pull()
+        except Exception as e:
+            print(f"  ☁ Cloud: {e}")
 
     # Initialize all systems
     engine = QuantumLanguageEngine()
     memory = LocalMemory()
 
+    memory._engine_ref = engine
     hybrid_gen = create_hybrid_generator(engine) if HAS_HYBRID else None
     unified_gen = create_unified_generator(engine) if HAS_UNIFIED else None
     quotes = get_quote_engine() if HAS_QUOTES else None
@@ -655,6 +654,8 @@ def run_chat(verbose=False):
     state_dir = str(memory.data_dir / "engine_state")
     if engine.load_state(state_dir):
         print(f"  Loaded saved state from {state_dir}")
+    else:
+            pass
 
     if getattr(engine, "_has_orch_or", False):
         memory.load_orch_or(engine.orch_or)
@@ -697,14 +698,18 @@ def run_chat(verbose=False):
         print(f"  Orch OR: unavailable (classical fallback)")
     print(f"  Hybrid gen: {'ACTIVE' if hybrid_gen else 'OFF'}")
 
-    # Initialize Hilbert bridge (persistent Hilbert space)
-    if HAS_HILBERT_BRIDGE:
-        init_hilbert_bridge(engine, state_dir=str(memory.data_dir))
-
-    # Auto-load concepts into QRAM
+    # Auto-load concepts into QRAM at startup if concepts exist
     if HAS_QRAM and memory.concepts:
-        concept_list = list(memory.concepts.keys())
-        load_concepts_into_qram(concept_list)
+        try:
+            _startup_qram = get_quantum_memory()
+            _n = _startup_qram.load_concepts(list(memory.concepts.keys()))
+            _qs = _startup_qram.status()
+            print(f"  QRAM: {_qs['backend']} — {_n} concepts loaded")
+        except Exception as e:
+            print(f"  QRAM: init error ({e})")
+    elif HAS_QRAM:
+        _qs = get_quantum_memory().status()
+        print(f"  QRAM: {_qs['backend']} — ready (use /qram load)")
 
     print()
 
@@ -773,7 +778,7 @@ def run_chat(verbose=False):
                         loop.close()
                     t = threading.Thread(target=run_research, daemon=True)
                     t.start()
-                    print(f"  Autonomous research started — {minutes} min")
+                    print(f"  Autonomous research started -- {minutes} min")
                     print(f"  Topics will print as they complete.")
                 elif cmd[1] == 'stop':
                     result = research.stop_autonomous_research()
@@ -817,6 +822,21 @@ def run_chat(verbose=False):
                 else:
                     print("  Self-Evolution not available.")
                 continue
+
+
+            elif cmd[0] == "/exam":
+                if HAS_EXAM:
+                    tracker = IntakeTracker()
+                    runner = ExamRunner(engine, tracker)
+                    if len(cmd) > 1 and cmd[1] == "status":
+                        runner.show_status()
+                    elif len(cmd) > 1 and cmd[1] == "review":
+                        runner.show_review()
+                    else:
+                        runner.run_exam(0)
+                else:
+                    print("  Exam system not available")
+                continue
             elif cmd[0] == '/save':
                 save_everything(memory, engine, state_dir)
                 print(f"  Saved to {memory.data_dir}")
@@ -834,6 +854,7 @@ def run_chat(verbose=False):
                 hybrid_gen = create_hybrid_generator(engine) if HAS_HYBRID else None
                 unified_gen = create_unified_generator(engine) if HAS_UNIFIED else None
                 memory = LocalMemory()
+                memory._engine_ref = engine
                 print("  Engine reset.")
                 continue
 
@@ -911,14 +932,19 @@ def run_chat(verbose=False):
                 print("  --- GENERATORS ---")
                 print(f"  Hybrid: {'ACTIVE' if hybrid_gen else 'OFF'}")
                 print(f"  Unified: {'ACTIVE' if unified_gen else 'OFF'}")
-                if HAS_HILBERT_BRIDGE:
-                    bridge_status = get_bridge_status()
-                    print(f"  Hilbert bridge: {'ACTIVE' if bridge_status.get('active') else 'OFF'}")
-                    if bridge_status.get('active'):
-                        print(f"    States: {bridge_status.get('hilbert_states', 0)}, dim={bridge_status.get('dimension', 0)}")
+                print()
+                print("  --- QRAM (Quantum Random Access Memory) ---")
                 if HAS_QRAM:
-                    qram_status = get_qram_status()
-                    print(f"  QRAM: {qram_status['strategy']} ({qram_status['stored']}/{qram_status['capacity']})")
+                    _qram = get_quantum_memory()
+                    _qs = _qram.status()
+                    print(f"  Backend:  {_qs['backend']}")
+                    print(f"  PennyLane QRAM: {'✓' if _qs.get('qram_available') else '✗ (classical fallback)'}")
+                    print(f"  Entries:  {_qs['entries_loaded']} / {_qs['max_entries']}")
+                    if _qs.get('templates'):
+                        avail = [k for k, v in _qs['templates'].items() if v]
+                        print(f"  Templates: {', '.join(avail) if avail else 'none'}")
+                else:
+                    print("  Status: unavailable (quantum_memory module not loaded)")
                 print()
                 print("  --- RESPONSE PIPELINE ---")
                 print("  1. TF-IDF concept extraction")
@@ -1042,8 +1068,8 @@ def run_chat(verbose=False):
                     print(f"  ║ Total: {total} URLs across {len(categories)} domains")
                     print(f"  ╚══════════════════════════════════════════════════")
                     print()
-                    print("  Usage: /feed <category>   — process one category")
-                    print("         /feed all          — process all categories")
+                    print("  Usage: /feed <category>   -- process one category")
+                    print("         /feed all          -- process all categories")
                     print()
                     continue
                 target = cmd[1].lower()
@@ -1093,248 +1119,82 @@ def run_chat(verbose=False):
                 print()
                 continue
             elif cmd[0] == '/cloud-save':
-                # Save ALL state to cloud via registry (Rclone → Google Drive + Local)
-                print("  Saving ALL state to cloud...")
-                try:
-                    from cloud_provider import get_cloud_registry
-                    registry = get_cloud_registry()
-
-                    # 1. Core state: concepts, growth, session
-                    from datetime import datetime, timezone
-                    state_data = {
-                        'saved_at': datetime.now(timezone.utc).isoformat(),
-                        'concepts': memory.concepts,
-                        'growth': memory.growth,
-                        'session_state': memory.session_state,
-                    }
-                    ok1 = registry.save('QuantumMCAGI/state', state_data)
-                    print(f"  {'✓' if ok1 else '✗'} State: {len(memory.concepts)} concepts, stage {memory.growth.get('stage', 0)}")
-
-                    # 2. Conversations (last 500)
-                    ok2 = registry.save('QuantumMCAGI/conversations', {
-                        'saved_at': datetime.now(timezone.utc).isoformat(),
-                        'conversations': memory.conversations[-500:],
-                    })
-                    print(f"  {'✓' if ok2 else '✗'} Conversations: {len(memory.conversations[-500:])} exchanges")
-
-                    # 3. Markov chain + corpus stats
-                    markov_data = {
-                        'saved_at': datetime.now(timezone.utc).isoformat(),
-                        'order': engine.markov.order,
-                        'chain': {' '.join(k): dict(v) for k, v in engine.markov.chain.items()},
-                        'starters': [' '.join(s) for s in engine.markov.starters],
-                        'total_tokens': engine.markov.total_tokens,
-                    }
-                    ok3 = registry.save('QuantumMCAGI/markov_chain', markov_data)
-                    print(f"  {'✓' if ok3 else '✗'} Markov chain: {len(engine.markov.chain)} states, {engine.markov.total_tokens} transitions")
-
-                    # 4. Corpus stats (TF-IDF)
-                    corpus_data = {
-                        'saved_at': datetime.now(timezone.utc).isoformat(),
-                        'doc_freq': dict(engine.extractor.document_frequencies),
-                        'word_freq': dict(engine.extractor.word_frequencies),
-                        'total_docs': engine.extractor.total_documents,
-                        'total_words': engine.extractor.total_words,
-                    }
-                    ok4 = registry.save('QuantumMCAGI/corpus_stats', corpus_data)
-                    print(f"  {'✓' if ok4 else '✗'} Corpus: {engine.extractor.total_documents} docs, {engine.extractor.total_words} words")
-
-                    # 5. Orch-OR state
-                    if getattr(engine, '_has_orch_or', False) and engine.orch_or:
-                        ok5 = registry.save('QuantumMCAGI/orch_or', {
-                            'saved_at': datetime.now(timezone.utc).isoformat(),
-                            'conscious_moments': engine.orch_or.total_moments,
-                        })
-                        print(f"  {'✓' if ok5 else '✗'} Orch-OR: {engine.orch_or.total_moments} moments")
-
-                    # Summary
-                    providers = registry.status()
-                    names = [p.get('provider', '?') for p in providers.get('providers', [])]
-                    print(f"  ──────────────────────────────")
-                    print(f"  Saved to: {', '.join(names)}")
-                except ImportError:
-                    print("  Cloud provider module not available.")
-                except Exception as e:
-                    print(f"  Cloud save error: {e}")
+                if HAS_CLOUD:
+                    print("  ☁ Saving state and pushing to cloud...")
+                    save_everything(memory, engine, state_dir)
+                    cb = CloudBrain()
+                    if cb.available:
+                        success = cb.push_all(quiet=False)
+                        print(f"  ☁ {'Brain pushed to cloud' if success else 'Push failed'}")
+                    else:
+                        print("  ☁ Cloud not available (rclone not configured)")
+                else:
+                    print("  CloudBrain not available.")
                 continue
             elif cmd[0] == '/cloud-status':
-                # Show status of all cloud providers
-                try:
-                    from cloud_provider import get_cloud_registry
-                    registry = get_cloud_registry()
-                    status = registry.status()
-                    print(f"  Cloud providers ({status['total_providers']}):")
-                    for p in status.get('providers', []):
-                        connected = '✓' if p.get('connected') else '✗'
-                        print(f"    {connected} {p.get('provider', '?')}")
-                        if p.get('objects'):
-                            print(f"      Objects: {p['objects']}")
-                        if p.get('error'):
-                            print(f"      Error: {p['error']}")
-                        if p.get('base_dir'):
-                            print(f"      Path: {p['base_dir']}")
-                except ImportError:
-                    print("  Cloud provider module not available.")
+                if HAS_CLOUD:
+                    cb = CloudBrain()
+                    print(f"  ☁ Cloud available: {cb.available}")
+                    print(f"  ☁ Remote: gdrive 666:Quantum Cloud/MCAGI_BACKUP/")
+                else:
+                    print("  CloudBrain not available.")
                 continue
             elif cmd[0] == '/cloud-load':
-                # Load ALL state from cloud via registry
-                print("  Loading state from cloud...")
-                try:
-                    from cloud_provider import get_cloud_registry
-                    registry = get_cloud_registry()
-
-                    # 1. Load core state
-                    state_data = registry.load('QuantumMCAGI/state')
-                    if state_data and isinstance(state_data, dict):
-                        cloud_concepts = state_data.get("concepts", {})
-                        merged_concepts = 0
-                        for name, attrs in cloud_concepts.items():
-                            if name not in memory.concepts:
-                                memory.concepts[name] = attrs
-                                merged_concepts += 1
-                            else:
-                                existing_rels = set(tuple(r) if isinstance(r, list) else r for r in memory.concepts[name].get("relationships", []))
-                                for rel in attrs.get("relationships", []):
-                                    key = tuple(rel) if isinstance(rel, list) else rel
-                                    if key not in existing_rels:
-                                        memory.concepts[name]["relationships"].append(rel)
-                                        merged_concepts += 1
-                        cloud_growth = state_data.get("growth", {})
-                        for key in ("total_interactions", "total_concepts", "total_connections", "total_questions_asked", "total_insights"):
-                            if cloud_growth.get(key, 0) > memory.growth.get(key, 0):
-                                memory.growth[key] = cloud_growth[key]
-                        print(f"  ✓ Merged {merged_concepts} concepts (total: {len(memory.concepts)})")
-                    else:
-                        print("  No state data found in cloud.")
-
-                    # 2. Load Markov chain
-                    markov_data = registry.load('QuantumMCAGI/markov_chain')
-                    if markov_data and isinstance(markov_data, dict) and 'chain' in markov_data:
-                        from collections import Counter, defaultdict
-                        cloud_chain_size = len(markov_data.get('chain', {}))
-                        local_chain_size = len(engine.markov.chain)
-                        if cloud_chain_size > local_chain_size:
-                            engine.markov.order = markov_data['order']
-                            engine.markov.chain = defaultdict(Counter)
-                            for k, v in markov_data['chain'].items():
-                                engine.markov.chain[tuple(k.split())] = Counter(v)
-                            engine.markov.starters = [tuple(s.split()) for s in markov_data.get('starters', [])]
-                            engine.markov.total_tokens = markov_data.get('total_tokens', 0)
-                            engine.markov.trained = len(engine.markov.chain) > 0
-                            print(f"  ✓ Markov chain loaded: {cloud_chain_size} states (was {local_chain_size})")
+                if HAS_CLOUD:
+                    print("  ☁ Pulling brain from cloud...")
+                    cb = CloudBrain()
+                    if cb.available:
+                        success = cb.pull_all()
+                        if success:
+                            print("  ☁ Brain loaded from cloud")
+                            memory.conversations = memory._load("conversations.json", [])
+                            memory.concepts = memory._load("concepts.json", {})
+                            memory.growth = memory._load("growth.json", memory.growth)
+                            memory.session_state = memory._load("session_state.json", memory.session_state)
+                            memory._engine_ref = engine
+                            engine.load_state(state_dir)
+                            print(f"  ☁ Concepts: {len(memory.concepts)}, Interactions: {memory.growth.get('total_interactions', 0)}")
                         else:
-                            print(f"  ○ Markov chain: local ({local_chain_size}) >= cloud ({cloud_chain_size}), keeping local")
+                            print("  ☁ Pull failed")
                     else:
-                        print("  No Markov chain data in cloud.")
-
-                    # 3. Load corpus stats
-                    corpus_data = registry.load('QuantumMCAGI/corpus_stats')
-                    if corpus_data and isinstance(corpus_data, dict):
-                        from collections import Counter
-                        if corpus_data.get('total_words', 0) > engine.extractor.total_words:
-                            engine.extractor.document_frequencies = Counter(corpus_data.get('doc_freq', {}))
-                            engine.extractor.word_frequencies = Counter(corpus_data.get('word_freq', {}))
-                            engine.extractor.total_documents = corpus_data.get('total_docs', 0)
-                            engine.extractor.total_words = corpus_data.get('total_words', 0)
-                            print(f"  ✓ Corpus loaded: {engine.extractor.total_documents} docs, {engine.extractor.total_words} words")
-                        else:
-                            print(f"  ○ Corpus: local >= cloud, keeping local")
-
-                    save_everything(memory, engine, state_dir)
-                    print(f"  ✓ All state saved to disk.")
-                except ImportError:
-                    print("  Cloud provider module not available.")
-                except Exception as e:
-                    print(f"  Cloud load error: {e}")
+                        print("  ☁ Cloud not available (rclone not configured)")
+                else:
+                    print("  CloudBrain not available.")
                 continue
             elif cmd[0] == '/cloud-pull':
-                # Pull everything from cloud (same as /cloud-load but also shows listing)
-                print("  Pulling brain state from cloud providers...")
-                try:
-                    from cloud_provider import get_cloud_registry
-                    registry = get_cloud_registry()
-
-                    # Pull state
-                    state_data = registry.load('QuantumMCAGI/state')
-                    if state_data and isinstance(state_data, dict):
-                        cloud_concepts = state_data.get("concepts", {})
-                        merged = 0
-                        for name, attrs in cloud_concepts.items():
-                            if name not in memory.concepts:
-                                memory.concepts[name] = attrs
-                                merged += 1
-                        cloud_growth = state_data.get("growth", {})
-                        for key in ("total_interactions", "total_concepts", "total_connections", "total_questions_asked", "total_insights"):
-                            if cloud_growth.get(key, 0) > memory.growth.get(key, 0):
-                                memory.growth[key] = cloud_growth[key]
-                        print(f"  ✓ State: merged {merged} new concepts (total: {len(memory.concepts)})")
-                        save_everything(memory, engine, state_dir)
+                if HAS_CLOUD:
+                    print("  ☁ Pulling full brain from cloud...")
+                    cb = CloudBrain()
+                    if cb.available:
+                        success = cb.pull_all()
+                        if success:
+                            print("  ☁ Brain pulled from cloud")
+                            memory.conversations = memory._load("conversations.json", [])
+                            memory.concepts = memory._load("concepts.json", {})
+                            memory.growth = memory._load("growth.json", memory.growth)
+                            memory.session_state = memory._load("session_state.json", memory.session_state)
+                            memory._engine_ref = engine
+                            engine.load_state(state_dir)
+                            print(f"  ☁ Concepts: {len(memory.concepts)}, Interactions: {memory.growth.get('total_interactions', 0)}")
+                        else:
+                            print("  ☁ Pull failed")
                     else:
-                        print("  No state data found in cloud.")
-
-                    # Pull brain snapshot (dream sync data)
-                    brain = registry.load('QuantumMCAGI/brain')
-                    if brain and isinstance(brain, dict):
-                        print(f"  ✓ Brain snapshot: v{brain.get('version', '?')} saved at {brain.get('saved_at', '?')}")
-                        gs = brain.get('growth_stats', {})
-                        if gs:
-                            print(f"    Growth stats: {len(gs)} fields")
-                        ds = brain.get('dream_state', {})
-                        if ds:
-                            print(f"    Dreams: {ds.get('total_dreams', 0)}, Insights: {ds.get('total_insights', 0)}")
-
-                    # List what's available
-                    objects = registry.list_objects('QuantumMCAGI/')
-                    if objects:
-                        print(f"  Cloud objects ({len(objects)}):")
-                        for obj in objects[:15]:
-                            print(f"    {obj}")
-                        if len(objects) > 15:
-                            print(f"    ... and {len(objects) - 15} more")
-                except ImportError:
-                    print("  No cloud providers available.")
-                continue
-            elif cmd[0] == '/rclone-setup':
-                if HAS_RCLONE:
-                    print("  Checking rclone configuration...")
-                    check = rclone_check()
-                    print(f"  rclone installed: {'✓' if check['rclone_installed'] else '✗'}")
-                    print(f"  Remote '{check['remote_name']}' configured: {'✓' if check['remote_configured'] else '✗'}")
-                    if check.get('configured_remotes'):
-                        print(f"  Available remotes: {', '.join(check['configured_remotes'])}")
-                    print(f"  Connection test: {'✓ OK' if check['test_ok'] else '✗ FAILED'}")
-                    if check.get('objects') is not None:
-                        print(f"  Objects in {check['base_path']}/: {check['objects']}")
-                    if check.get('note'):
-                        print(f"  Note: {check['note']}")
-                    if check.get('error'):
-                        print(f"  Error: {check['error']}")
-                    if not check['test_ok']:
-                        print()
-                        print("  Setup instructions:")
-                        print("    1. pkg install rclone")
-                        print("    2. rclone config  (create a remote named 'gdrive')")
-                        print("    3. Or set: export RCLONE_REMOTE=your_remote_name")
+                        print("  ☁ Cloud not available (rclone not configured)")
                 else:
-                    print("  rclone not available.")
-                    print("  Install: pkg install rclone")
-                    print("  Then: rclone config  (create a Google Drive remote)")
+                    print("  CloudBrain not available.")
                 continue
-            elif cmd[0] == '/rclone-status':
-                if HAS_RCLONE:
-                    print("  Listing Google Drive contents...")
-                    objects = rclone_list('QuantumMCAGI/')
-                    if objects:
-                        print(f"  Found {len(objects)} object(s):")
-                        for obj in objects[:20]:
-                            print(f"    {obj}")
-                        if len(objects) > 20:
-                            print(f"    ... and {len(objects) - 20} more")
+            elif cmd[0] == '/backup':
+                if HAS_CLOUD:
+                    print("  ☁ Backing up full brain to cloud...")
+                    save_everything(memory, engine, state_dir)
+                    cb = CloudBrain()
+                    if cb.available:
+                        success = cb.push_all(quiet=False)
+                        print(f"  ☁ {'Backup complete' if success else 'Backup failed'}")
                     else:
-                        print("  No objects found (or QuantumMCAGI/ doesn't exist yet).")
-                        print("  Use /cloud-save to push brain data to Google Drive.")
+                        print("  ☁ Cloud not available (rclone not configured)")
                 else:
-                    print("  rclone not available. Run /rclone-setup for instructions.")
+                    print("  CloudBrain not available.")
                 continue
             elif cmd[0] == '/pardon':
                 if evolution and len(cmd) > 1:
@@ -1366,8 +1226,8 @@ def run_chat(verbose=False):
                     n = int(cmd[1]) if len(cmd) > 1 and cmd[1].isdigit() else len(memory.conversations)
                     exchanges = memory.conversations[-n:]
                     lines = [
-                        "# Quantum MCAGI — Local Chat Export",
-                        f"**Growth stage:** {memory.growth.get('stage', 0)} — {memory.growth.get('name', 'Unknown')}",
+                        "# Quantum MCAGI -- Local Chat Export",
+                        f"**Growth stage:** {memory.growth.get('stage', 0)} -- {memory.growth.get('name', 'Unknown')}",
                         f"**Concepts:** {memory.growth.get('total_concepts', len(memory.concepts))}",
                         f"**Interactions:** {len(memory.conversations)}",
                         f"**Exported:** {datetime.now().isoformat()}",
@@ -1444,122 +1304,184 @@ def run_chat(verbose=False):
                     print()
                 continue
 
-            elif cmd[0] == '/cistercian' or cmd[0] == '/cistercian-math':
-                if not HAS_CISTERCIAN_MATH:
-                    print("  Cistercian math module not available.")
-                elif len(cmd) < 2:
-                    print("  Usage: /cistercian N  or  /cistercian EXPR")
+            elif cmd[0] in ('/cistercian-math', '/cmath') and HAS_CISTERCIAN_MATH:
+                if len(cmd) < 4:
+                    print("  Usage: /cistercian-math NUMBER OP NUMBER")
+                    print("  Example: /cistercian-math 50 - 20")
+                    print("  Operators: + - * /")
+                    print("  Also: /cistercian NUMBER  (show a Cistercian numeral)")
                 else:
-                    expr = ' '.join(cmd[1:])
-                    result = evaluate_math(expr)
-                    if result:
-                        print(f"\n  {format_math_response(result)}\n")
+                    expr_text = ' '.join(cmd[1:])
+                    expr = detect_math(expr_text)
+                    if expr:
+                        ev = evaluate_math(expr)
+                        print(format_math_response(ev))
                     else:
-                        print(f"  Could not evaluate: {expr}")
+                        print("  Invalid expression. Use: NUMBER OP NUMBER")
                 continue
 
-            elif cmd[0] == '/qram':
-                if not HAS_QRAM:
-                    print("  QRAM module not available.")
-                elif len(cmd) == 1:
-                    # Status
-                    status = get_qram_status()
-                    print(f"\n  QRAM Status:")
-                    print(f"    Strategy: {status['strategy']}")
-                    print(f"    Backend:  {status.get('backend', 'classical')}")
-                    print(f"    Stored:   {status['stored']}/{status['capacity']}")
-                    print(f"    Utilization: {status['utilization']:.1%}")
-                    print()
-                elif cmd[1] == 'load':
-                    concept_list = list(memory.concepts.keys())
-                    result = load_concepts_into_qram(concept_list)
-                    print(f"  QRAM loaded: {result['loaded']} concepts ({result['strategy']})")
-                elif cmd[1] == 'query' and len(cmd) > 2:
-                    try:
+            elif cmd[0] == '/cistercian' and HAS_CISTERCIAN_MATH:
+                if len(cmd) < 2 or not cmd[1].isdigit():
+                    print("  Usage: /cistercian NUMBER  (0-9999)")
+                    print("  Example: /cistercian 1234")
+                else:
+                    n = int(cmd[1])
+                    if 0 <= n <= 9999:
+                        print(f"  𝕮({n}):")
+                        for line in render_cistercian_ascii(n).split('\n'):
+                            print(f"    {line}")
+                    else:
+                        print("  Number must be 0-9999 (Cistercian range)")
+                continue
+
+            elif cmd[0] == '/qram' and HAS_QRAM:
+                qram = get_quantum_memory()
+                subcmd = cmd[1] if len(cmd) > 1 else ''
+                if subcmd == 'load':
+                    # Load current concepts into QRAM
+                    concept_names = list(memory.concepts.keys())
+                    if concept_names:
+                        count = qram.load_concepts(concept_names)
+                        print(f"  💾 QRAM: Loaded {count} concepts into quantum memory")
+                    else:
+                        print("  No concepts learned yet -- talk to me first!")
+                elif subcmd == "query":
+                    # Query concept by address
+                    if len(cmd) > 2 and cmd[2].isdigit():
                         addr = int(cmd[2])
-                        result = query_qram(addr)
+                        result = qram.query(addr)
                         if result:
-                            print(f"  Address {addr}: {result.get('concept', 'unknown')}")
+                            print(f"  💾 QRAM[{addr}] → {result}")
                         else:
-                            print(f"  Address {addr}: empty")
-                    except ValueError:
-                        print("  Usage: /qram query N (integer address)")
-                elif cmd[1] == 'search' and len(cmd) > 2:
-                    term = ' '.join(cmd[2:])
-                    results = search_qram(term)
-                    if results:
-                        for r in results[:10]:
-                            print(f"  [{r['address_int']:3d}] {r['concept']}")
+                            print(f"  💾 QRAM[{addr}] → (empty)")
                     else:
-                        print(f"  No results for '{term}'")
-                elif cmd[1] == 'super' and len(cmd) > 2:
-                    try:
-                        addrs = [int(a) for a in cmd[2:]]
-                        results = superposition_query(*addrs)
-                        for r in results:
-                            print(f"  [{r['address_int']:3d}] {r['concept']}")
-                        if not results:
-                            print("  No results at those addresses")
-                    except ValueError:
-                        print("  Usage: /qram super N1 N2 N3 ...")
-                elif cmd[1] == 'strategy' and len(cmd) > 2:
-                    strat = cmd[2]
-                    if strat in ('bb', 'select', 'hybrid', 'classical'):
-                        reset_quantum_memory()
-                        get_qram(strategy=strat)
-                        print(f"  QRAM strategy set to: {strat}")
+                        print("  Usage: /qram query ADDRESS")
+                elif subcmd == 'search':
+                    # Search QRAM by concept name
+                    if len(cmd) > 2:
+                        needle = ' '.join(cmd[2:]).lower()
+                        s = qram.status()
+                        if s['entries_loaded'] == 0:
+                            print("  💾 QRAM empty — run /qram load first")
+                        else:
+                            matches = []
+                            for addr in range(s['entries_loaded']):
+                                name = qram.query(addr)
+                                if name and needle in name.lower():
+                                    matches.append((addr, name))
+                            if matches:
+                                print(f"  💾 QRAM search '{needle}' — {len(matches)} match{'es' if len(matches) != 1 else ''}:")
+                                for addr, name in matches[:20]:
+                                    print(f"    [{addr}] {name}")
+                                if len(matches) > 20:
+                                    print(f"    ... and {len(matches) - 20} more")
+                            else:
+                                print(f"  💾 No matches for '{needle}'")
                     else:
-                        print("  Strategies: bb, select, hybrid, classical")
+                        print("  Usage: /qram search TERM")
+                elif subcmd == 'super':
+                    # Superposition query across multiple addresses
+                    addrs = [int(a) for a in cmd[2:] if a.isdigit()]
+                    if len(addrs) < 2:
+                        print("  Usage: /qram super ADDR1 ADDR2 [ADDR3 ...]")
+                        print("  Queries multiple addresses in quantum superposition")
+                    else:
+                        s = qram.status()
+                        if s['entries_loaded'] == 0:
+                            print("  💾 QRAM empty — run /qram load first")
+                        else:
+                            results = qram.superposition_query(addrs)
+                            if results:
+                                backend = 'quantum' if s.get('qram_available') else 'classical'
+                                print(f"  💾 QRAM superposition query ({backend}):")
+                                for name, prob in sorted(results, key=lambda x: -x[1]):
+                                    bar = '█' * int(prob * 30)
+                                    print(f"    {name:20s}  {prob:.4f}  {bar}")
+                            else:
+                                print("  💾 No valid addresses in query")
+                elif subcmd == 'strategy':
+                    # Show or switch QRAM strategy
+                    _pqa = PENNYLANE_QRAM_AVAILABLE
+                    if len(cmd) > 2 and cmd[2] in ('bb', 'select', 'hybrid'):
+                        if not _pqa:
+                            print("  💾 Strategy switch requires PennyLane ≥0.44 QRAM templates")
+                        else:
+                            new_strat = cmd[2]
+                            reset_quantum_memory()
+                            qram = get_quantum_memory(strategy=new_strat)
+                            # Reload concepts if memory has them
+                            concept_names = list(memory.concepts.keys())
+                            if concept_names:
+                                qram.load_concepts(concept_names)
+                            s = qram.status()
+                            print(f"  💾 QRAM strategy → {s['backend']}")
+                            print(f"    Entries reloaded: {s['entries_loaded']}")
+                    else:
+                        s = qram.status()
+                        print(f"  💾 Current strategy: {s['backend']}")
+                        if s.get('templates'):
+                            print(f"    Available templates:")
+                            for name, avail in s['templates'].items():
+                                print(f"      {name}: {'✓' if avail else '✗'}")
+                        print(f"  Usage: /qram strategy [bb|select|hybrid]")
+                elif subcmd == '' or subcmd == 'status':
+                    # Show status (default when no subcommand)
+                    s = qram.status()
+                    print(f"  💾 QRAM Status:")
+                    print(f"    Backend:        {s['backend']}")
+                    print(f"    PennyLane:      {'✓' if s['pennylane_available'] else '✗'}")
+                    print(f"    QRAM templates: {'✓' if s['qram_available'] else '✗ (classical fallback)'}")
+                    print(f"    Entries loaded: {s['entries_loaded']}")
+                    print(f"    Bit width:      {s['bit_width']}")
+                    print(f"    Max entries:    {s['max_entries']}")
+                    if s.get('templates'):
+                        print(f"    Templates:")
+                        for name, avail in s['templates'].items():
+                            print(f"      {name}: {'✓' if avail else '✗'}")
                 else:
-                    print("  /qram [load|query N|search TERM|super N N|strategy X]")
-                continue
-
-            elif cmd[0] == '/exam':
-                if not HAS_EXAM:
-                    print("  Exam system not available.")
-                elif len(cmd) >= 2 and cmd[1] == 'summary':
-                    exam_sys = get_exam_system()
-                    summary = exam_sys.get_summary()
-                    print(f"\n  Exam Summary:")
-                    print(f"    Exams taken: {summary['exams']}")
-                    if summary['exams'] > 0:
-                        print(f"    Latest: {summary['latest_score']:.1%}")
-                        print(f"    Best:   {summary['best_score']:.1%}")
-                        print(f"    Average: {summary['average_score']:.1%}")
-                        print(f"    Trend:  {summary['trend']}")
-                    print()
-                else:
-                    domain = cmd[1] if len(cmd) > 1 else None
-                    exam_sys = get_exam_system()
-                    results = exam_sys.run_exam(memory, engine, domain=domain)
-                    print(format_exam_results(results))
+                    # Unknown subcommand — show usage
+                    print(f"  Unknown: /qram {subcmd}")
+                    print("  Usage:")
+                    print("    /qram              — show QRAM status")
+                    print("    /qram load         — load concepts into quantum memory")
+                    print("    /qram query N      — retrieve concept at address N")
+                    print("    /qram search TERM  — find concepts matching TERM")
+                    print("    /qram super N N ... — superposition query (quantum)")
+                    print("    /qram strategy X   — switch QRAM strategy (bb/select/hybrid)")
                 continue
 
             else:
                 print("  Commands: /status /learn FILE /save /load /reset /quit")
                 print("  Gen:      /hybrid TEXT  /unified TEXT")
                 print("  Extra:    /analyze TEXT  /personality  /knowledge TOPIC  /collapse TEXT")
-                print("  Math:     /cistercian N  or type any math expression")
-                print("  Memory:   /qram  /qram load  /qram search TERM  /qram query N")
-                print("  Exam:     /exam  /exam DOMAIN  /exam summary")
+                print("  Math:     /cistercian-math 50 - 20  /cistercian 1234")
+                print("  Memory:   /qram [load|query N|search X|super N N|strategy X]")
                 print("  Share:    /export [N]  /copy-last")
+                continue
+
+        # ---- Math detection -- compute BEFORE Markov chain ----
+        if HAS_CISTERCIAN_MATH:
+            expr = detect_math(user_input)
+            if expr:
+                ev = evaluate_math(expr)
+                response = format_math_response(ev, show_ascii=True)
+
+                # Still learn from the interaction and store it
+                engine.learn_from_text(user_input)
+                concepts = engine.extract_concepts(user_input)
+                for tag in ["arithmetic", "mathematics"]:
+                    if tag not in concepts:
+                        concepts.append(tag)
+                memory.add_exchange(user_input, response, concepts, [])
+
+                print(f"  AI: {response}")
+                print()
                 continue
 
         # ---- Process input ----
         t0 = time.time()
 
-        # Learn from input first (builds Markov vocabulary including math terms)
         engine.learn_from_text(user_input)
-
-        # Check for math expression (before full response generation)
-        if HAS_CISTERCIAN_MATH and detect_math(user_input):
-            result = evaluate_math(user_input)
-            if result and "error" not in result:
-                print()
-                print(f"AI: {format_math_response(result)}")
-                print()
-                continue
-
         concepts = engine.extract_concepts(user_input)
         growth_stage = memory.growth["stage"]
         known = memory.get_known_concepts()
@@ -1587,25 +1509,19 @@ def run_chat(verbose=False):
         else:
             tone = {'register': 'conversational', 'depth': 0.5}
 
+        # Pass tone depth to chaos engine for adaptive personality
+        if quotes:
+            quotes._tone_depth = tone.get("depth", 0)
+
         # Generate response based on register
-        if tone['register'] in ('analytical', 'philosophical') and hybrid_gen:
-            # Deep: hybrid quantum generation
-            # extract_concepts_scored returns List[Dict] with 'concept' and 'score' keys
-            concept_scores = engine.extract_concepts_scored(user_input)
-            response = hybrid_gen.generate(
-                user_input, concepts, concept_scores,
-                min_words=10, max_words=25
-            )
-            # Append a question if appropriate
-            if questions and (not getattr(engine, "_has_orch_or", False) or True):
-                q = questions[0] if isinstance(questions[0], str) else questions[0].get('question', '')
-                response = response + " " + q
-        else:
-            # Casual/conversational: tone-aware composer
-            response = engine.generate_response(
-                user_input, questions, understanding, concepts,
-                growth_stage=growth_stage
-            )
+# --- COMPETITIVE GENERATION ---
+        concept_scores = engine.extract_concepts_scored(user_input) if hybrid_gen else []
+        r_hybrid = hybrid_gen.generate(user_input, concepts, concept_scores, min_words=10, max_words=25) if hybrid_gen else ""
+        r_casual = engine.generate_response(user_input, questions, understanding, concepts, growth_stage=growth_stage)
+        response = r_hybrid if len(r_hybrid) > len(r_casual) else r_casual
+        if questions:
+            q = questions[0] if isinstance(questions[0], str) else questions[0].get("question", "")
+            pass  # question shown in collapse analysis only
 
         # Add personality perspective (30% chance)
         if personality:
@@ -1623,6 +1539,15 @@ def run_chat(verbose=False):
         elapsed = time.time() - t0
 
         # Store the exchange
+        # Grammar fix + context update + concept graph
+        if HAS_ADVANCED:
+            try:
+                adv = get_advanced_engine()
+                adv._tone_depth = tone.get('depth', 0)
+                response = adv.enhance_response(response, user_input, concepts)
+            except Exception:
+                pass
+
         memory.add_exchange(user_input, response, concepts, questions)
 
         # Auto-save every 10 interactions or every 5 minutes
@@ -1675,7 +1600,7 @@ def run_chat(verbose=False):
             # Get topology
             topo = memory.check_graph_topology()
             conn = memory.count_connections()
-            print(f"  ║   Stage:         {growth_stage} — {memory.growth['name']}")
+            print(f"  ║   Stage:         {growth_stage} -- {memory.growth['name']}")
             print(f"  ║   Concepts:      {memory.growth.get('total_concepts', len(memory.concepts))}")
             print(f"  ║   Connections:   {conn}")
             print(f"  ║   Graph: avg deg={topo['avg_degree']}, diam={topo['diameter']}, comps={topo['component_count']}")
@@ -1684,6 +1609,19 @@ def run_chat(verbose=False):
                 print(f"  ║ QUESTIONS GENERATED")
                 for q in questions[:3]:
                     print(f"  ║   → {q}")
+            # Rubric scoring
+            if HAS_EVAL:
+                try:
+                    ev = get_evaluation_engine(markov=engine.markov)
+                    scores = ev.score_response(user_input, response, {})
+                    score_str = ' | '.join(f'{k[:3]}={v}' for k,v in scores.items() if v is not None)
+                    print(f'  ║')
+                    print(f'  ║ RUBRIC SCORES')
+                    print(f'  ║   {score_str}')
+                    total = sum(v for v in scores.values() if v is not None)
+                    print(f'  ║   Total: {total}/32')
+                except Exception:
+                    pass
             print(f"  ╚═══════════════════════════════════════════════════")
 
         print()

@@ -131,7 +131,8 @@ class TextAnalyzer:
             analysis['indicators']['llm'].append('Excessive exclamation marks')
 
         # Check for paragraph structure
-        paragraphs = text.split('\n\n')
+        paragraphs = text.split('\n')
+
         if len(paragraphs) > 3 and all(len(p) > 100 for p in paragraphs if p.strip()):
             analysis['indicators']['llm'].append('Overly structured paragraphs')
 

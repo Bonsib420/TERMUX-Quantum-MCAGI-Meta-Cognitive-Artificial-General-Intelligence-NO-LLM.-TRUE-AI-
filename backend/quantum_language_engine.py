@@ -17,7 +17,18 @@ import random
 import json
 import os
 import logging
+
+try:
+    from hilbert_engine import HilbertEngine
+    HAS_HILBERT = True
+except ImportError:
+    HAS_HILBERT = False
 from collections import defaultdict, Counter
+try:
+    from quantum_markov import QuantumMarkovChain
+    HAS_QUANTUM_MARKOV = True
+except ImportError:
+    HAS_QUANTUM_MARKOV = False
 from typing import List, Dict, Tuple, Optional
 
 try:
@@ -49,6 +60,13 @@ class MarkovChain:
         self.starters = []  # Sentence-starting prefixes
         self.trained = False
         self.total_tokens = 0
+        if HAS_QUANTUM_MARKOV:
+            self._qmarkov = QuantumMarkovChain(
+                classical_chains={order: self.chain},
+                classical_starters={order: self.starters}
+            )
+        else:
+            self._qmarkov = None
     
     def train(self, text: str):
         """Train the Markov chain on a corpus of text."""
@@ -108,7 +126,10 @@ class MarkovChain:
             
             # Get candidates and apply temperature
             candidates = self.chain[current_prefix]
-            next_word = self._weighted_select(candidates, temperature)
+            if HAS_QUANTUM_MARKOV and hasattr(self, '_qmarkov'):
+                next_word = self._qmarkov.quantum_sample(candidates, temperature, words)
+            else:
+                next_word = self._weighted_select(candidates, temperature)
             words.append(next_word)
             
             # Stop at sentence boundaries
@@ -230,9 +251,9 @@ class MarkovChain:
             data = json.load(f)
         self.order = data['order']
         self.chain = defaultdict(Counter)
-        for k, v in data['chain'].items():
+        for k, v in data.get('chain', data.get('transitions', {})).items():
             self.chain[tuple(k.split())] = Counter(v)
-        self.starters = [tuple(s.split()) for s in data['starters']]
+        self.starters = [tuple(s.split()) for s in data.get('starters', [])]
         self.total_tokens = data.get('total_tokens', 0)
         self.trained = len(self.chain) > 0
         return True
@@ -636,8 +657,14 @@ class ResponseComposer:
         gaps = understanding.get('gaps', [])
         related = understanding.get('related_concepts', [])
         
+        kg_facts = understanding.get('kg_facts', [])
         parts = []
         
+        # 0. Knowledge graph facts
+        if kg_facts:
+            # Skip raw knowledge graph facts - let Markov and personality speak
+            pass
+
         # 1. Opening — varies by understanding depth
         opening = self._compose_opening(topic, score, user_input, growth_stage)
         parts.append(opening)
@@ -678,8 +705,8 @@ class ResponseComposer:
         """
         input_words = user_input.lower().split()
         
-        if self.markov.trained:
-            # Try to generate a relevant opening from the Markov chain
+        if self.markov.trained and score < 0.7:
+            # Low-depth only — Markov cannot handle philosophical reasoning chains
             candidates = []
             for _ in range(5):  # Generate 5 candidates, pick best
                 sent = self.markov.generate(max_words=20, seed_words=input_words,
@@ -714,8 +741,6 @@ class ResponseComposer:
             ]
         else:
             openers = [
-                f"I've developed a rich web of understanding around {topic}.",
-                f"The landscape of {topic} has become familiar enough that I can spot what's missing.",
                 f"Deep engagement with {topic} has led me to see it as part of a larger architecture.",
             ]
         
@@ -746,9 +771,7 @@ class ResponseComposer:
         else:
             joined = ', '.join(related_names[:-1]) + f', and {related_names[-1]}'
             templates = [
-                f"This sits at a crossroads with {joined}.",
                 f"Multiple threads converge here: {joined}.",
-                f"The connections to {joined} suggest this is a nexus point.",
             ]
         
         return random.choice(templates)
@@ -970,6 +993,19 @@ class QuantumLanguageEngine:
         self.question_gen = QuestionGenerator(self.extractor)
         self.composer = ResponseComposer(self.markov, self.extractor)
         self.coherence = CoherenceScorer()
+        # Tier 2: function-word dossier engine (graceful no-op if module missing)
+        self.fwe = None
+        try:
+            from function_word_engine import FunctionWordEngine
+            self.fwe = FunctionWordEngine(stopwords_set=ConceptExtractor.STOPWORDS)
+            _fwe_path = os.path.expanduser("~/.quantum-mcagi/function_words.json")
+            try:
+                if os.path.exists(_fwe_path):
+                    self.fwe.load(_fwe_path)
+            except Exception:
+                pass
+        except ImportError:
+            self.fwe = None
         try:
             from orch_or_integration import OrchORLanguageBridge
             self.orch_bridge = OrchORLanguageBridge()
@@ -979,6 +1015,16 @@ class QuantumLanguageEngine:
             self.orch_or = None
             self.orch_bridge = None
             self._has_orch_or = False
+        self._has_hilbert = False
+        if HAS_HILBERT:
+            try:
+                self.hilbert = HilbertEngine(dim=128)
+                hilbert_path = os.path.expanduser("~/.quantum-mcagi/hilbert/hilbert_state.npz")
+                if os.path.exists(hilbert_path):
+                    self.hilbert.load_state(hilbert_path)
+                self._has_hilbert = True
+            except Exception:
+                self._has_hilbert = False
 
         
 
@@ -1024,15 +1070,54 @@ class QuantumLanguageEngine:
             else:
                 q_dicts.append(q)
         
+        # Trigger conscious moment on every response
+        if self._has_orch_or:
+            try:
+                self.orch_or.conscious_moment()
+
+            except Exception:
+                pass
+        # Knowledge graph lookup - structured Wikidata facts
+        try:
+            import sys as _sys
+            _sys.path.insert(0, os.path.dirname(__file__))
+            from wikidata_ingester import kg_to_facts, query_kg
+            _input_lower = user_input.lower()
+            _kg_facts = []
+            # Check each concept against knowledge graph
+            for _c in concepts:
+                _c_str = _c if isinstance(_c, str) else str(_c)
+                _entry = query_kg(_c_str)
+                if _entry:
+                    _kg_facts.extend(kg_to_facts(_c_str))
+            # Also check input words directly
+            for _word in _input_lower.split():
+                if len(_word) > 4:
+                    _entry = query_kg(_word)
+                    if _entry:
+                        _kg_facts.extend(kg_to_facts(_word))
+            # Deduplicate
+            _kg_facts = list(dict.fromkeys(_kg_facts))
+            if _kg_facts:
+                # Inject facts into understanding context
+                understanding['kg_facts'] = _kg_facts[:6]
+        except Exception:
+            pass
         return self.composer.compose_response(
             user_input, concepts, understanding, q_dicts, growth_stage
         )
     
     def learn_from_text(self, text: str):
-        """Feed text to the Markov chain and concept extractor to improve generation."""
+        """Feed text to BOTH tiers: content (markov/extractor/coherence) and function (fwe)."""
         self.markov.train(text)
         self.extractor.update_corpus_stats(text)
         self.coherence.update(text)
+        # Tier 2: feed FunctionWordEngine if available
+        if self.fwe is not None:
+            try:
+                self.fwe.update_from_text(text)
+            except Exception:
+                pass
     
     def save_state(self, directory: str):
         """Persist learned state."""
@@ -1047,6 +1132,13 @@ class QuantumLanguageEngine:
         }
         with open(os.path.join(directory, 'corpus_stats.json'), 'w') as f:
             json.dump(stats, f)
+        # Tier 2: persist FunctionWordEngine dossier
+        if getattr(self, 'fwe', None) is not None:
+            try:
+                _fwe_path = os.path.expanduser("~/.quantum-mcagi/function_words.json")
+                self.fwe.save(_fwe_path)
+            except Exception:
+                pass
         # Save engine metadata
         from datetime import datetime, timezone
         engine_meta = {
@@ -1060,7 +1152,7 @@ class QuantumLanguageEngine:
             'total_words': self.extractor.total_words,
             'coherence_pairs': len(self.coherence.cooccurrence) if hasattr(self.coherence, 'cooccurrence') else 0,
             'has_orch_or': self._has_orch_or,
-            'orch_or_moments': getattr(self.orch_or, 'total_moments', 0) if self.orch_or else 0,
+            'orch_or_moments': getattr(self.orch_or, 'conscious_moments', 0) if self.orch_or else 0,
             'has_pennylane': self._has_pennylane,
         }
         with open(os.path.join(directory, 'engine_state.json'), 'w') as f:

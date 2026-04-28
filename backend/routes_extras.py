@@ -1,8 +1,4 @@
-"""
-🔮 Extras Routes
-==================
-Covenant, safety, dictionary, dream, personality, quotes, text analysis, prebo.
-"""
+"""\n🔮 Extras Routes\n==================\nCovenant, safety, dictionary, dream, personality, quotes, text analysis, prebo.\n"""
 
 from fastapi import APIRouter, HTTPException, Response, Body, UploadFile, File
 from pydantic import BaseModel
@@ -10,6 +6,7 @@ from typing import List, Dict, Any, Optional
 import os
 import logging
 import random
+import re
 from datetime import datetime, timezone
 import json
 
@@ -73,11 +70,7 @@ async def get_growth_notifications():
 
 @router.get("/covenant/status")
 async def get_covenant_status():
-    """
-    ARTICLE 1 - Covenant Status
-    
-    Get current covenant compliance status.
-    """
+    """\nARTICLE 1 - Covenant Status\n\nGet current covenant compliance status.\n"""
     try:
         status = await state.covenant_manager.get_covenant_status()
         return status
@@ -150,9 +143,7 @@ async def reset_safety_settings():
 
 @router.get("/dictionary/lookup/{word}")
 async def lookup_word(word: str):
-    """
-    Look up a word in dictionaries and add to semantic memory
-    """
+    """\nLook up a word in dictionaries and add to semantic memory\n"""
     try:
         result = await state.dictionary.lookup_and_store(word)
         return result
@@ -161,9 +152,7 @@ async def lookup_word(word: str):
 
 @router.post("/dictionary/batch-load")
 async def batch_load_dictionary(limit: int = 100):
-    """
-    Load common words into dictionary (background task)
-    """
+    """\nLoad common words into dictionary (background task)\n"""
     try:
         result = await state.dictionary.batch_load_common_words(limit)
         return result
@@ -542,12 +531,7 @@ async def get_cistercian_numeral(number: int, size: int = 80, color: str = "#FFF
 
 @router.get("/cistercian/data")
 async def get_cistercian_data(number: int):
-    """
-    Get Cistercian numeral shape data as JSON.
-
-    Returns:
-        JSON with line segments, triangles, and digit breakdown
-    """
+    """\nGet Cistercian numeral shape data as JSON.\n\nReturns:\nJSON with line segments, triangles, and digit breakdown\n"""
     try:
         from cistercian_numerals import generate_cistercian_numeral
         data = generate_cistercian_numeral(number)
@@ -690,6 +674,91 @@ async def download_cistercian_font(
     return await batch_cistercian_svgs(start=0, end=9999, size=size, color=color)
 
 
+class CistercianMathRequest(BaseModel):
+    """Request for Cistercian numeral math."""
+    expression: str  # e.g. "42 + 73" or just Cistercian number references
+    color: str = "#FFFFFF"
+    size: int = 80
+
+
+@router.post("/cistercian/math")
+async def cistercian_math(req: CistercianMathRequest):
+    """
+    Evaluate a math expression and return operands + result as Cistercian numerals.
+
+    Accepts expressions like "42 + 73", "1000 - 250", "12 * 8", "100 / 4".
+    Numbers can be 0-9999 (Cistercian range). Results are clamped to 0-9999.
+
+    Returns JSON with:
+    - operands: list of {value, svg} for each number in the expression
+    - operator: the math operator used
+    - result: {value, svg} for the computed answer
+    - expression: the original expression
+    - cistercian_expression: human-readable "cistercian(42) + cistercian(73) = cistercian(115)"
+    """
+    try:
+        from cistercian_numerals import render_cistercian_svg
+
+        expr = req.expression.strip()
+
+        # Parse: number operator number (supports +, -, *, /)
+        match = re.match(r'^\s*(\d{1,5})\s?([+\-*/])\s?(\d{1,5})\s*$', expr[:60])
+        if not match:
+            raise HTTPException(status_code=400, detail="Expression must be: NUMBER OP NUMBER (e.g. '42 + 73'). Supported operators: + - * /")
+
+        a_val = int(match.group(1))
+        op = match.group(2)
+        b_val = int(match.group(3))
+
+        # Validate Cistercian range
+        if not (0 <= a_val <= 9999) or not (0 <= b_val <= 9999):
+            raise HTTPException(status_code=400, detail="Numbers must be 0-9999 (Cistercian range)")
+
+        # Compute
+        if op == '+':
+            result_val = a_val + b_val
+        elif op == '-':
+            result_val = a_val - b_val
+        elif op == '*':
+            result_val = a_val * b_val
+        elif op == '/':
+            if b_val == 0:
+                raise HTTPException(status_code=400, detail="Division by zero")
+            result_val = a_val // b_val
+        else:
+            raise HTTPException(status_code=400, detail=f"Unsupported operator: {op}")
+
+        # Clamp result to Cistercian range
+        clamped_result = max(0, min(9999, result_val))
+
+        # Generate SVGs for all three numbers
+        a_svg = render_cistercian_svg(a_val, size=req.size, color=req.color)
+        b_svg = render_cistercian_svg(b_val, size=req.size, color=req.color)
+        result_svg = render_cistercian_svg(clamped_result, size=req.size, color=req.color)
+
+        return {
+            "expression": expr,
+            "operands": [
+                {"value": a_val, "svg": a_svg},
+                {"value": b_val, "svg": b_svg}
+            ],
+            "operator": op,
+            "result": {
+                "value": clamped_result,
+                "overflow": result_val != clamped_result,
+                "raw_value": result_val,
+                "svg": result_svg
+            },
+            "cistercian_expression": f"𝕮({a_val}) {op} 𝕮({b_val}) = 𝕮({clamped_result})"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Cistercian math error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============================================================================
 # ALGORITHMIC CORE - Pure Algorithmic AI (No Templates)
 # ============================================================================
@@ -711,6 +780,7 @@ def _initialize_algorithmic():
         logger.info("🧠 Training Markov chain on training corpus...")
         _markov_generator = MarkovTextGenerator(max_order=3)
         _markov_generator.train(PHILOSOPHY_CORPUS + "\n" + PHYSICS_CORPUS)
+
         _algorithmic_initialized = True
         logger.info("✅ Algorithmic core ready (Markov generator trained)")
     except Exception as e:
@@ -864,7 +934,8 @@ async def bm25_search(
 
         retriever = BM25()
         # Add sentences from training corpus
-        paragraphs = (PHILOSOPHY_CORPUS + PHYSICS_CORPUS).split('\n\n')
+        paragraphs = (PHILOSOPHY_CORPUS + PHYSICS_CORPUS).split('\n')
+
         for i, para in enumerate(paragraphs[:20]):  # Limit for demo
             if para.strip():
                 retriever.add_document(f"doc_{i}", para.strip(), metadata={"text": para.strip()})
@@ -1020,6 +1091,7 @@ async def calculate_pmi(
             from training_corpus import PHILOSOPHY_CORPUS, PHYSICS_CORPUS
             pmi_calc.train(PHILOSOPHY_CORPUS + "\n" + PHYSICS_CORPUS)
 
+
         score = pmi_calc.score(word1.lower(), word2.lower())
 
         return {
@@ -1052,6 +1124,7 @@ async def generate_dream(num_sentences: int = 3):
             generator = MarkovTextGenerator(max_order=3)
             generator.train(PHILOSOPHY_CORPUS + "\n" + PHYSICS_CORPUS)
 
+
             # Generate dream-like text
             seeds = ["consciousness", "quantum", "dream", "reality", "infinite"]
             import random
@@ -1079,6 +1152,7 @@ async def generate_dream(num_sentences: int = 3):
 
             return {
                 "dream": "\n".join(dreams),
+
                 "concepts_used": list(concepts_used),
                 "method": "entanglement_synthesis"
             }
@@ -1130,10 +1204,7 @@ async def upload_file(file: UploadFile = File(...), conversation_id: Optional[st
 
 @router.get("/growth/evolution")
 async def get_evolution_status():
-    """
-    Get self-evolution status and history.
-    Returns the latest cognitive growth stage from growth_metrics events.
-    """
+    """\nGet self-evolution status and history.\nReturns the latest cognitive growth stage from growth_metrics events.\n"""
     try:
         import shared_state as state
         if hasattr(state, 'db'):
@@ -1187,6 +1258,7 @@ async def generate_dream(num_sentences: int = 3):
             generator = MarkovTextGenerator(max_order=3)
             generator.train(PHILOSOPHY_CORPUS + "\n" + PHYSICS_CORPUS)
 
+
             # Generate dream-like text
             seeds = ["consciousness", "quantum", "dream", "reality", "infinite"]
             seed = [random.choice(seeds)]
@@ -1213,6 +1285,7 @@ async def generate_dream(num_sentences: int = 3):
 
             return {
                 "dream": "\n".join(dreams),
+
                 "concepts_used": list(concepts_used),
                 "method": "entanglement_synthesis"
             }
@@ -1222,91 +1295,58 @@ async def generate_dream(num_sentences: int = 3):
 
 
 # ============================================================================
-# CLOUD STORAGE ENDPOINTS (via CloudProviderRegistry — Rclone + Local)
+# CLOUD STORAGE ENDPOINTS
 # ============================================================================
 
 @router.get("/cloud/status")
-async def cloud_status_endpoint():
-    """Check cloud storage status (all providers)"""
+async def cloud_status():
+    """Check cloud storage status via CloudBrain"""
     try:
-        from cloud_provider import get_cloud_registry
-        registry = get_cloud_registry()
-        return registry.status()
+        from cloud_brain import CloudBrain
+        cb = CloudBrain()
+        return {"available": cb.available, "webdav": cb._webdav_active}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/cloud/save")
-async def cloud_save_endpoint():
-    """Save current AI state to cloud (Rclone Google Drive + Local)"""
+async def cloud_save():
+    """Push brain state to cloud via CloudBrain (rclone)"""
     try:
-        from cloud_provider import get_cloud_registry
-        from datetime import datetime, timezone
-        registry = get_cloud_registry()
-
-        # Get metrics and stage
-        metrics = await state.cognitive_core.growth_tracker.calculate_metrics()
-        stage_info = await state.cognitive_core.growth_tracker.get_current_stage()
-
-        # Get concepts (up to 2000)
-        concepts_cursor = state.db.semantic_memory.find(
-            {}, {"concept": 1, "definition": 1, "relationships": 1, "_id": 0}
-        ).limit(2000)
-        concepts_list = await concepts_cursor.to_list(2000)
-        concepts = {}
-        for c in concepts_list:
-            name = c.get("concept")
-            if name:
-                concepts[name] = {k: v for k, v in c.items() if k != "concept"}
-
-        state_data = {
-            'saved_at': datetime.now(timezone.utc).isoformat(),
-            'growth': {**metrics, **stage_info},
-            'concepts': concepts,
-            'session_state': {"total_interactions": metrics.get("total_interactions", 0)},
-        }
-
-        success = registry.save('QuantumMCAGI/state', state_data)
+        from cloud_brain import CloudBrain
+        cb = CloudBrain()
+        success = cb.push_all(quiet=True)
         if success:
-            return {"status": "saved", "concepts": len(concepts), "providers": registry.status()['provider_names']}
+            return {"status": "saved", "message": "State pushed to cloud"}
         else:
-            raise HTTPException(status_code=500, detail="Cloud save failed (all providers)")
+            raise HTTPException(status_code=500, detail="Cloud save failed — check rclone config")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/cloud/load")
-async def cloud_load_endpoint():
-    """Load AI state from cloud (preview)"""
+async def cloud_load():
+    """Pull brain state from cloud via CloudBrain (rclone)"""
     try:
-        from cloud_provider import get_cloud_registry
-        registry = get_cloud_registry()
-        data = registry.load('QuantumMCAGI/state')
-        if not data:
-            raise HTTPException(status_code=404, detail="No data found in cloud")
-        return {"status": "retrieved", "data": data}
+        from cloud_brain import CloudBrain
+        cb = CloudBrain()
+        success = cb.pull_all()
+        if success:
+            return {"status": "loaded", "message": "Brain pulled from cloud"}
+        else:
+            raise HTTPException(status_code=404, detail="Cloud pull failed — check rclone config")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/cloud/restore")
-async def cloud_restore_endpoint():
-    """Restore AI state from cloud (upserts concepts into DB)"""
+async def cloud_restore():
+    """Pull and restore brain state from cloud via CloudBrain"""
     try:
-        from cloud_provider import get_cloud_registry
-        registry = get_cloud_registry()
-        data = registry.load('QuantumMCAGI/state')
-        if not data:
-            raise HTTPException(status_code=404, detail="No data in cloud")
-        if isinstance(data, str):
-            data = json.loads(data)
-        concepts = data.get("concepts", {})
-        for name, attrs in concepts.items():
-            doc = {"concept": name}
-            doc.update(attrs)
-            await state.db.semantic_memory.update_one(
-                {"concept": name},
-                {"$set": doc},
-                upsert=True
-            )
-        return {"status": "restored", "concepts_restored": len(concepts)}
+        from cloud_brain import CloudBrain
+        cb = CloudBrain()
+        success = cb.pull_all()
+        if success:
+            return {"status": "restored", "message": "Brain restored from cloud"}
+        else:
+            raise HTTPException(status_code=404, detail="Cloud restore failed — check rclone config")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1370,10 +1410,7 @@ async def research_history(limit: int = 20):
 
 @router.get("/dev/context")
 async def get_dev_context():
-    """
-    Generate current project context as markdown — ready to paste into Claude.
-    Reads PROJECT_CONTEXT.md and appends live metrics from the database.
-    """
+    """\nGenerate current project context as markdown — ready to paste into Claude.\nReads PROJECT_CONTEXT.md and appends live metrics from the database.\n"""
     try:
         import pathlib
         
@@ -1385,9 +1422,12 @@ async def get_dev_context():
         
         # Append live metrics if database is available
         live_section = []
-        live_section.append("\n\n---\n")
+        live_section.append("\n---\n")
+
         live_section.append("## 📊 Live Metrics Snapshot\n")
+
         live_section.append(f"*Generated: {datetime.now(timezone.utc).isoformat()}*\n")
+
         
         try:
             total_concepts = await state.db.semantic_memory.count_documents({})
@@ -1411,6 +1451,7 @@ async def get_dev_context():
         live_section.append("")
         
         exported_text = static_context + "\n".join(live_section)
+
         
         return {
             "format": "markdown",
@@ -1422,10 +1463,7 @@ async def get_dev_context():
 
 @router.get("/dev/changelog")
 async def get_dev_changelog():
-    """
-    Return the development changelog section from PROJECT_CONTEXT.md.
-    Useful for quickly checking what changed recently.
-    """
+    """\nReturn the development changelog section from PROJECT_CONTEXT.md.\nUseful for quickly checking what changed recently.\n"""
     try:
         import pathlib
         
@@ -1442,6 +1480,7 @@ async def get_dev_changelog():
         
         # Find the next ## heading after the changelog
         next_section = content.find("\n## ", changelog_start + 1)
+
         if next_section == -1:
             changelog = content[changelog_start:]
         else:

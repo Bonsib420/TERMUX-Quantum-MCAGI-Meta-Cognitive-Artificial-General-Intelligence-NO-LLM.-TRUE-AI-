@@ -27,11 +27,11 @@ load_dotenv(ROOT_DIR / '.env')
 class SimpleLocalDB:
     """
     Simple file-based database that mimics MongoDB's async interface.
-    Uses JSON files stored in ~/.quantum-mcagi-backend/.
+    Uses JSON files stored in ~/.quantum-mcagi/.
     """
     
     def __init__(self, data_dir=None):
-        self.data_dir = Path(data_dir or os.path.expanduser("~/.quantum-mcagi-backend"))
+        self.data_dir = Path(data_dir or os.path.expanduser("~/.quantum-mcagi"))
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._collections = {}
     

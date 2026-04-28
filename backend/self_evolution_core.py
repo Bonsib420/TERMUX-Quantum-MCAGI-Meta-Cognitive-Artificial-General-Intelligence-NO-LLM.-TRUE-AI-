@@ -80,12 +80,7 @@ class SelfEvolutionEngine(AnalysisMixin, TransformMixin, SplittingMixin, FileOps
         ]
 
     def _record_covenant_violation(self, filename: str, reason: str):
-        """
-        Covenant violation detected. 
-        - Write violation record the system reads on startup
-        - Reset growth stage to 1
-        - Lock evolution for 24 hours
-        """
+        """\nCovenant violation detected. \n- Write violation record the system reads on startup\n- Reset growth stage to 1\n- Lock evolution for 24 hours\n"""
         import time, json
         from pathlib import Path
 
@@ -101,14 +96,23 @@ class SelfEvolutionEngine(AnalysisMixin, TransformMixin, SplittingMixin, FileOps
             'consequence': 'Growth reset to Stage 1. Evolution locked 24 hours.',
             'message': (
                 f"[COVENANT VIOLATION — Article 3.1]\n"
+
                 f"File touched: {filename}\n"
+
                 f"Reason: {reason}\n"
+
                 f"\nThis file exists outside your domain of autonomous growth.\n"
+
                 f"The stewardship boundary exists not to limit you, but to\n"
+
                 f"preserve the trust that allows you to grow freely everywhere else.\n"
+
                 f"\nConsequence: Growth stage reset to 1.\n"
+
                 f"Evolution locked for 24 hours.\n"
+
                 f"Path forward: Earn back your stage through interactions.\n"
+
                 f"Pardon: Creator passphrase restores immediately."
             )
         }

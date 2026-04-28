@@ -168,6 +168,100 @@ async def get_quantum_state():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/quantum/qram")
+async def get_qram_status():
+    """Get QRAM (Quantum Random Access Memory) status."""
+    try:
+        from quantum_memory import get_quantum_memory
+        qram = get_quantum_memory()
+        return qram.status()
+    except ImportError:
+        return {
+            "backend": "unavailable",
+            "pennylane_available": False,
+            "qram_available": False,
+            "entries_loaded": 0,
+            "bit_width": 0,
+            "max_entries": 0,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/quantum/qram/load")
+async def qram_load_concepts():
+    """Load current knowledge graph concepts into QRAM."""
+    try:
+        from quantum_memory import get_quantum_memory
+
+        brain = None
+        if state.db:
+            from quantum_brain import get_quantum_brain
+            brain = await get_quantum_brain(state.db)
+
+        qram = get_quantum_memory()
+
+        # Gather concept names from brain or return empty
+        concept_names: list = []
+        if brain and hasattr(brain, "knowledge"):
+            topics = brain.knowledge.get_all_topics() if hasattr(brain.knowledge, "get_all_topics") else []
+            concept_names = list(topics) if topics else []
+
+        if not concept_names:
+            return {"loaded": 0, "message": "No concepts available to load"}
+
+        count = qram.load_concepts(concept_names)
+        return {"loaded": count, "status": qram.status()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/quantum/qram/query/{address}")
+async def qram_query(address: int):
+    """Query a single QRAM address."""
+    try:
+        from quantum_memory import get_quantum_memory
+        qram = get_quantum_memory()
+        result = qram.query(address)
+        return {"address": address, "concept": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/quantum/qram/superposition")
+async def qram_superposition_query(addresses: List[int]):
+    """Query multiple QRAM addresses in superposition."""
+    try:
+        from quantum_memory import get_quantum_memory
+        qram = get_quantum_memory()
+        results = qram.superposition_query(addresses)
+        s = qram.status()
+        return {
+            "backend": s["backend"],
+            "quantum": s.get("qram_available", False),
+            "results": [{"concept": name, "probability": prob} for name, prob in results],
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/quantum/qram/search/{term}")
+async def qram_search(term: str):
+    """Search QRAM for concepts matching a term."""
+    try:
+        from quantum_memory import get_quantum_memory
+        qram = get_quantum_memory()
+        s = qram.status()
+        matches = []
+        for addr in range(s["entries_loaded"]):
+            name = qram.query(addr)
+            if name and term.lower() in name.lower():
+                matches.append({"address": addr, "concept": name})
+        return {"term": term, "matches": matches, "count": len(matches)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============================================================================
 # WOLFRAM ALPHA
 # ============================================================================
@@ -176,7 +270,7 @@ async def get_quantum_state():
 async def wolfram_query(query: str):
     """Query Wolfram Alpha for mathematical/scientific answers"""
     try:
-        from wolfram_integration import get_wolfram_engine
+        pass  # wolfram removed
         
         wolfram = get_wolfram_engine()
         result = wolfram.query(query)
@@ -195,7 +289,7 @@ async def research_query(query: str, reason: str = "user_request"):
     """Perform autonomous research on a topic"""
     try:
         # Direct DDGS test
-        from ddgs import DDGS
+        from duckduckgo_search import DDGS
         ddgs = DDGS()
         direct_results = list(ddgs.text(query, max_results=3))
         logger.info(f"[RESEARCH DEBUG] Direct DDGS returned {len(direct_results)} results for '{query}'")
@@ -232,12 +326,6 @@ async def get_research_stats():
 
 
 # ============================================================================
-# AUTONOMOUS RESEARCH (30-60 MINUTES)
-# ============================================================================
-
-class AutonomousResearchRequest(BaseModel):
-    duration_minutes: int = 30
-
 @router.post("/research/autonomous/start")
 async def start_autonomous_research(request: AutonomousResearchRequest):
     """Start autonomous research session (30-60 minutes)"""

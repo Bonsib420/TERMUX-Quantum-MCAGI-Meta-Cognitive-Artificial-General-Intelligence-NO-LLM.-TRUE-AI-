@@ -111,9 +111,6 @@ class ChatStore:
         self._save_to_file()
 
     def _save_to_file(self):
-        pass
-
-    def _save_to_file(self):
         """Save to pickle file"""
         data = {conv.id: conv.to_dict() for conv in self.conversations.values()}
         with open(CHAT_HISTORY_FILE, 'wb') as f:

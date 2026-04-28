@@ -74,6 +74,7 @@ async def startup_event():
     except Exception as e:
         import traceback
         logger.error(f"Startup failed: {e}\n{traceback.format_exc()}")
+
         raise
 
 

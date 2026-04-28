@@ -1,8 +1,4 @@
-"""
-🧬 Self-Evolution Engine — Splitting Module
-============================================
-Operations for splitting long functions, files, and classes.
-"""
+"""\n🧬 Self-Evolution Engine — Splitting Module\n============================================\nOperations for splitting long functions, files, and classes.\n"""
 
 import ast
 import re
@@ -13,10 +9,7 @@ class SplittingMixin:
     """Mixin providing code splitting operations."""
 
     def _split_long_function(self, code: str, target: str) -> Tuple[str, Optional[str]]:
-        """Split a long function by extracting blocks into helpers.
-        For __init__: extracts data blocks into _init_<n>() methods.
-        For other methods: extracts logical blocks into _<n>_<section>() helpers.
-        """
+        """Split a long function by extracting blocks into helpers.\nFor __init__: extracts data blocks into _init_<n>() methods.\nFor other methods: extracts logical blocks into _<n>_<section>() helpers.\n"""
         parts = target.replace('method ', '').split('.')
         if len(parts) != 2:
             return code, None
@@ -36,6 +29,7 @@ class SplittingMixin:
             return code, None
 
         lines = code.split('\n')
+
         func_start = target_node.lineno - 1
         func_end = target_node.end_lineno
 
@@ -141,6 +135,7 @@ class SplittingMixin:
         new_lines.extend(lines[func_end:])
 
         new_code = '\n'.join(new_lines)
+
         try:
             ast.parse(new_code)
         except SyntaxError:
@@ -189,7 +184,9 @@ class SplittingMixin:
         helper_name = f'_{method_name}_continued'
 
         kept_code = '\n'.join(line for b in keep_blocks for line in b)
+
         extracted_code = '\n'.join(line for b in extract_blocks for line in b)
+
 
         passed_vars = self._detect_passed_variables(
             kept_code, extracted_code, def_lines
@@ -224,6 +221,7 @@ class SplittingMixin:
         new_lines.extend(lines[func_end:])
 
         new_code = '\n'.join(new_lines)
+
         try:
             ast.parse(new_code)
         except SyntaxError:
@@ -280,6 +278,7 @@ class SplittingMixin:
         """Detect local variables from kept code that are used in extracted code."""
         assigned_vars = set()
         for line in kept_code.split('\n'):
+
             stripped = line.strip()
             m = re.match(r'^([a-zA-Z_]\w*)\s*=\s', stripped)
             if m and not stripped.startswith('self.'):
@@ -312,6 +311,7 @@ class SplittingMixin:
 
         # Add inline imports used in extracted blocks
         extracted_text = '\n'.join(l for b in extract_blocks for l in b)
+
         for block in keep_blocks:
             for line in block:
                 stripped = line.strip()

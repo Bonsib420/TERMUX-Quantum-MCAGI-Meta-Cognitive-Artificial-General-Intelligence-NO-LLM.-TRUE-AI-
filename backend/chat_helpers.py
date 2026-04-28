@@ -1,8 +1,4 @@
-"""
-🔮 Chat Command Helpers
-========================
-Helper functions for chat commands: memory, research, book analysis, etc.
-"""
+"""\n🔮 Chat Command Helpers\n========================\nHelper functions for chat commands: memory, research, book analysis, etc.\n"""
 
 import os
 import logging
@@ -47,12 +43,7 @@ async def get_memory_summary(session_id: str) -> str:
         progress_display = ""
         if stage.get("next_stage"):
             progress = stage.get("progress_to_next", {})
-            progress_display = f"""
-**Progress to {stage['next_stage']}:**
-• Connections: {'█' * (progress.get('connections', 0) // 10)}{'░' * (10 - progress.get('connections', 0) // 10)} {progress.get('connections', 0)}%
-• Concepts: {'█' * (progress.get('concepts', 0) // 10)}{'░' * (10 - progress.get('concepts', 0) // 10)} {progress.get('concepts', 0)}%
-• Avg Degree: {'█' * (progress.get('avg_degree', 0) // 10)}{'░' * (10 - progress.get('avg_degree', 0) // 10)} {progress.get('avg_degree', 0)}%
-• Diameter: {'█' * (progress.get('diameter', 0) // 10)}{'░' * (10 - progress.get('diameter', 0) // 10)} {progress.get('diameter', 0)}%"""
+            progress_display = f"""\n**Progress to {stage['next_stage']}:**\n• Connections: {'█' * (progress.get('connections', 0) // 10)}{'░' * (10 - progress.get('connections', 0) // 10)} {progress.get('connections', 0)}%\n• Concepts: {'█' * (progress.get('concepts', 0) // 10)}{'░' * (10 - progress.get('concepts', 0) // 10)} {progress.get('concepts', 0)}%\n• Avg Degree: {'█' * (progress.get('avg_degree', 0) // 10)}{'░' * (10 - progress.get('avg_degree', 0) // 10)} {progress.get('avg_degree', 0)}%\n• Diameter: {'█' * (progress.get('diameter', 0) // 10)}{'░' * (10 - progress.get('diameter', 0) // 10)} {progress.get('diameter', 0)}%"""
 
         # Build response
         response = f"""🧠 **QUANTUM AI MEMORY STATUS**
@@ -102,12 +93,14 @@ async def do_deep_research(topic: str) -> str:
             for r in search_results.get("results", [])[:3]:
                 title = r.get("title", "")[:60]
                 snippet = r.get("snippet", "")[:150]
-                results.append(f"• **{title}**\n  {snippet}")
+                results.append(f"• **{title}**\n{snippet}")
+
         
         # 2. Check semantic memory for related concepts
         related = await state.cognitive_core.semantic_memory.recall_concept(topic)
         if related:
             results.append(f"\n**📚 From Memory:**\n• {related.get('definition', 'Previously encountered concept')[:200]}")
+
         
         # 3. Dictionary lookup
         try:
@@ -118,6 +111,7 @@ async def do_deep_research(topic: str) -> str:
                 definition = dict_result.get("data", {}).get("primary_definition", "")
                 if definition:
                     results.append(f"\n**📖 Definition:**\n• {definition[:200]}")
+
         except Exception:
             pass
         
@@ -129,10 +123,13 @@ async def do_deep_research(topic: str) -> str:
         
         # Build response
         if results:
-            response = f"🔍 **DEEP RESEARCH: {topic.upper()}**\n\n" + "\n\n".join(results)
-            response += "\n\n_This knowledge has been added to my memory._"
+            response = f"🔍 **DEEP RESEARCH: {topic.upper()}**\n" + "\n".join(results)
+
+            response += "\n_This knowledge has been added to my memory._"
+
         else:
-            response = f"🔍 **Research on '{topic}'**\n\nI couldn't find substantial information on this topic. Would you like to tell me more about it?"
+            response = f"🔍 **Research on '{topic}'**\nI couldn't find substantial information on this topic. Would you like to tell me more about it?"
+
         
         return response
         
@@ -167,7 +164,8 @@ async def analyze_book_characters():
         text, filename = await get_most_recent_document_text()
         if not text:
             return "📚 No document found. Please upload a book first."
-        return f"📚 **CHARACTERS IN {filename.upper()}**\n\nNative character extraction not yet implemented. Use /analyze for general text analysis."
+        return f"📚 **CHARACTERS IN {filename.upper()}**\nNative character extraction not yet implemented. Use /analyze for general text analysis."
+
     except Exception as e:
         return f"📚 Character analysis error: {str(e)}"
 
@@ -178,7 +176,8 @@ async def analyze_book_timeline():
         text, filename = await get_most_recent_document_text()
         if not text:
             return "📅 No document found. Please upload a book first."
-        return f"📅 **TIMELINE: {filename.upper()}**\n\nNative timeline extraction not yet implemented. Use /analyze for general text analysis."
+        return f"📅 **TIMELINE: {filename.upper()}**\nNative timeline extraction not yet implemented. Use /analyze for general text analysis."
+
     except Exception as e:
         return f"📅 Timeline analysis error: {str(e)}"
 
@@ -189,7 +188,8 @@ async def analyze_book_worldbuilding():
         text, filename = await get_most_recent_document_text()
         if not text:
             return "🌍 No document found. Please upload a book first."
-        return f"🌍 **WORLDBUILDING: {filename.upper()}**\n\nNative worldbuilding extraction not yet implemented. Use /analyze for general text analysis."
+        return f"🌍 **WORLDBUILDING: {filename.upper()}**\nNative worldbuilding extraction not yet implemented. Use /analyze for general text analysis."
+
     except Exception as e:
         return f"🌍 Worldbuilding analysis error: {str(e)}"
 
@@ -200,7 +200,8 @@ async def analyze_book_feedback():
         text, filename = await get_most_recent_document_text()
         if not text:
             return "✍️ No document found. Please upload a book first."
-        return f"✍️ **WRITING FEEDBACK: {filename.upper()}**\n\nNative writing feedback not yet implemented. Use /analyze for general text analysis."
+        return f"✍️ **WRITING FEEDBACK: {filename.upper()}**\nNative writing feedback not yet implemented. Use /analyze for general text analysis."
+
     except Exception as e:
         return f"✍️ Feedback error: {str(e)}"
 
@@ -212,7 +213,8 @@ async def process_shared_link(url: str) -> str:
         link_type = state.shared_link.detect_link_type(url)
         
         if link_type == 'unknown':
-            return "🔗 **Unknown Link Type**\n\nSupported services:\n• Google Drive\n• Dropbox\n• OneDrive\n• Direct file URLs (http/https)"
+            return "🔗 **Unknown Link Type**\nSupported services:\n• Google Drive\n• Dropbox\n• OneDrive\n• Direct file URLs (http/https)"
+
         
         # Download file
         result = await state.shared_link.download_from_link(url)
@@ -230,7 +232,8 @@ async def process_shared_link(url: str) -> str:
 The file is now available for analysis. Ask me about it or use `!read {filename}` to process it."""
         else:
             error = result.get("message", "Unknown error")
-            return f"🔗 **Download Failed**\n\n{error}\n\nMake sure the link is publicly accessible."
+            return f"🔗 **Download Failed**\n{error}\nMake sure the link is publicly accessible."
+
             
     except Exception as e:
         return f"🔗 Error processing link: {str(e)}"
@@ -243,7 +246,8 @@ async def list_all_documents() -> str:
         upload_dir = "/app/uploads"
         
         if not os.path.exists(upload_dir):
-            return "📁 **No Documents**\n\nUpload files using the Explorer tab or `!link <url>`"
+            return "📁 **No Documents**\nUpload files using the Explorer tab or `!link <url>`"
+
         
         files = []
         for filename in os.listdir(upload_dir):
@@ -266,14 +270,17 @@ async def list_all_documents() -> str:
                 })
         
         if not files:
-            return "📁 **No Documents**\n\nUpload files using the Explorer tab or `!link <url>`"
+            return "📁 **No Documents**\nUpload files using the Explorer tab or `!link <url>`"
+
         
         # Sort by modified date (most recent first)
         files.sort(key=lambda x: x["modified"], reverse=True)
         
-        response = f"📁 **UPLOADED DOCUMENTS** ({len(files)} files)\n\n"
+        response = f"📁 **UPLOADED DOCUMENTS** ({len(files)} files)\n"
+
         for f in files:
-            response += f"{f['icon']} **{f['name']}**\n   {f['size']:.1f} KB • {f['modified']}\n\n"
+            response += f"{f['icon']} **{f['name']}**\n{f['size']:.1f} KB • {f['modified']}\n"
+
         
         response += "_Ask about any document by name, or say 'compare all documents'_"
         return response

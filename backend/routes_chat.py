@@ -10,6 +10,7 @@ from typing import List, Dict, Optional, Any
 import uuid
 import os
 import logging
+import re
 import time
 from datetime import datetime, timezone
 
@@ -97,42 +98,11 @@ async def _handle_command(content: str, explain_mode: bool = False) -> Optional[
             response_text = "State automatically saved to local storage."
         elif cmd in ('/cloud-save', '/cloud-status', '/cloud-load'):
             try:
-                from cloud_provider import get_cloud_registry
-                registry = get_cloud_registry()
-                if cmd == '/cloud-status':
-                    status = registry.status()
-                    lines = [f"Cloud providers ({status['total_providers']}):"]
-                    for p in status.get('providers', []):
-                        connected = '✓' if p.get('connected') else '✗'
-                        lines.append(f"  {connected} {p.get('provider', '?')}")
-                    response_text = "\n".join(lines)
-                else:
-                    response_text = f"Cloud command '{cmd}' is available in local chat mode (chat.py). Use API endpoints /cloud/save or /cloud/load for server mode."
+                pass  # wolfram removed
+                # But these functions expect LocalMemory object; server uses different storage.
+                response_text = f"Wolfram Cloud command '{cmd}' is only available in local chat mode (chat.py)."
             except ImportError:
-                response_text = "Cloud provider module not available."
-        elif cmd in ('/rclone-setup', '/rclone-status'):
-            try:
-                from rclone_provider import rclone_check, rclone_list, _rclone_available
-                if not _rclone_available():
-                    response_text = "rclone not installed. Install: pkg install rclone"
-                elif cmd == '/rclone-setup':
-                    check = rclone_check()
-                    lines = [
-                        f"rclone installed: {'✓' if check['rclone_installed'] else '✗'}",
-                        f"Remote '{check['remote_name']}' configured: {'✓' if check['remote_configured'] else '✗'}",
-                        f"Connection test: {'✓ OK' if check['test_ok'] else '✗ FAILED'}",
-                    ]
-                    if check.get('error'):
-                        lines.append(f"Error: {check['error']}")
-                    response_text = "\n".join(lines)
-                else:
-                    objects = rclone_list('QuantumMCAGI/')
-                    if objects:
-                        response_text = f"Found {len(objects)} object(s):\n" + "\n".join(f"  {o}" for o in objects[:20])
-                    else:
-                        response_text = "No objects found on Google Drive."
-            except ImportError:
-                response_text = "rclone_provider module not available."
+                response_text = "Wolfram Cloud not available."
         elif cmd == '/knowledge' and args:
             topic = ' '.join(args)
             try:
@@ -193,8 +163,40 @@ async def _handle_command(content: str, explain_mode: bool = False) -> Optional[
                         explanation = result.get("explanation")
                 except Exception as e:
                     response_text = f"Research error: {e}"
+        elif cmd == '/cistercian-math':
+            if not args:
+                response_text = "Usage: /cistercian-math <expression>\nExample: /cistercian-math 42 + 73\nSupported: + - * /  (numbers 0-9999)"
+            else:
+                expr = ' '.join(args)
+                match = re.match(r'^\s*(\d+)\s*([+\-*/])\s*(\d+)\s*$', expr)
+                if not match:
+                    response_text = "Invalid expression. Use: NUMBER OP NUMBER\nExample: /cistercian-math 42 + 73"
+                else:
+                    a_val = int(match.group(1))
+                    op = match.group(2)
+                    b_val = int(match.group(3))
+                    if not (0 <= a_val <= 9999) or not (0 <= b_val <= 9999):
+                        response_text = "Numbers must be 0-9999 (Cistercian range)"
+                    elif op == '/' and b_val == 0:
+                        response_text = "Division by zero"
+                    else:
+                        if op == '+': result_val = a_val + b_val
+                        elif op == '-': result_val = a_val - b_val
+                        elif op == '*': result_val = a_val * b_val
+                        else: result_val = int(a_val / b_val)
+                        clamped = max(0, min(9999, result_val))
+                        overflow = " (clamped to Cistercian range)" if result_val != clamped else ""
+                        response_text = (
+                            f"🖋️ Cistercian Math:\n"
+                            f"  𝕮({a_val}) {op} 𝕮({b_val}) = 𝕮({clamped}){overflow}\n"
+                            f"  Arabic: {a_val} {op} {b_val} = {result_val}\n\n"
+                            f"View the Cistercian numerals at:\n"
+                            f"  /api/cistercian/numeral?number={a_val}\n"
+                            f"  /api/cistercian/numeral?number={b_val}\n"
+                            f"  /api/cistercian/numeral?number={clamped}"
+                        )
         else:
-            response_text = f"Unknown command: {cmd}. Supported: /explain, /status, /save, /cloud-save, /cloud-status, /cloud-load, /knowledge <topic>, /analyze <text>, /personality, /research <topic> -<depth>"
+            response_text = f"Unknown command: {cmd}. Supported: /explain, /status, /save, /cloud-save, /cloud-status, /cloud-load, /knowledge <topic>, /analyze <text>, /personality, /research <topic> -<depth>, /cistercian-math <expr>"
         
         if explain_mode:
             explanation = _build_command_explanation(cmd, response_text)
@@ -538,7 +540,7 @@ async def quantum_chat(message: ChatMessage):
             # --- Slash commands (compatible with chat.py) ---
             elif command["command"] == "cloud_save":
                 try:
-                    from wolfram_cloud import cloud_save
+                    pass  # wolfram removed
                     # cloud_save expects LocalMemory, not available here
                     response = "Wolfram Cloud save is only available in local chat mode (run `python chat.py`)."
                 except ImportError:
@@ -553,7 +555,7 @@ async def quantum_chat(message: ChatMessage):
             
             elif command["command"] == "cloud_status":
                 try:
-                    from wolfram_cloud import cloud_status
+                    pass  # wolfram removed
                     status = cloud_status()
                     response = f"Wolfram Cloud status: {status}"
                 except ImportError:
@@ -568,7 +570,7 @@ async def quantum_chat(message: ChatMessage):
             
             elif command["command"] == "cloud_load":
                 try:
-                    from wolfram_cloud import cloud_load
+                    pass  # wolfram removed
                     data = cloud_load()
                     response = f"Cloud data loaded: {data}" if data else "No data in cloud."
                 except ImportError:
@@ -755,6 +757,81 @@ async def quantum_chat(message: ChatMessage):
 
         # Get conversation history for context from local file storage
         history = await get_conversation_history(session_id, limit=10)
+        
+        # ============================================================
+        # MATH DETECTION — intercept arithmetic before Markov chain
+        # Detects patterns like "50 - 20", "50-20=", "what is 42+73"
+        # Computes actual answer and shows Cistercian numeral SVGs
+        # ============================================================
+        content_stripped = message.content.strip()[:60]  # limit length to prevent ReDoS
+        math_match = re.match(
+            r'(?:what is |calculate |compute |solve )?'   # optional prefix (no \s+)
+            r'(\d{1,5}) ?([+\-*/×÷]) ?(\d{1,5})'        # NUMBER OP NUMBER (max 1 space)
+            r' ?[=?]?$',                                   # optional trailing = or ?
+            content_stripped, re.IGNORECASE
+        )
+        if math_match:
+            a_val = int(math_match.group(1))
+            op_raw = math_match.group(2)
+            b_val = int(math_match.group(3))
+            # Normalize operator
+            op = {'+': '+', '-': '-', '*': '*', '/': '/', '×': '*', '÷': '/'}.get(op_raw)
+            if not op:
+                op = op_raw  # fallback
+            op_display = {'+': '+', '-': '−', '*': '×', '/': '÷'}.get(op, op)
+            
+            # Compute
+            error = None
+            result_val = 0
+            if op == '/' and b_val == 0:
+                error = "Division by zero is undefined."
+            else:
+                if op == '+': result_val = a_val + b_val
+                elif op == '-': result_val = a_val - b_val
+                elif op == '*': result_val = a_val * b_val
+                elif op == '/': result_val = a_val // b_val
+            
+            if error:
+                return ChatResponse(
+                    questions=[], response=f"🧮 {error}",
+                    understanding={"type": "math", "error": True},
+                    concepts=["arithmetic"], session_id=session_id
+                )
+            
+            # Build response with Cistercian context
+            cistercian_range = (0 <= a_val <= 9999 and 0 <= b_val <= 9999)
+            clamped = max(0, min(9999, result_val))
+            overflow_note = ""
+            if cistercian_range and result_val != clamped:
+                overflow_note = f"\n  ⚠️ Result clamped to Cistercian range (0-9999)"
+            
+            lines = [
+                f"🧮 {a_val} {op_display} {b_val} = {result_val}",
+            ]
+            
+            if cistercian_range:
+                lines.append(f"")
+                lines.append(f"🖋️ In Cistercian numerals:")
+                lines.append(f"  𝕮({a_val}) {op_display} 𝕮({b_val}) = 𝕮({clamped}){overflow_note}")
+                lines.append(f"")
+                lines.append(f"View the glyphs:")
+                lines.append(f"  /api/cistercian/numeral?number={a_val}")
+                lines.append(f"  /api/cistercian/numeral?number={b_val}")
+                lines.append(f"  /api/cistercian/numeral?number={clamped}")
+            elif result_val > 9999 or a_val > 9999 or b_val > 9999:
+                lines.append(f"\n  (Numbers beyond 9999 exceed Cistercian range)")
+            
+            # Store in history
+            await store_chat_message(session_id, "user", message.content)
+            await store_chat_message(session_id, "assistant", "\n".join(lines))
+            
+            return ChatResponse(
+                questions=[],
+                response="\n".join(lines),
+                understanding={"type": "math", "expression": f"{a_val} {op} {b_val}", "result": result_val},
+                concepts=["arithmetic", "cistercian_numerals"] if cistercian_range else ["arithmetic"],
+                session_id=session_id
+            )
         
         # DEBUG: log structured_response
         logger.info(f"DEBUG: structured_response from message: {message.structured_response[:50] if message.structured_response else 'None'}")

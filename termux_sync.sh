@@ -1,6 +1,6 @@
 #!/data/data/com.termux/files/usr/bin/bash
 # ============================================================================
-# 🔮 QUANTUM MCAGI -- TERMUX -> GITHUB SYNC
+# 🔮 QUANTUM MCAGI V⁰² -- TERMUX -> GITHUB SYNC
 # ============================================================================
 # Push ALL local state (code + brain data) to GitHub in one command.
 # Brain data from ~/.quantum-mcagi/ is bundled into brain-data/ and committed
@@ -46,7 +46,7 @@ BOLD='\033[1m'
 
 # Config
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEFAULT_INSTALL_DIR="$HOME/Quantum_MCAGI_NO_LLM"
+DEFAULT_INSTALL_DIR="$HOME/Quantum_MCAGI_NO_LLM_V⁰²"
 if [ -n "${MCAGI_INSTALL_DIR:-}" ]; then
     INSTALL_DIR="$MCAGI_INSTALL_DIR"
 elif [ -d "$SCRIPT_DIR/.git" ] && [ -d "$SCRIPT_DIR/backend" ]; then

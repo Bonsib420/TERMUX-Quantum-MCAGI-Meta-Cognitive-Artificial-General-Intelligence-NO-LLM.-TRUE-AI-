@@ -529,14 +529,6 @@ FULL_CORPUS = {
     "astrophysics": ASTROPHYSICS_CORPUS
 }
 
-def get_all_corpus_text() -> str:
-    """Get all corpus text combined."""
-    return "\n\n".join(FULL_CORPUS.values())
-
-def get_domain_corpus(domain: str) -> str:
-    """Get corpus for specific domain."""
-    return FULL_CORPUS.get(domain, "")
-
 def _clean_text(text: str) -> str:
     """Remove terminal commands, pip output, code syntax, and other noise from text."""
     import re

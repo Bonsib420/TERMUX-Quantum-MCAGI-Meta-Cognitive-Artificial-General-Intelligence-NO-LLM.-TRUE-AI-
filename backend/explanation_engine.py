@@ -40,6 +40,7 @@ def explain_concepts(engine, user_input):
     return "\n".join(lines)
 
 
+
 def explain_orch_or(engine):
     """Show Orch OR quantum state and collapse patterns."""
     lines = []
@@ -71,6 +72,7 @@ def explain_orch_or(engine):
         lines.append("    (Orch OR not loaded — using probabilistic selection)")
     
     return "\n".join(lines)
+
 
 
 def explain_tone(tone_result):
@@ -105,6 +107,7 @@ def explain_tone(tone_result):
     return "\n".join(lines)
 
 
+
 def explain_bloom(questions, growth_stage):
     """Show Bloom's taxonomy question generation."""
     lines = []
@@ -125,6 +128,7 @@ def explain_bloom(questions, growth_stage):
             lines.append(f"    {q}")
     
     return "\n".join(lines)
+
 
 
 def explain_markov(engine, user_input):
@@ -152,6 +156,7 @@ def explain_markov(engine, user_input):
         lines.append(f"    Unknown words: {', '.join(unknown[:10])}")
     
     return "\n".join(lines)
+
 
 
 def explain_generator(tone_result, has_hybrid):
@@ -183,6 +188,7 @@ def explain_generator(tone_result, has_hybrid):
     return "\n".join(lines)
 
 
+
 def explain_understanding(understanding, concepts, memory_concepts):
     """Show understanding formation."""
     lines = []
@@ -209,6 +215,7 @@ def explain_understanding(understanding, concepts, memory_concepts):
     return "\n".join(lines)
 
 
+
 def explain_flavor(has_quotes, has_personality):
     """Show personality and flavor layer."""
     lines = []
@@ -220,13 +227,11 @@ def explain_flavor(has_quotes, has_personality):
     return "\n".join(lines)
 
 
+
 def full_explanation(engine, user_input, concepts, questions, tone_result,
                      understanding, growth_stage, elapsed, memory_concepts,
                      has_hybrid=False, has_quotes=False, has_personality=False):
-    """
-    Generate complete explanation of the response pipeline.
-    Call this instead of the simple verbose debug output.
-    """
+    """\nGenerate complete explanation of the response pipeline.\nCall this instead of the simple verbose debug output.\n"""
     sections = []
     
     sections.append("")
@@ -255,4 +260,5 @@ def full_explanation(engine, user_input, concepts, questions, tone_result,
     sections.append("")
     
     return "\n".join(sections)
+
 
