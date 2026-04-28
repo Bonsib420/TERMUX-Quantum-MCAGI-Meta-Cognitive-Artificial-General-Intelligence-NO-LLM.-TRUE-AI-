@@ -1,150 +1,164 @@
 """
-■ COMPREHENSIVE TRAINING CORPUS
+📚 COMPREHENSIVE TRAINING CORPUS
 ================================
 Large corpus for training the Markov chains to generate fluent text.
 Organized by domain with diverse sentence structures.
 """
 
 PHILOSOPHY_CORPUS = """
-Consciousness is the subjective experience of awareness that characterizes sentient beings. The hard problem of consciousness asks why physical brain processes give rise to
-Free will is the ability to make choices that are not determined by prior causes or divine intervention. Compatibilists argue that free will is compatible with determinism
+Consciousness is the subjective experience of awareness that characterizes sentient beings. The hard problem of consciousness asks why physical brain processes give rise to subjective experience at all. Philosophers have debated the nature of mind and its relationship to the body for centuries.
 
-The meaning of life has been contemplated by philosophers throughout human history. Existentialists like Sartre argued that we create our own meaning through our choices an
+Free will is the ability to make choices that are not determined by prior causes or divine intervention. Compatibilists argue that free will is compatible with determinism because we act according to our own desires. Libertarian free will requires genuine indeterminism in our decision-making processes.
 
-Knowledge is traditionally defined as justified true belief, though this definition has been challenged by Gettier cases. Epistemology examines the nature, sources, and lim
+The meaning of life has been contemplated by philosophers throughout human history. Existentialists like Sartre argued that we create our own meaning through our choices and actions. Nihilists deny that life has any inherent meaning, while religious traditions often locate meaning in divine purpose.
 
-Ethics examines how we ought to live and what actions are morally right or wrong. Deontological ethics focuses on duties and rules that must be followed regardless of conse
+Knowledge is traditionally defined as justified true belief, though this definition has been challenged by Gettier cases. Epistemology examines the nature, sources, and limits of human knowledge. Rationalists emphasize reason while empiricists emphasize sensory experience as the foundation of knowledge.
 
-Reality may be fundamentally different from how it appears to our senses and minds. Idealists argue that reality is ultimately mental or spiritual in nature. Materialists c
-Truth is correspondence between our beliefs and the way the world actually is. Coherentist theories define truth as internal consistency among a set of beliefs. Pragmatist
+Ethics examines how we ought to live and what actions are morally right or wrong. Deontological ethics focuses on duties and rules that must be followed regardless of consequences. Consequentialist ethics judges actions solely by their outcomes and effects on well-being.
 
-Personal identity concerns what makes a person the same individual over time. Psychological continuity theories emphasize memory and psychological connections. Biological t
+Reality may be fundamentally different from how it appears to our senses and minds. Idealists argue that reality is ultimately mental or spiritual in nature. Materialists contend that only physical matter truly exists and mental phenomena are reducible to brain states.
 
-Time appears to flow from past through present toward future in our experience. The block universe theory suggests all moments in time exist equally and eternally. Presenti
+Truth is correspondence between our beliefs and the way the world actually is. Coherentist theories define truth as internal consistency among a set of beliefs. Pragmatist theories define truth in terms of practical usefulness and successful prediction.
 
-Beauty and aesthetic value have been subjects of philosophical inquiry since ancient times. Subjective theories hold that beauty exists only in the perception of the behold
+Personal identity concerns what makes a person the same individual over time. Psychological continuity theories emphasize memory and psychological connections. Biological theories focus on bodily continuity as the basis of personal identity.
+
+Time appears to flow from past through present toward future in our experience. The block universe theory suggests all moments in time exist equally and eternally. Presentism holds that only the present moment truly exists while past and future do not.
+
+Beauty and aesthetic value have been subjects of philosophical inquiry since ancient times. Subjective theories hold that beauty exists only in the perception of the beholder. Objective theories argue that beauty is a real property that objects possess independently.
 """
 
 PHYSICS_CORPUS = """
-Quantum mechanics describes the behavior of matter and energy at atomic and subatomic scales. Particles exhibit wave-particle duality, behaving sometimes as particles and s
+Quantum mechanics describes the behavior of matter and energy at atomic and subatomic scales. Particles exhibit wave-particle duality, behaving sometimes as particles and sometimes as waves. The uncertainty principle states that certain pairs of properties cannot both be known precisely.
 
-The wave function describes the quantum state of a particle or system of particles. Wave function collapse occurs when measurement forces a superposition into a definite st
+The wave function describes the quantum state of a particle or system of particles. Wave function collapse occurs when measurement forces a superposition into a definite state. The Copenhagen interpretation says that observation itself causes this collapse to occur.
 
-Entanglement is a quantum phenomenon where particles become correlated in their properties. Measuring one entangled particle instantly affects the state of its partner rega
+Entanglement is a quantum phenomenon where particles become correlated in their properties. Measuring one entangled particle instantly affects the state of its partner regardless of distance. Einstein called this spooky action at a distance but experiments have confirmed its reality.
 
-Special relativity revolutionized our understanding of space and time as unified spacetime. Time dilation means moving clocks run slower relative to stationary observers. L
+Special relativity revolutionized our understanding of space and time as unified spacetime. Time dilation means moving clocks run slower relative to stationary observers. Length contraction means moving objects appear shortened in the direction of motion.
 
-General relativity describes gravity as the curvature of spacetime caused by mass and energy. Massive objects bend spacetime causing other objects to follow curved paths we
+General relativity describes gravity as the curvature of spacetime caused by mass and energy. Massive objects bend spacetime causing other objects to follow curved paths we perceive as gravity. Black holes are regions where spacetime curvature becomes so extreme that nothing can escape.
 
-The Standard Model describes fundamental particles and the forces that govern their interactions. Quarks combine to form protons and neutrons through the strong nuclear for
-Thermodynamics governs the behavior of heat and energy in physical systems. The first law states that energy cannot be created or destroyed only transformed between forms.
+The Standard Model describes fundamental particles and the forces that govern their interactions. Quarks combine to form protons and neutrons through the strong nuclear force. Leptons include electrons and neutrinos which interact through the weak and electromagnetic forces.
 
-Electromagnetic radiation includes light radio waves X-rays and gamma rays. Photons are the quantum particles that carry electromagnetic force between charged particles. Th
+Thermodynamics governs the behavior of heat and energy in physical systems. The first law states that energy cannot be created or destroyed only transformed between forms. The second law states that entropy or disorder tends to increase in closed systems.
 
-Nuclear physics studies the properties and behavior of atomic nuclei. Nuclear fission splits heavy nuclei releasing enormous amounts of energy. Nuclear fusion combines ligh
-Particle accelerators probe the fundamental structure of matter at the smallest scales. The Large Hadron Collider discovered the Higgs boson confirming the origin of mass.
+Electromagnetic radiation includes light radio waves X-rays and gamma rays. Photons are the quantum particles that carry electromagnetic force between charged particles. The electromagnetic spectrum spans wavelengths from kilometers to smaller than atoms.
+
+Nuclear physics studies the properties and behavior of atomic nuclei. Nuclear fission splits heavy nuclei releasing enormous amounts of energy. Nuclear fusion combines light nuclei into heavier ones powering stars including our sun.
+
+Particle accelerators probe the fundamental structure of matter at the smallest scales. The Large Hadron Collider discovered the Higgs boson confirming the origin of mass. High energy collisions create exotic particles that exist only briefly before decaying.
 """
 
 COMPUTER_SCIENCE_CORPUS = """
-Algorithms are precise step-by-step procedures for solving computational problems. Time complexity measures how the running time grows with input size. Space complexity mea
+Algorithms are precise step-by-step procedures for solving computational problems. Time complexity measures how the running time grows with input size. Space complexity measures how much memory an algorithm requires to execute.
 
-Machine learning enables computers to learn patterns from data without explicit programming. Supervised learning uses labeled examples to train predictive models. Unsupervi
+Machine learning enables computers to learn patterns from data without explicit programming. Supervised learning uses labeled examples to train predictive models. Unsupervised learning discovers hidden patterns in unlabeled data.
 
-Neural networks are computing systems inspired by biological brains composed of interconnected nodes. Deep learning uses many layers of neurons to learn hierarchical repres
-Data structures organize information for efficient storage and retrieval operations. Arrays provide constant time access to elements by index position. Trees organize data
+Neural networks are computing systems inspired by biological brains composed of interconnected nodes. Deep learning uses many layers of neurons to learn hierarchical representations. Backpropagation adjusts connection weights to minimize prediction errors.
 
-Programming languages provide abstractions for expressing computational procedures. High level languages like Python emphasize readability and developer productivity. Low l
+Data structures organize information for efficient storage and retrieval operations. Arrays provide constant time access to elements by index position. Trees organize data hierarchically enabling efficient searching and sorting.
 
-Databases store and organize large amounts of structured information for retrieval. Relational databases use tables with rows and columns linked by keys. NoSQL databases pr
-Computer networks connect devices to share resources and communicate information. The internet is a global network of networks using standardized protocols. The world wide
+Programming languages provide abstractions for expressing computational procedures. High level languages like Python emphasize readability and developer productivity. Low level languages like C provide direct control over hardware resources.
 
-Operating systems manage computer hardware and provide services for applications. Process scheduling determines which programs run and for how long. Memory management alloc
+Databases store and organize large amounts of structured information for retrieval. Relational databases use tables with rows and columns linked by keys. NoSQL databases provide flexible schemas for unstructured or semi-structured data.
 
-Cryptography protects information through mathematical transformations and algorithms. Public key encryption uses paired keys for secure communication. Hash functions creat
+Computer networks connect devices to share resources and communicate information. The internet is a global network of networks using standardized protocols. The world wide web provides hypertext documents accessible through browsers.
 
-Artificial intelligence aims to create systems that exhibit intelligent behavior. Natural language processing enables computers to understand human language. Computer visio
+Operating systems manage computer hardware and provide services for applications. Process scheduling determines which programs run and for how long. Memory management allocates and tracks physical and virtual memory resources.
+
+Cryptography protects information through mathematical transformations and algorithms. Public key encryption uses paired keys for secure communication. Hash functions create fixed size fingerprints of arbitrary data.
+
+Artificial intelligence aims to create systems that exhibit intelligent behavior. Natural language processing enables computers to understand human language. Computer vision allows machines to interpret and analyze visual information.
 """
 
 BIOLOGY_CORPUS = """
-Evolution by natural selection explains the diversity of life on Earth. Variation arises through genetic mutation and sexual recombination. Selection favors traits that enh
+Evolution by natural selection explains the diversity of life on Earth. Variation arises through genetic mutation and sexual recombination. Selection favors traits that enhance survival and reproductive success.
 
-DNA carries genetic information encoded in sequences of nucleotide bases. Genes are segments of DNA that code for specific proteins. Transcription copies DNA into RNA which
-Cells are the fundamental units of life capable of independent metabolism and reproduction. Prokaryotic cells lack membrane-bound organelles while eukaryotic cells contain
+DNA carries genetic information encoded in sequences of nucleotide bases. Genes are segments of DNA that code for specific proteins. Transcription copies DNA into RNA which is then translated into proteins.
 
-The brain processes information through networks of billions of interconnected neurons. Synapses transmit signals between neurons using chemical neurotransmitters. Neural p
+Cells are the fundamental units of life capable of independent metabolism and reproduction. Prokaryotic cells lack membrane-bound organelles while eukaryotic cells contain them. Mitochondria generate cellular energy through oxidative phosphorylation.
 
-Ecosystems are communities of organisms interacting with their physical environment. Energy flows through food webs from producers to consumers to decomposers. Nutrient cyc
+The brain processes information through networks of billions of interconnected neurons. Synapses transmit signals between neurons using chemical neurotransmitters. Neural plasticity allows the brain to reorganize connections based on experience.
 
-Proteins are complex molecules that perform most cellular functions. Enzymes catalyze biochemical reactions by lowering activation energy. Structural proteins provide suppo
-Photosynthesis converts light energy into chemical energy stored in glucose. Chloroplasts contain chlorophyll that captures photons from sunlight. Plants release oxygen as
+Ecosystems are communities of organisms interacting with their physical environment. Energy flows through food webs from producers to consumers to decomposers. Nutrient cycles move essential elements through biological and geological processes.
 
-The immune system defends the body against pathogens and disease. Antibodies are proteins that recognize and neutralize foreign substances. T cells coordinate immune respon
+Proteins are complex molecules that perform most cellular functions. Enzymes catalyze biochemical reactions by lowering activation energy. Structural proteins provide support and shape to cells and tissues.
 
-Genetics studies heredity and variation in living organisms. Mendel discovered the basic laws of inheritance through pea plant experiments. Modern genetics explores molecul
-Ecology examines relationships between organisms and their environments. Population dynamics models growth competition and predator prey interactions. Conservation biology
+Photosynthesis converts light energy into chemical energy stored in glucose. Chloroplasts contain chlorophyll that captures photons from sunlight. Plants release oxygen as a byproduct of splitting water molecules.
+
+The immune system defends the body against pathogens and disease. Antibodies are proteins that recognize and neutralize foreign substances. T cells coordinate immune responses and directly attack infected cells.
+
+Genetics studies heredity and variation in living organisms. Mendel discovered the basic laws of inheritance through pea plant experiments. Modern genetics explores molecular mechanisms of gene expression and regulation.
+
+Ecology examines relationships between organisms and their environments. Population dynamics models growth competition and predator prey interactions. Conservation biology applies ecological principles to protect biodiversity.
 """
 
-MATHEMATICS_CORPUS = """
-Mathematics studies abstract structures and their relationships through rigorous proof. Axioms are fundamental assumptions accepted without proof as starting points. Theore
+MATHEMATICS_CORPUS = """
+Mathematics studies abstract structures and their relationships through rigorous proof. Axioms are fundamental assumptions accepted without proof as starting points. Theorems are statements proven true through logical deduction from axioms.
 
-Numbers represent quantities and support arithmetic operations like addition and multiplication. Natural numbers count discrete objects while real numbers include all point
+Numbers represent quantities and support arithmetic operations like addition and multiplication. Natural numbers count discrete objects while real numbers include all points on a line. Complex numbers extend reals with an imaginary unit satisfying i squared equals negative one.
 
-Algebra generalizes arithmetic using symbols to represent unknown or variable quantities. Equations express relationships between quantities that can be solved for unknowns
+Algebra generalizes arithmetic using symbols to represent unknown or variable quantities. Equations express relationships between quantities that can be solved for unknowns. Polynomials are expressions involving variables raised to various powers.
 
-Geometry studies shapes sizes and positions of figures in space. Euclidean geometry is based on five axioms including the parallel postulate. Non-Euclidean geometries arise
+Geometry studies shapes sizes and positions of figures in space. Euclidean geometry is based on five axioms including the parallel postulate. Non-Euclidean geometries arise when the parallel postulate is modified or rejected.
 
-Calculus analyzes continuous change through differentiation and integration. Derivatives measure instantaneous rates of change of functions. Integrals compute accumulated q
+Calculus analyzes continuous change through differentiation and integration. Derivatives measure instantaneous rates of change of functions. Integrals compute accumulated quantities and areas under curves.
 
-Probability quantifies uncertainty using numbers between zero and one. Random variables assign numerical values to outcomes of random experiments. Distributions describe th
+Probability quantifies uncertainty using numbers between zero and one. Random variables assign numerical values to outcomes of random experiments. Distributions describe the probabilities of different values occurring.
 
-Set theory provides foundations for modern mathematics through collections of objects. Operations include union intersection and complement of sets. Cardinality measures th
+Set theory provides foundations for modern mathematics through collections of objects. Operations include union intersection and complement of sets. Cardinality measures the size of sets including infinite sets.
 
-Logic studies valid reasoning and the structure of mathematical arguments. Propositional logic deals with truth values of simple statements. Predicate logic adds quantifier
+Logic studies valid reasoning and the structure of mathematical arguments. Propositional logic deals with truth values of simple statements. Predicate logic adds quantifiers expressing statements about all or some objects.
 
-Topology studies properties preserved under continuous deformations of space. Homeomorphisms are continuous bijections with continuous inverses. Manifolds are spaces that l
+Topology studies properties preserved under continuous deformations of space. Homeomorphisms are continuous bijections with continuous inverses. Manifolds are spaces that locally resemble Euclidean space.
 
-Number theory investigates properties of integers and prime numbers. The fundamental theorem states every integer factors uniquely into primes. Famous unsolved problems inc
+Number theory investigates properties of integers and prime numbers. The fundamental theorem states every integer factors uniquely into primes. Famous unsolved problems include the Riemann hypothesis about prime distribution.
 """
 
 PSYCHOLOGY_CORPUS = """
-Psychology studies mind behavior and mental processes through scientific methods. Cognitive psychology examines perception attention memory and reasoning. Clinical psycholo
+Psychology studies mind behavior and mental processes through scientific methods. Cognitive psychology examines perception attention memory and reasoning. Clinical psychology applies psychological knowledge to treat mental disorders.
 
-Memory encodes stores and retrieves information from past experiences. Working memory holds information temporarily for active manipulation. Long-term memory preserves info
-Learning changes behavior through experience and interaction with the environment. Classical conditioning associates stimuli through repeated pairing. Operant conditioning
+Memory encodes stores and retrieves information from past experiences. Working memory holds information temporarily for active manipulation. Long-term memory preserves information over extended periods of time.
 
-Emotion involves physiological arousal subjective feelings and behavioral expression. Basic emotions may be universal across human cultures. Emotional regulation involves m
+Learning changes behavior through experience and interaction with the environment. Classical conditioning associates stimuli through repeated pairing. Operant conditioning shapes behavior through reinforcement and punishment.
 
-Perception constructs meaningful experiences from raw sensory information. Bottom-up processing builds perception from basic features. Top-down processing applies knowledge
+Emotion involves physiological arousal subjective feelings and behavioral expression. Basic emotions may be universal across human cultures. Emotional regulation involves managing and modifying emotional experiences.
 
-Motivation drives and directs behavior toward goals and desired outcomes. Intrinsic motivation comes from internal satisfaction and interest. Extrinsic motivation depends o
-Personality encompasses consistent patterns of thinking feeling and behaving. Trait theories describe personality using dimensional characteristics. Psychodynamic theories
+Perception constructs meaningful experiences from raw sensory information. Bottom-up processing builds perception from basic features. Top-down processing applies knowledge and expectations to interpret stimuli.
 
-Development tracks psychological changes across the human lifespan. Cognitive development involves qualitative changes in thinking abilities. Social development concerns re
+Motivation drives and directs behavior toward goals and desired outcomes. Intrinsic motivation comes from internal satisfaction and interest. Extrinsic motivation depends on external rewards and incentives.
 
-Social psychology examines how people influence and relate to each other. Conformity and obedience demonstrate the power of social situations. Attribution explains how we i
+Personality encompasses consistent patterns of thinking feeling and behaving. Trait theories describe personality using dimensional characteristics. Psychodynamic theories emphasize unconscious processes and early experiences.
 
-Consciousness is the subjective awareness of internal and external experiences. Altered states include sleep dreaming meditation and hypnosis. The unconscious influences be
+Development tracks psychological changes across the human lifespan. Cognitive development involves qualitative changes in thinking abilities. Social development concerns relationships and understanding of others.
+
+Social psychology examines how people influence and relate to each other. Conformity and obedience demonstrate the power of social situations. Attribution explains how we infer causes of behavior.
+
+Consciousness is the subjective awareness of internal and external experiences. Altered states include sleep dreaming meditation and hypnosis. The unconscious influences behavior without our direct awareness.
 """
 
 LANGUAGE_CORPUS = """
-Language enables communication through structured systems of symbols and rules. Phonology studies the sound systems and patterns of languages. Morphology examines the struc
+Language enables communication through structured systems of symbols and rules. Phonology studies the sound systems and patterns of languages. Morphology examines the structure and formation of words.
 
-Syntax governs how words combine into phrases and sentences. Grammar rules specify which combinations are considered well-formed. Parsing involves analyzing the grammatical
+Syntax governs how words combine into phrases and sentences. Grammar rules specify which combinations are considered well-formed. Parsing involves analyzing the grammatical structure of sentences.
 
-Semantics studies meaning in language at word phrase and sentence levels. Denotation refers to the literal meaning of words and expressions. Connotation encompasses associa
+Semantics studies meaning in language at word phrase and sentence levels. Denotation refers to the literal meaning of words and expressions. Connotation encompasses associated meanings and emotional implications.
 
-Pragmatics examines how context influences language interpretation and use. Speech acts perform functions like requesting promising and asserting. Implicature conveys meani
+Pragmatics examines how context influences language interpretation and use. Speech acts perform functions like requesting promising and asserting. Implicature conveys meaning beyond what is literally stated.
 
-Language acquisition occurs naturally in children exposed to linguistic input. Critical periods may limit native-like attainment of second languages. Universal grammar prop
+Language acquisition occurs naturally in children exposed to linguistic input. Critical periods may limit native-like attainment of second languages. Universal grammar proposes innate language knowledge in humans.
 
-Communication transfers information between speakers through verbal and nonverbal channels. Encoding converts thoughts into signals for transmission. Decoding interprets re
+Communication transfers information between speakers through verbal and nonverbal channels. Encoding converts thoughts into signals for transmission. Decoding interprets received signals back into meaningful messages.
 
-Writing represents language through visual symbols on permanent media. Alphabets map sounds to letters while logographies map meanings to symbols. Literacy enables preserva
-Translation converts meaning from one language into another language. Equivalence may be formal preserving structure or dynamic preserving effect. Machine translation uses
+Writing represents language through visual symbols on permanent media. Alphabets map sounds to letters while logographies map meanings to symbols. Literacy enables preservation and transmission of knowledge across generations.
 
-Discourse analysis studies language use in context beyond individual sentences. Coherence concerns logical connections between parts of text. Cohesion involves linguistic d
-Sociolinguistics examines relationships between language and society. Dialects vary language by region and social group. Language change occurs gradually over time through
+Translation converts meaning from one language into another language. Equivalence may be formal preserving structure or dynamic preserving effect. Machine translation uses computational methods to automate the process.
+
+Discourse analysis studies language use in context beyond individual sentences. Coherence concerns logical connections between parts of text. Cohesion involves linguistic devices that link text together.
+
+Sociolinguistics examines relationships between language and society. Dialects vary language by region and social group. Language change occurs gradually over time through usage patterns.
 """
+
 # Combine all corpora
 COMMON_TOPICS_CORPUS = """
 Gravity is the force that attracts objects with mass toward each other.
@@ -157,6 +171,7 @@ Gravitational waves are ripples in spacetime caused by massive accelerating obje
 Gravity is one of the four fundamental forces of nature along with electromagnetism and nuclear forces.
 Gravity holds galaxies together and shapes the large scale structure of the cosmos.
 Gravity acts instantaneously across any distance according to Newton but actually travels at light speed.
+
 Time is the continuous progression of events from past through present to future.
 Time dilation occurs when objects move at high speeds relative to an observer.
 Time appears to flow in one direction according to our everyday experience.
@@ -167,6 +182,7 @@ Time may be an emergent property rather than a fundamental feature of reality.
 Time travel remains theoretical though special relativity allows for forward time travel.
 Time is relative meaning it passes differently for observers in different reference frames.
 Time cannot be separated from space in modern physics since they form a unified spacetime.
+
 Space is the boundless three dimensional extent in which objects exist and events occur.
 Space and time are unified as spacetime in Einstein's theory of relativity.
 Spacetime curvature caused by mass is what we experience as gravity.
@@ -177,9 +193,9 @@ Space is not truly empty but contains quantum fluctuations and dark energy.
 Spatial dimensions include length width and height as we perceive them.
 Space expands continuously carrying galaxies away from each other.
 Spacetime can be warped bent and even torn under extreme conditions.
-Energy is the capacity to do work and exists in many forms including kinetic and potential.
 
-Energy cannot be created or destroyed only transformed from one form to another.
+Energy is the capacity to do work and exists in many forms including kinetic and potential.
+Energy cannot be created or destroyed only transformed from one form to another.
 Energy flows through ecosystems from producers to consumers to decomposers.
 Energy drives all physical processes from chemical reactions to biological functions.
 Energy is equivalent to mass according to Einstein's famous equation E equals mc squared.
@@ -188,6 +204,7 @@ Energy efficiency determines how much useful work can be extracted from a proces
 Energy in the universe is conserved though it tends to spread out and become less useful.
 Energy manifests as heat light motion sound and many other phenomena.
 Energy transfer occurs through radiation conduction and convection.
+
 Matter is anything that has mass and occupies space in the physical world.
 Matter exists in states including solid liquid gas and plasma.
 Matter is composed of atoms which contain protons neutrons and electrons.
@@ -198,6 +215,7 @@ Matter makes up only about five percent of the total energy content of the unive
 Matter can be neither created nor destroyed in chemical reactions only rearranged.
 Matter organizes into complex structures from atoms to molecules to living organisms.
 Matter in the early universe was nearly uniformly distributed before gravity formed structures.
+
 Life is the condition that distinguishes organisms from inorganic matter.
 Life evolved on Earth over billions of years through natural selection.
 Life requires energy metabolism reproduction and response to environment.
@@ -208,6 +226,7 @@ Life forms complex ecosystems with intricate relationships between species.
 Life uses DNA or RNA to store and transmit genetic information.
 Life might exist elsewhere in the universe given the vast number of planets.
 Living systems maintain order by constantly consuming energy from their environment.
+
 Intelligence is the ability to learn reason solve problems and adapt to new situations.
 Intelligence can be measured in various ways though definitions remain controversial.
 Artificial intelligence aims to create machines that exhibit intelligent behavior.
@@ -218,6 +237,7 @@ Intelligence is not a single ability but a collection of cognitive capacities.
 Intelligence tests measure certain cognitive abilities but not creativity or emotional skill.
 Intelligence enables abstract thinking language use and complex social interaction.
 Intelligent systems can optimize their behavior based on feedback and experience.
+
 Truth is correspondence between statements and the actual state of affairs.
 Truth is what we seek through inquiry and investigation.
 Truth claims must be supported by evidence and logical reasoning.
@@ -228,6 +248,7 @@ Truth in science is provisional always subject to revision based on new evidence
 Truth telling is generally considered a moral virtue and foundation of trust.
 Truth can be difficult to establish when evidence is limited or conflicting.
 Truth is the goal of philosophical inquiry and scientific investigation.
+
 Beauty is a quality that gives pleasure to the senses or mind.
 Beauty may be objective or subjective depending on philosophical perspective.
 Beauty in nature and art has inspired humans throughout history.
@@ -238,6 +259,7 @@ Beautiful experiences trigger positive emotions and reward responses in the brai
 Beauty in mathematics refers to elegance simplicity and surprising connections.
 Beauty can be found in scientific theories that explain much with little.
 Beauty appreciation appears to be universal though specific preferences vary.
+
 Love is a complex emotion involving affection attachment and care for others.
 Love takes many forms including romantic familial and platonic bonds.
 Love has been explored in philosophy literature art and science.
@@ -248,6 +270,7 @@ Love between parents and children is fundamental to human development.
 Loving relationships contribute to health happiness and wellbeing.
 Love is a central theme in religious and spiritual traditions worldwide.
 Love requires vulnerability trust and mutual commitment to flourish.
+
 Freedom is the power to act speak or think without external restraint.
 Freedom requires responsibility and consideration of consequences.
 Freedom of thought is essential for philosophical and scientific inquiry.
@@ -258,6 +281,7 @@ Freedom of speech is protected in democratic societies as essential to open disc
 Freedom is never absolute but exists within a framework of social norms and laws.
 Freedom must be balanced with other values like security equality and community.
 Freedom of religion allows individuals to practice their beliefs without persecution.
+
 Knowledge is justified true belief according to traditional epistemology.
 Knowledge is acquired through experience reason and testimony.
 Knowledge grows through questioning testing and revising our beliefs.
@@ -268,17 +292,18 @@ Knowledge is social constructed and transmitted through culture and education.
 Knowledge has limits we cannot know everything and some things may be unknowable.
 Knowledge requires both individual effort and collective validation.
 Knowledge advances through both accumulation of facts and revolutionary paradigm shifts.
+
 Reality is the state of things as they actually exist independently of perception.
 Reality at the quantum level differs from our everyday experience.
 Reality may be fundamentally different from how it appears to our senses.
-
-Reality is the subject of metaphysics the branch of philosophy studying existence.
+Reality is the subject of metaphysics the branch of philosophy studying existence.
 Reality includes both physical objects and abstract entities like numbers.
 Reality is what remains when we stop believing in it as Philip K Dick said.
 Reality testing helps distinguish between fantasy and actual states of affairs.
 Reality may be a simulation according to some philosophical arguments.
 Reality is constructed through the interaction of mind and world.
 Real things have causal powers and can affect other things.
+
 Death is the permanent cessation of biological functions in living organisms.
 Death raises profound philosophical questions about meaning and existence.
 Death has been contemplated by philosophers and religions throughout history.
@@ -289,6 +314,7 @@ Death can be defined in multiple ways including brain death and cardiac death.
 Death anxiety is a psychological phenomenon that influences human behavior.
 Death gives life urgency and meaning according to existentialist thinkers.
 Dead organisms decompose returning their matter to the environment.
+
 Happiness is a state of well being characterized by positive emotions and life satisfaction.
 Happiness can be pursued through relationships achievement and meaning.
 Happiness research examines factors that contribute to human flourishing.
@@ -299,6 +325,7 @@ Happy people tend to be healthier more productive and more socially connected.
 Happiness is a central concern of positive psychology and wellbeing science.
 Happiness can be cultivated through practices like gratitude and mindfulness.
 Happiness is both a goal in itself and a contributor to other good outcomes.
+
 Music is an art form consisting of organized sounds and silences over time.
 Music affects emotions and has been part of human culture throughout history.
 Music can be analyzed through rhythm melody harmony and timbre.
@@ -309,6 +336,7 @@ Musical preferences are shaped by culture exposure and individual personality.
 Music brings people together and plays important roles in rituals and celebrations.
 Musicians develop specialized brain structures through years of practice.
 Musical notation allows compositions to be preserved and shared across time.
+
 Art is the expression of human creativity and imagination in visual or performative forms.
 Art serves many purposes including aesthetic pleasure and social commentary.
 Art history traces the development of creative expression across cultures.
@@ -319,6 +347,7 @@ Artists develop skills through training but also express unique personal visions
 Art markets assign monetary value to works based on complex factors.
 Art appreciation involves both emotional response and intellectual understanding.
 Artistic expression is a fundamental human capacity found in all cultures.
+
 Science is the systematic study of the natural world through observation and experiment.
 Science produces knowledge that can be tested verified and built upon.
 Scientific method involves hypothesis testing data collection and analysis.
@@ -329,6 +358,7 @@ Science has enabled tremendous technological progress and understanding.
 Scientific literacy helps citizens make informed decisions about complex issues.
 Science is collaborative building on the work of previous researchers.
 Scientific fraud and bias are serious problems that undermine public trust.
+
 Technology is the application of scientific knowledge for practical purposes.
 Technology has transformed human civilization enabling new capabilities.
 Technological progress raises both opportunities and ethical concerns.
@@ -339,6 +369,7 @@ Technological determinism suggests that technology shapes society and culture.
 Technological risks include environmental damage and unintended consequences.
 Technology access is unequally distributed creating digital divides.
 Technological ethics addresses questions about appropriate use and development.
+
 Religion is a system of beliefs and practices relating to the sacred or divine.
 Religion provides meaning community and moral guidance for many people.
 Religious traditions vary widely in their doctrines rituals and worldviews.
@@ -349,6 +380,7 @@ Religious fundamentalism emphasizes literal interpretation of sacred texts.
 Religious pluralism recognizes the validity of multiple spiritual paths.
 Religion shapes values customs and social structures in many societies.
 Religious freedom is a fundamental human right in democratic societies.
+
 Philosophy is the study of fundamental questions about existence knowledge and values.
 Philosophy uses reason and argument to examine concepts and beliefs.
 Philosophical inquiry has shaped human thought for thousands of years.
@@ -359,17 +391,18 @@ Philosophical traditions vary across cultures from Western to Eastern.
 Philosophy can be practical helping people live better lives.
 Philosophical skills include critical thinking analysis and clear argumentation.
 Philosophy matters because it addresses questions everyone faces about life and meaning.
+
 History is the study of past events and their significance for the present.
 History helps us understand how societies and cultures have developed.
 Historical knowledge comes from documents artifacts and other evidence.
 History is written by historians who interpret evidence through their perspectives.
 Historical events have multiple causes and complex consequences.
-
-History teaches lessons though they are often contested and debated.
+History teaches lessons though they are often contested and debated.
 Historical consciousness shapes identity and influences current decisions.
 History includes social economic cultural and political dimensions.
 Historical memory can be selective emphasizing some events over others.
 History is not just about the past but about how the past relates to present and future.
+
 Mathematics is the abstract science of number quantity and space.
 Mathematics provides tools for reasoning about patterns and relationships.
 Mathematical truths are discovered through proof and logical deduction.
@@ -380,6 +413,7 @@ Mathematical beauty lies in elegant proofs and surprising connections.
 Mathematics develops through both pure inquiry and practical application.
 Mathematical ability varies among individuals but can be developed.
 Mathematics is universal applying across all cultures and contexts.
+
 Consciousness is the subjective experience of awareness and self-knowledge.
 Consciousness remains one of the deepest mysteries in philosophy and science.
 Conscious experience includes perception thought emotion and sensation.
@@ -390,6 +424,7 @@ Conscious and unconscious processes both influence human behavior.
 Consciousness raises questions about free will moral responsibility and identity.
 Consciousness may be more widespread in nature than we typically assume.
 Conscious machines remain theoretical though AI continues to advance.
+
 Quantum mechanics describes the behavior of matter at the smallest scales.
 Quantum particles exhibit wave-particle duality showing both properties.
 Quantum superposition allows particles to be in multiple states simultaneously.
@@ -400,6 +435,7 @@ Quantum computing uses superposition for powerful parallel processing.
 Quantum physics challenges our intuitions about reality and causation.
 Quantum theory is among the most successful in physics despite being strange.
 Quantum effects are typically only visible at atomic and subatomic scales.
+
 Evolution is the process by which life changes over generations.
 Evolution occurs through natural selection acting on genetic variation.
 Evolutionary theory explains the diversity and adaptation of life forms.
@@ -411,6 +447,7 @@ Evolution has no goal or direction only differential reproductive success.
 Evolutionary arms races occur between predators and prey or hosts and parasites.
 Evolution continues today in all living populations including humans.
 """
+
 # NEW: Astrophysics specific content
 ASTROPHYSICS_CORPUS = """
 Black holes are regions of spacetime where gravity is so strong that nothing can escape.
@@ -423,6 +460,7 @@ Stellar black holes form from stars at least twenty times more massive than our 
 Black holes distort spacetime so severely that time appears to stop at the event horizon.
 The singularity at a black hole center is where density becomes infinite.
 Black hole mergers produce gravitational waves that ripple through spacetime.
+
 Neutron stars are the collapsed cores of massive stars after supernova explosions.
 Neutron stars are incredibly dense with a teaspoon weighing billions of tons.
 Pulsars are rapidly rotating neutron stars that emit beams of electromagnetic radiation.
@@ -433,6 +471,7 @@ A neutron star forms when a star between eight and twenty solar masses explodes.
 The rotation rates of pulsars are extremely stable making them cosmic clocks.
 Magnetars are neutron stars with exceptionally powerful magnetic fields.
 Neutron star collisions produce heavy elements like gold and platinum.
+
 Superposition is a fundamental quantum principle where particles exist in multiple states simultaneously.
 In superposition a particle can be in all possible positions or states at once.
 Superposition only collapses into a definite state when observed or measured.
@@ -443,6 +482,7 @@ Superposition is destroyed by decoherence when quantum systems interact with the
 The wave function mathematically describes all possible states in superposition.
 Quantum superposition enables interference patterns in the double slit experiment.
 Maintaining superposition requires isolating quantum systems from thermal noise.
+
 Stars are massive balls of hot gas held together by their own gravity.
 Stars generate energy through nuclear fusion converting hydrogen to helium.
 The life cycle of a star depends on its initial mass when it forms.
@@ -453,17 +493,18 @@ Binary star systems contain two stars orbiting their common center of mass.
 Star formation occurs in giant molecular clouds of gas and dust.
 The color of a star indicates its surface temperature from red to blue.
 Stars create heavy elements through fusion that are scattered when they die.
+
 Galaxies are vast collections of stars gas dust and dark matter bound by gravity.
 The Milky Way is a barred spiral galaxy containing hundreds of billions of stars.
 Elliptical galaxies are smooth and round with little ongoing star formation.
 Spiral galaxies have distinctive arms where new stars are actively forming.
-
-Galaxy clusters contain thousands of galaxies bound together gravitationally.
+Galaxy clusters contain thousands of galaxies bound together gravitationally.
 Dark matter provides most of the gravitational binding in galaxies.
 Galaxies evolve through mergers and collisions over cosmic timescales.
 Active galactic nuclei are powered by supermassive black holes consuming matter.
 The Andromeda galaxy will collide with the Milky Way in about four billion years.
 Dwarf galaxies are small systems that orbit larger host galaxies.
+
 The universe began approximately fourteen billion years ago in the Big Bang.
 The universe continues to expand carrying galaxies away from each other.
 Dark energy drives the accelerating expansion of the universe.
@@ -475,91 +516,83 @@ Most of the universe consists of dark matter and dark energy which remain myster
 The ultimate fate of the universe depends on whether expansion continues forever.
 Cosmic voids are vast regions of space containing very few galaxies.
 """
+
 FULL_CORPUS = {
-"philosophy": PHILOSOPHY_CORPUS,
-"physics": PHYSICS_CORPUS,
-"computer_science": COMPUTER_SCIENCE_CORPUS,
-"biology": BIOLOGY_CORPUS,
-"mathematics": MATHEMATICS_CORPUS,
-"psychology": PSYCHOLOGY_CORPUS,
-"language": LANGUAGE_CORPUS,
-"common_topics": COMMON_TOPICS_CORPUS,
-"astrophysics": ASTROPHYSICS_CORPUS
+    "philosophy": PHILOSOPHY_CORPUS,
+    "physics": PHYSICS_CORPUS,
+    "computer_science": COMPUTER_SCIENCE_CORPUS,
+    "biology": BIOLOGY_CORPUS,
+    "mathematics": MATHEMATICS_CORPUS,
+    "psychology": PSYCHOLOGY_CORPUS,
+    "language": LANGUAGE_CORPUS,
+    "common_topics": COMMON_TOPICS_CORPUS,
+    "astrophysics": ASTROPHYSICS_CORPUS
 }
+
 def _clean_text(text: str) -> str:
-"""Remove terminal commands, pip output, code syntax, and other noise from text."""
-import re
-lines = text.split('
-')
-cleaned_lines = []
-# Patterns that indicate lines to skip (terminal/REPL/output)
-skip_patterns = [
-r'^\$ ',
-# shell prompt ($ command)
-r'^>>> ',
-# Python REPL
-r'^> ',
-# generic prompt
-r'^In \[\d+\]:',
-# IPython (In [1]:)
-r'^\[.*\] %',
-# progress bar like [##...] 50%
-r'^apt ',
-# apt command
-r'^pip ',
-# pip command
-r'^sudo ',
-# sudo command
-r'^cd ',
-# cd command
-r'^ls ',
-# ls command
-r'^cat ',
-# cat command
-r'^echo ',
-# echo command
-r'^sh:',
-# shell output prefix (sh: command)
-r'^/bin/',
-# binary path
-r'^# '
-# lines that are only a comment (no preceding text)
-]
-for line in lines:
-stripped = line.strip()
-if not stripped:
-cleaned_lines.append(line)
-continue
-# Check if line matches any skip pattern
-if any(re.match(pat, stripped) for pat in skip_patterns):
-continue
-# Skip lines that are almost entirely non-alphanumeric (e.g., -----, ====, ***)
-# Keep if there is at least one alphanumeric character
-if not re.search(r'[A-Za-z0-9]', stripped):
-continue
-# Skip lines that look like raw progress bars (e.g., [::::::::::] or [...;;;...])
-if re.match(r'^\[[=:#;.\-\s]+\]$', stripped):
-continue
-cleaned_lines.append(line)
-return '
-'.join(cleaned_lines)
+    """Remove terminal commands, pip output, code syntax, and other noise from text."""
+    import re
+    lines = text.split('\n')
+    cleaned_lines = []
+    
+    # Patterns that indicate lines to skip (terminal/REPL/output)
+    skip_patterns = [
+        r'^\$ ',           # shell prompt ($ command)
+        r'^>>> ',          # Python REPL
+        r'^> ',            # generic prompt
+        r'^In \[\d+\]:',   # IPython (In [1]:)
+        r'^\[.*\] %',      # progress bar like [##...] 50%
+        r'^apt ',          # apt command
+        r'^pip ',          # pip command
+        r'^sudo ',         # sudo command
+        r'^cd ',           # cd command
+        r'^ls ',           # ls command
+        r'^cat ',          # cat command
+        r'^echo ',         # echo command
+        r'^sh:',           # shell output prefix (sh: command)
+        r'^/bin/',         # binary path
+        r'^# '             # lines that are only a comment (no preceding text)
+    ]
+    
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            cleaned_lines.append(line)
+            continue
+        
+        # Check if line matches any skip pattern
+        if any(re.match(pat, stripped) for pat in skip_patterns):
+            continue
+        
+        # Skip lines that are almost entirely non-alphanumeric (e.g., -----, ====, ***)
+        # Keep if there is at least one alphanumeric character
+        if not re.search(r'[A-Za-z0-9]', stripped):
+            continue
+        
+        # Skip lines that look like raw progress bars (e.g., [::::::::::] or [...;;;...])
+        if re.match(r'^\[[=:#;.\-\s]+\]$', stripped):
+            continue
+        
+        cleaned_lines.append(line)
+    
+    return '\n'.join(cleaned_lines)
+
 
 def get_all_corpus_text() -> str:
-"""Get all corpus text combined."""
-combined = "
-".join(FULL_CORPUS.values())
-return _clean_text(combined)
+    """Get all corpus text combined."""
+    combined = "\n\n".join(FULL_CORPUS.values())
+    return _clean_text(combined)
+
 
 def get_domain_corpus(domain: str) -> str:
-"""Get corpus for specific domain."""
-raw = FULL_CORPUS.get(domain, "")
-return _clean_text(raw)
+    """Get corpus for specific domain."""
+    raw = FULL_CORPUS.get(domain, "")
+    return _clean_text(raw)
+
 
 def get_corpus_sentences() -> list:
-"""Get all sentences from corpus."""
-import re
-
-text = get_all_corpus_text()
-sentences = re.split(r'(?<=[.!?])\s+', text)
-return [s.strip() for s in sentences if len(s.strip()) > 20]
-
+    """Get all sentences from corpus."""
+    import re
+    text = get_all_corpus_text()
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    return [s.strip() for s in sentences if len(s.strip()) > 20]

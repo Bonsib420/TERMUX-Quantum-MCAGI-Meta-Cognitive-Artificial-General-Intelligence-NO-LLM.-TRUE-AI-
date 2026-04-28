@@ -10,6 +10,7 @@ Refactored: Uses knowledge_base.py and quote_engine.py for cleaner code.
 import os
 import re
 import random
+import ast
 from typing import Dict, List, Optional
 from datetime import datetime, timezone
 
@@ -31,7 +32,13 @@ from knowledge_base import get_knowledge_base
 from quote_engine import get_quote_engine
 
 try:
-    from wolfram_integration import get_wolfram_engine
+    from quantum_memory import get_quantum_memory
+    QRAM_AVAILABLE = True
+except ImportError:
+    QRAM_AVAILABLE = False
+
+try:
+    pass  # wolfram removed
     WOLFRAM_AVAILABLE = True
 except Exception:
     WOLFRAM_AVAILABLE = False
@@ -68,6 +75,15 @@ class QuantumBrain:
         # Use modular knowledge and quotes
         self.knowledge = get_knowledge_base()
         self.quotes = get_quote_engine()
+
+        # Initialize QRAM (PennyLane 0.44+ or classical fallback)
+        self.qram = None
+        if QRAM_AVAILABLE:
+            try:
+                self.qram = get_quantum_memory()
+                print(f"[QUANTUM BRAIN] QRAM initialized ({self.qram.status()['backend']})")
+            except Exception as e:
+                print(f"[QUANTUM BRAIN] QRAM init note: {e}")
     
     async def initialize(self):
         self.research_engine = await get_research_engine(self.db)
@@ -277,7 +293,7 @@ class QuantumBrain:
             clean_expr = re.sub(r'[a-zA-Z\?]', '', clean_expr).strip()
             
             if clean_expr and re.match(r'^[\d\s\+\-\*\/\(\)\.]+$', clean_expr):
-                result = eval(clean_expr)
+                result = ast.literal_eval(clean_expr)
                 return f"The answer is: {result}"
             
             if self.wolfram:

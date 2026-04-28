@@ -968,7 +968,7 @@ class AlgorithmicCore:
         self.pmi.train(clean_text)
         
         # Add to memory for retrieval
-        doc_id = hashlib.md5(clean_text.encode()).hexdigest()[:8]
+        doc_id = hashlib.md5(clean_text.encode(), usedforsecurity=False).hexdigest()[:8]
         self.memory.add_document(doc_id, clean_text, {"source": source, "time": datetime.now().isoformat()})
         
         # Extract and associate concepts (Hebbian)

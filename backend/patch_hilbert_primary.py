@@ -2,15 +2,10 @@
 Patch B — Hilbert-Primary Three-Signal Generation
 ==================================================
 Modifies markov.py:MarkovEngine.generate_from_concepts to use:
-PRIMARY:
-VALIDATOR:
-GRAMMAR:
 
-Hilbert.sample_token(context_tokens=...) — Born-rule semantic sampling
-Markov.chain[prefix]
-— adjacency probability
-FunctionWordEngine dossier rerank
-— function-word fit
+PRIMARY:     Hilbert.sample_token(context_tokens=...) — Born-rule semantic sampling
+VALIDATOR:   Markov.chain[prefix]                      — adjacency probability
+GRAMMAR:     FunctionWordEngine dossier rerank         — function-word fit
 
 Selection logic per token:
 1. Try Hilbert sample
@@ -18,20 +13,24 @@ Selection logic per token:
 transitions OR pick weighted-random from Markov candidates
 3. FunctionWordEngine reranks if applicable
 4. Append, advance ρ, advance Markov state
+
 Graceful degradation: if Hilbert returns None, falls through to Markov-only.
 If both empty, returns whatever was accumulated.
+
 Modifies markov.py at line 57: generate_from_concepts.
 """
+
 import os
 import time
 import py_compile
+
 TARGET = os.path.expanduser(
 "~/Quantum_MCAGI_NO_LLM_V⁰²/backend/markov.py"
 )
 
+
 # Anchor — the existing classical generator. Match by signature line.
-OLD = '''
-def generate_from_concepts(self, concepts, length=30, wild=False):
+OLD = '''    def generate_from_concepts(self, concepts, length=30, wild=False):
 seed = None
 for c in concepts:
 for pre in self.chain:
@@ -56,15 +55,15 @@ if len(result) < 6:
 break
 if not self.starters:'''
 
-NEW = '''
-def generate_from_concepts(self, concepts, length=30, wild=False):
+
+NEW = '''    def generate_from_concepts(self, concepts, length=30, wild=False):
 """Hilbert-primary, Markov-validating, FunctionWord-grammar generation.
+
 Three-signal token selection per step:
 1. Hilbert.sample_token(context) — semantic primary (Born-rule)
-2. Markov.chain[prefix]
-— adjacency validator
-3. FunctionWordEngine
-— grammar fit reranker
+2. Markov.chain[prefix]          — adjacency validator
+3. FunctionWordEngine            — grammar fit reranker
+
 Falls through gracefully when any tier is missing or returns None.
 """
 # Lazy-load helpers (cached on instance after first use)
@@ -88,12 +87,11 @@ fwe.load(fwe_path)
 self._fwe = fwe
 except Exception:
 self._fwe = None
-# ■■ Seed selection (unchanged) ■■
+
+# ⁰⁰ Seed selection (unchanged) ⁰⁰
 seed = None
 for c in concepts:
 for pre in self.chain:
-
-if c.lower() in ' '.join(pre).lower():
 seed = pre
 break
 if seed:
@@ -103,6 +101,7 @@ seed = random.choice(self.starters)
 if not seed:
 return []
 result = list(seed)
+
 # Seed Hilbert ρ from input concepts so semantic field reflects intent
 if self._hilbert and concepts:
 for c in concepts[:3]:
@@ -110,9 +109,11 @@ try:
 self._hilbert.evolve(c)
 except Exception:
 pass
-# ■■ Generation loop ■■
+
+# ⁰⁰ Generation loop ⁰⁰
 for _ in range(length * 2):
 nxt = None
+
 # SIGNAL 1: Hilbert primary (semantic Born-rule)
 if self._hilbert is not None:
 try:
@@ -124,6 +125,7 @@ top_k=20,
 )
 except Exception:
 nxt = None
+
 # SIGNAL 2: Markov adjacency validator
 # If Hilbert returned a token, check if Markov has ever seen it
 # follow this prefix. If yes -> good. If no -> still allow but
@@ -134,6 +136,7 @@ if nxt is None and markov_choices:
 words = list(markov_choices.keys())
 weights = list(markov_choices.values())
 nxt = random.choices(words, weights=weights)[0]
+
 # SIGNAL 3: FunctionWord grammar reranker (only if multiple Markov candidates)
 if (nxt is not None and self._fwe is not None
 and markov_choices and len(markov_choices) > 1):
@@ -159,57 +162,62 @@ nxt = alt
 break
 except Exception:
 pass
+
 # If still no candidate, terminate gracefully
 if nxt is None:
 if len(result) < 6:
 break
 if not self.starters:'''
 
+
 def main():
-if not os.path.exists(TARGET):
-print(f"■ Target not found: {TARGET}")
-return False
-s = open(TARGET).read()
-if "_hilbert" in s and "SIGNAL 1: Hilbert primary" in s:
-print("✓ Patch B already applied")
-return True
-if OLD not in s:
-print("■ Anchor not found. Current generate_from_concepts head:")
-idx = s.find("def generate_from_concepts")
-if idx > 0:
-print(s[idx:idx+800])
-return False
-backup = TARGET + ".bak.patchB." + str(int(time.time()))
-open(backup, "w").write(s)
-print(f"✓ Backup: {backup}")
-s = s.replace(OLD, NEW, 1)
+    if not os.path.exists(TARGET):
+        print(f"⁰ Target not found: {TARGET}")
+        return False
 
-open(TARGET, "w").write(s)
-try:
-py_compile.compile(TARGET, doraise=True)
-print("✓ Patch B applied — markov.py compiles clean")
-except py_compile.PyCompileError as e:
-print(f"■ Compile failed — rolling back: {e}")
-open(TARGET, "w").write(open(backup).read())
-return False
-# Smoke-test imports
-print("✓ Smoke test:")
-import subprocess
-r = subprocess.run(
-["python", "-c", "from markov import MarkovEngine; m = MarkovEngine(silent=True); print('
-capture_output=True, text=True,
-cwd=os.path.dirname(TARGET),
-)
-if r.returncode != 0:
-print(f" ■ Import test failed: {r.stderr}")
-print(" Rolling back...")
-open(TARGET, "w").write(open(backup).read())
-return False
-print(r.stdout.strip())
-return True
+        s = open(TARGET).read()
 
-if __name__ == "__main__":
-main()
+        if "_hilbert" in s and "SIGNAL 1: Hilbert primary" in s:
+            print("✓ Patch B already applied")
+            return True
 
-MarkovEngine instantiates clean')"],
+            if OLD not in s:
+                print("⁰ Anchor not found. Current generate_from_concepts head:")
+                idx = s.find("def generate_from_concepts")
+                if idx > 0:
+                    print(s[idx:idx+800])
+                    return False
 
+                    backup = TARGET + ".bak.patchB." + str(int(time.time()))
+                    open(backup, "w").write(s)
+                    print(f"✓ Backup: {backup}")
+                    s = s.replace(OLD, NEW, 1)
+
+                    try:
+                        py_compile.compile(TARGET, doraise=True)
+                        print("✓ Patch B applied — markov.py compiles clean")
+                    except py_compile.PyCompileError as e:
+                        print(f"⁰ Compile failed — rolling back: {e}")
+                        open(TARGET, "w").write(open(backup).read())
+                        return False
+
+                        # Smoke-test imports
+                        print("✓ Smoke test:")
+                        import subprocess
+                        r = subprocess.run(
+                        ["python", "-c", "from markov import MarkovEngine; m = MarkovEngine(silent=True); print('   MarkovEngine instantiates clean')"],
+                        capture_output=True, text=True,
+                        cwd=os.path.dirname(TARGET),
+                        )
+                        if r.returncode != 0:
+                            print(f" ⁰ Import test failed: {r.stderr}")
+                            print(" Rolling back...")
+                            open(TARGET, "w").write(open(backup).read())
+                            return False
+                            print(r.stdout.strip())
+
+                            return True
+
+
+                            if __name__ == "__main__":
+                                main()
