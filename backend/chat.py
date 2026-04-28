@@ -861,6 +861,7 @@ def run_chat(verbose=False):
                 hybrid_gen = create_hybrid_generator(engine) if HAS_HYBRID else None
                 unified_gen = create_unified_generator(engine) if HAS_UNIFIED else None
                 memory = LocalMemory()
+                memory._engine_ref = engine
                 print("  Engine reset.")
                 continue
 
@@ -1164,7 +1165,7 @@ def run_chat(verbose=False):
                 else:
                     print("  CloudBrain not available.")
                 continue
-            elif cmd[0] in ('/cloud-pull', '/backup'):
+            elif cmd[0] == '/cloud-pull':
                 if HAS_CLOUD:
                     print("  ☁ Pulling full brain from cloud...")
                     cb = CloudBrain()
@@ -1178,6 +1179,19 @@ def run_chat(verbose=False):
                             print(f"  ☁ Concepts: {len(memory.concepts)}, Interactions: {memory.growth.get('total_interactions', 0)}")
                         else:
                             print("  ☁ Pull failed")
+                    else:
+                        print("  ☁ Cloud not available (rclone not configured)")
+                else:
+                    print("  CloudBrain not available.")
+                continue
+            elif cmd[0] == '/backup':
+                if HAS_CLOUD:
+                    print("  ☁ Backing up full brain to cloud...")
+                    save_everything(memory, engine, state_dir)
+                    cb = CloudBrain()
+                    if cb.available:
+                        success = cb.push_all(quiet=False)
+                        print(f"  ☁ {'Backup complete' if success else 'Backup failed'}")
                     else:
                         print("  ☁ Cloud not available (rclone not configured)")
                 else:
