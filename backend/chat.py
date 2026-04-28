@@ -43,14 +43,14 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from quantum_language_engine import QuantumLanguageEngine
 try:
     from evaluation_engine import get_evaluation_engine
+    HAS_EVAL = True
+except ImportError:
+    HAS_EVAL = False
+try:
     from algorithmic_brain import get_advanced_engine
     HAS_ADVANCED = True
 except ImportError:
     HAS_ADVANCED = False
-try:
-    HAS_EVAL = True
-except ImportError:
-    HAS_EVAL = False
 try:
     from exam_system import ExamRunner, IntakeTracker, detect_domain
     HAS_EXAM = True

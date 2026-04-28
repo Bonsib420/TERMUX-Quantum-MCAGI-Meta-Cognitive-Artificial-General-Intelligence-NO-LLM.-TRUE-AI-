@@ -148,6 +148,11 @@ class KnowledgeBase:
 
         return None
 
+    def get_topic_explanation(self, topic: str) -> Optional[str]:
+        """Compatibility alias for callers expecting the old API."""
+        entry = self.lookup(topic)
+        return entry['description'] if entry else None
+
     def get_related(self, concept: str, depth: int = 1) -> List[str]:
         """Get related concepts at given traversal depth."""
         entry = self.lookup(concept)
