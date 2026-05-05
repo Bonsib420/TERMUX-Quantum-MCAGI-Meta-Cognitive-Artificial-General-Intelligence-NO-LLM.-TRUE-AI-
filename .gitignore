@@ -2,6 +2,12 @@ backend/__pycache__/
 **/__pycache__/
 *.pyc
 
+# Environment / credentials — NEVER commit tokens or secrets
+backend/.env
+backend/.env.local
+.env
+.env.local
+
 # Backup and debug files (generated on Termux, not source code)
 *.bak
 *.backup

@@ -38,9 +38,17 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("quantum_ai")
 
+# Load backend/.env so RCLONE_REMOTE / RCLONE_BASE_PATH are available
+# without requiring the user to `export` them manually.
+try:
+    from dotenv import load_dotenv as _load_dotenv
+    _load_dotenv(Path(__file__).parent / ".env", override=False)
+except Exception:
+    pass
+
 # Default rclone remote name and base path on that remote
-_DEFAULT_REMOTE = "gdrive"
-_DEFAULT_BASE_PATH = "QuantumMCAGI"
+_DEFAULT_REMOTE = "gdrive 666"
+_DEFAULT_BASE_PATH = "Quantum Cloud/MCAGI_BRAIN"
 
 
 def _get_rclone_remote() -> str:
@@ -143,7 +151,7 @@ def rclone_check() -> Dict[str, Any]:
                 result["error"] = (
                     f"Remote '{_get_rclone_remote()}' not found. "
                     f"Available: {remotes}. "
-                    f"Set RCLONE_REMOTE=<name> or run: rclone config"
+                    f"Run: bash cloud_setup.sh  or  rclone config"
                 )
                 return result
         else:

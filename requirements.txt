@@ -2,7 +2,8 @@
 # ==========================================
 # Only packages directly imported by backend Python modules.
 # Transitive deps resolved automatically by pip.
-# PennyLane: pip install --no-deps PennyLane (pennylane-lightning needs scipy-openblas32, no Termux wheel)
+# PennyLane Lightning: fast state-vector simulator.
+#   On Termux/Android run cloud_setup.sh instead — it handles platform quirks.
 
 beautifulsoup4>=4.12
 duckduckgo_search>=5.0
@@ -12,6 +13,7 @@ internetarchive>=4.0
 nltk>=3.8
 numpy>=1.26
 openpyxl>=3.1
+pennylane-lightning>=0.44.1
 pillow>=10.0
 pydantic>=2.0
 pymongo>=4.5

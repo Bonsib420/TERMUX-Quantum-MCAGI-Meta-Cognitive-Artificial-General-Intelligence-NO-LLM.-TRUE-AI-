@@ -143,18 +143,22 @@ pip install -r requirements.txt 2>&1 | tail -5
 echo -e "${GREEN}  ✓ Core dependencies installed${NC}"
 
 # ============================================================================
-# STEP 4: PennyLane (special handling for Termux)
+# STEP 4: PennyLane Lightning (special handling for Termux)
 # ============================================================================
-echo -e "${CYAN}[4/8] Installing PennyLane (quantum computing)...${NC}"
+echo -e "${CYAN}[4/8] Installing PennyLane Lightning 0.44.1...${NC}"
 
-# PennyLane has a hard dep on pennylane-lightning which requires
-# scipy-openblas32 (no Android wheel). Install with --no-deps.
-pip install --no-deps PennyLane 2>&1 | tail -3 || {
-    echo -e "${YELLOW}  PennyLane install failed — quantum features will use fallback${NC}"
-    echo -e "${YELLOW}  (All PennyLane imports are guarded with try/except)${NC}"
+# Try pennylane-lightning first (fast C++ simulator, preferred).
+# On some Termux builds the scipy-openblas32 wheel is missing — if so,
+# fall back to pennylane core-only (--no-deps) so quantum still works.
+pip install pennylane-lightning==0.44.1 2>/dev/null || \
+pip install --break-system-packages pennylane-lightning==0.44.1 2>/dev/null || {
+    echo -e "${YELLOW}  pennylane-lightning wheel unavailable for this platform.${NC}"
+    echo -e "${YELLOW}  Installing PennyLane core-only (classical fallback will be used)...${NC}"
+    pip install --no-deps PennyLane 2>/dev/null || \
+    pip install --break-system-packages --no-deps PennyLane 2>/dev/null || true
 }
 
-# Install autoray (PennyLane needs it at runtime)
+# autoray is required by PennyLane at runtime
 pip install autoray 2>/dev/null || true
 
 echo -e "${GREEN}  ✓ PennyLane setup complete${NC}"
@@ -192,6 +196,34 @@ elif command -v pkg &>/dev/null; then
     echo -e "  The system works without it using file-based storage."
 else
     echo -e "  MongoDB not found. Using file-based storage."
+fi
+
+# ============================================================================
+# STEP 6b: Google Drive cloud sync (optional — runs cloud_setup.sh)
+# ============================================================================
+echo -e "${CYAN}[6b] Google Drive cloud sync setup...${NC}"
+
+CLOUD_SETUP="$INSTALL_DIR/cloud_setup.sh"
+if [[ -f "$CLOUD_SETUP" ]]; then
+    if [[ -n "${GDRIVE_TOKEN:-}" || -n "${GDRIVE_TOKEN_FILE:-}" ]]; then
+        echo "  GDRIVE_TOKEN detected — running cloud_setup.sh automatically..."
+        bash "$CLOUD_SETUP"
+    elif rclone listremotes 2>/dev/null | grep -qF "gdrive 666:"; then
+        echo -e "${GREEN}  ✓ rclone remote 'gdrive 666' already configured — skipping interactive setup.${NC}"
+        # Ensure backend/.env has the right values even if cloud_setup.sh hasn't run yet
+        mkdir -p "$BACKEND_DIR"
+        ENV_FILE="$BACKEND_DIR/.env"
+        if ! grep -q "RCLONE_REMOTE" "$ENV_FILE" 2>/dev/null; then
+            printf '\n# Google Drive cloud sync\nRCLONE_REMOTE=gdrive 666\nRCLONE_BASE_PATH=Quantum Cloud/MCAGI_BRAIN\n' >> "$ENV_FILE"
+            echo -e "${GREEN}  ✓ backend/.env updated with RCLONE_REMOTE${NC}"
+        fi
+    else
+        echo -e "${YELLOW}  To enable Google Drive sync, run:${NC}"
+        echo -e "${YELLOW}    GDRIVE_TOKEN='{...your token JSON...}' bash cloud_setup.sh${NC}"
+        echo -e "${YELLOW}  Or interactively:  bash cloud_setup.sh${NC}"
+    fi
+else
+    echo -e "${YELLOW}  cloud_setup.sh not found at $CLOUD_SETUP${NC}"
 fi
 
 # ============================================================================
@@ -320,11 +352,15 @@ echo "  ║                                                  ║"
 echo "  ║  Alias:  bash install_alias.sh                   ║"
 echo "  ║          Then just: mcagi                        ║"
 echo "  ║                                                  ║"
-echo "  ║  Cloud sync (Google Drive via rclone):           ║"
+echo "  ║  Cloud sync setup (first time):                  ║"
+echo "  ║    bash cloud_setup.sh                           ║"
+echo "  ║    (or: GDRIVE_TOKEN='{...}' bash cloud_setup.sh)║"
+echo "  ║                                                  ║"
+echo "  ║  In-chat cloud commands:                         ║"
 echo "  ║    /rclone-setup  (check config & connection)    ║"
 echo "  ║    /rclone-status (list Drive contents)          ║"
-echo "  ║    /cloud-save    (save to all cloud providers)  ║"
-echo "  ║    /cloud-load    (restore from cloud)           ║"
+echo "  ║    /cloud-save    (save brain to Drive)          ║"
+echo "  ║    /cloud-load    (restore from Drive)           ║"
 echo "  ║    /cloud-pull    (pull from all providers)      ║"
 echo "  ║                                                  ║"
 echo "  ║  Push code to GitHub:                            ║"
