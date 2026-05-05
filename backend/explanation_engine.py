@@ -8,7 +8,21 @@ No LLM. No web search. Pure transparency into the pipeline.
 
 
 def explain_concepts(engine, user_input):
-    """Show TF-IDF concept extraction with scores."""
+    """
+    Generate a plain-text TF‑IDF concept extraction report for the given input.
+    
+    Creates a multi-line report that lists extracted concepts with their term frequency (tf),
+    inverse document frequency (idf), and combined score, then appends corpus vocabulary and
+    document counts.
+    
+    Parameters:
+        engine: An object providing extract_concepts(text) and an `extractor` with
+            `word_frequencies` (mapping of token to document frequency) and `total_documents`.
+        user_input (str): The input text to analyze for concept extraction.
+    
+    Returns:
+        report (str): A newline-joined string containing the TF‑IDF concept report.
+    """
     concepts = engine.extract_concepts(user_input)
     
     # Get raw word frequencies for scoring
@@ -42,7 +56,17 @@ def explain_concepts(engine, user_input):
 
 
 def explain_orch_or(engine):
-    """Show Orch OR quantum state and collapse patterns."""
+    """
+    Builds a human-readable Orch OR diagnostic report.
+    
+    If the engine has an Orch OR module loaded, includes its status, conscious moments, last temperature, per-microtubule coherence/entropy/collapses, and optional gap junctions. Otherwise indicates a classical fallback.
+    
+    Parameters:
+        engine: Engine object exposing '_has_orch_or' boolean and 'orch_or' with a `get_status()` method.
+    
+    Returns:
+        report (str): Multi-line diagnostic string describing Orch OR status or a classical fallback message.
+    """
     lines = []
     lines.append("  --- ORCH OR (Penrose-Hameroff) ---")
     
@@ -76,7 +100,26 @@ def explain_orch_or(engine):
 
 
 def explain_tone(tone_result):
-    """Show tone detection reasoning."""
+    """
+    Builds a human-readable report explaining tone detection results.
+    
+    The returned report enumerates detected fields (register, depth, deep_markers, word_count) and, when present, VADER-style sentiment scores (`positive`, `negative`, `neutral`, `compound`). It also appends a concise decision line derived from `depth` using these thresholds:
+    - depth < 0.15: casual response
+    - depth < 0.35: conversational
+    - depth < 0.65: analytical pipeline
+    - otherwise: full quantum generation
+    
+    Parameters:
+        tone_result (dict): Mapping containing tone analysis outputs. Expected keys:
+            - 'register' (str): Named register for the input (e.g., 'conversational', 'analytical').
+            - 'depth' (float): Depth score used to choose processing path.
+            - 'deep_markers' (int): Count of deep/complex markers.
+            - 'word_count' (int): Number of words in the input.
+            - 'sentiment' (dict, optional): VADER-like scores with keys 'positive', 'negative', 'neutral', 'compound'.
+    
+    Returns:
+        str: Multiline report describing the tone detection results and the chosen processing decision.
+    """
     lines = []
     lines.append("  --- TONE DETECTION (VADER + Heuristics) ---")
     lines.append(f"    Register: {tone_result.get('register', 'unknown')}")
@@ -109,7 +152,19 @@ def explain_tone(tone_result):
 
 
 def explain_bloom(questions, growth_stage):
-    """Show Bloom's taxonomy question generation."""
+    """
+    Format a Bloom's Taxonomy report listing generated questions and available levels.
+    
+    Parameters:
+        questions (list): Sequence of question entries. Each item may be a string or a dict with keys:
+            - 'question' (str): the question text (fallback: str(item) if missing)
+            - 'level' (str|int, optional): taxonomy level label to display
+        growth_stage (int): Current growth stage used to compute the highest available taxonomy level (0-based).
+    
+    Returns:
+        str: Multi-line report containing a header, growth stage, available levels, number of questions,
+             and each question on its own line (prefixed by its level when provided).
+    """
     lines = []
     lines.append("  --- BLOOM'S TAXONOMY QUESTIONS ---")
     
@@ -132,7 +187,16 @@ def explain_bloom(questions, growth_stage):
 
 
 def explain_markov(engine, user_input):
-    """Show Markov chain state and candidate generation."""
+    """
+    Builds a brief diagnostic report of the Markov chain state and how it relates to the provided input.
+    
+    Parameters:
+        engine: Object containing a `markov` attribute with `chain`, `total_tokens`, and `trained` fields.
+        user_input (str): Text to compare against the Markov chain vocabulary.
+    
+    Returns:
+        report (str): Multi-line string listing total states, transitions, training flag, up to the first 10 known words with their transition counts, and up to the first 10 unknown words.
+    """
     lines = []
     lines.append("  --- MARKOV CHAIN ---")
     lines.append(f"    States: {len(engine.markov.chain)}")
@@ -160,7 +224,18 @@ def explain_markov(engine, user_input):
 
 
 def explain_generator(tone_result, has_hybrid):
-    """Show which generator was selected and why."""
+    """
+    Describe which text generator was selected and the rationale for that choice.
+    
+    Constructs a multi-line, human-readable report that names the chosen generator (either a hybrid quantum generator or the tone-aware composer), explains the reason based on the input register and hybrid availability, and summarizes the high-level process steps used by the selected generator.
+    
+    Parameters:
+        tone_result (dict): Analysis result that should include a 'register' key (e.g., 'conversational', 'analytical', 'philosophical') used to determine selection.
+        has_hybrid (bool): Whether the hybrid quantum generator capability is available.
+    
+    Returns:
+        str: A newline-joined report describing the selected generator, the decision reason, and its process summary.
+    """
     lines = []
     lines.append("  --- GENERATOR SELECTION ---")
     
@@ -190,7 +265,21 @@ def explain_generator(tone_result, has_hybrid):
 
 
 def explain_understanding(understanding, concepts, memory_concepts):
-    """Show understanding formation."""
+    """
+    Format a human-readable report of the agent's understanding and how extracted concepts relate to memory.
+    
+    Parameters:
+        understanding (dict): Mapping that may contain:
+            - 'topic' (str): Topic label for this understanding.
+            - 'understanding_score' (number): Numeric score; formatted to two decimals.
+            - 'gaps' (list[str]): Missing knowledge items.
+            - 'related_concepts' (list[dict|any]): Related items; each dict may include a 'concept' key.
+        concepts (iterable[str]): Concepts extracted from the current input.
+        memory_concepts (iterable[str]): Concepts already known/stored in memory.
+    
+    Returns:
+        str: A multi-line textual report including Topic, Score, Known concepts, New concepts, Gaps, and Related concepts.
+    """
     lines = []
     lines.append("  --- UNDERSTANDING ---")
     lines.append(f"    Topic: {understanding.get('topic', 'general')}")
@@ -217,7 +306,16 @@ def explain_understanding(understanding, concepts, memory_concepts):
 
 
 def explain_flavor(has_quotes, has_personality):
-    """Show personality and flavor layer."""
+    """
+    Describe which personality and flavor layers are active.
+    
+    Parameters:
+        has_quotes (bool): When True, the quote-related flavor layers (quote engine, philosophical asides, dream fragments) are reported as potentially active.
+        has_personality (bool): When True, the personality layer is reported as potentially active.
+    
+    Returns:
+        str: A multi-line textual report showing the activation state and chance indications for quote and personality flavor layers.
+    """
     lines = []
     lines.append("  --- PERSONALITY + FLAVOR ---")
     lines.append(f"    Quote engine: {'ACTIVE (20% chance)' if has_quotes else 'OFF'}")
@@ -231,7 +329,31 @@ def explain_flavor(has_quotes, has_personality):
 def full_explanation(engine, user_input, concepts, questions, tone_result,
                      understanding, growth_stage, elapsed, memory_concepts,
                      has_hybrid=False, has_quotes=False, has_personality=False):
-    """\nGenerate complete explanation of the response pipeline.\nCall this instead of the simple verbose debug output.\n"""
+    """
+                     Compose a full multi-section textual explanation of how the response was produced.
+                     
+                     Builds and returns a human-readable report that aggregates each internal explanation
+                     section (concept extraction, tone detection, Markov state, Orch OR status, Bloom's
+                     questions, understanding, generator selection, and flavor) followed by timing.
+                     
+                     Parameters:
+                         engine: The engine instance providing extractors, markov, and other subsystems used
+                             to generate per-section reports.
+                         user_input (str): Original user input text used for concept and Markov analyses.
+                         concepts (Iterable): Extracted concept tokens used in the understanding section.
+                         questions (Iterable): Questions generated for Bloom's taxonomy reporting.
+                         tone_result (dict): Tone analysis output used to build the tone and generator sections.
+                         understanding (dict): Understanding summary including topic, score, gaps, and related concepts.
+                         growth_stage (int): Growth stage used to determine available Bloom taxonomy levels.
+                         elapsed (float): Total elapsed pipeline time in seconds to display in the timing section.
+                         memory_concepts (Iterable): Previously known concepts used to compute known vs. new concepts.
+                         has_hybrid (bool): Whether a hybrid (quantum) generator is available; affects generator selection wording.
+                         has_quotes (bool): Whether the quote engine is enabled; affects flavor reporting.
+                         has_personality (bool): Whether personality layers are enabled; affects flavor reporting.
+                     
+                     Returns:
+                         str: The concatenated multi-section explanation report ready for display or logging.
+                     """
     sections = []
     
     sections.append("")

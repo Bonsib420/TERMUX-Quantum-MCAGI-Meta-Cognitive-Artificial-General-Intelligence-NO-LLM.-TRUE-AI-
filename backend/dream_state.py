@@ -44,13 +44,32 @@ class DreamStateEngine:
     """
 
     def __init__(self):
+        """
+        Initialize a DreamStateEngine instance and its runtime state.
+        
+        Attributes:
+            fragments (List[str]): Reference corpus of dream fragments used to compose outputs.
+            depth (float): Current dream depth level, starts at 0.0 and increases up to 1.0.
+            dreams_generated (int): Count of dreams produced by this instance, starts at 0.
+            active (bool): Whether the engine is currently generating a dream, starts as False.
+        """
         self.fragments = DREAM_FRAGMENTS
         self.depth = 0.0
         self.dreams_generated = 0
         self.active = False
 
     def enter_dream(self, concepts: List[str]) -> str:
-        """Generate a dream-state associative response."""
+        """
+        Compose a short associative "dream" sentence from stored fragments, optionally incorporating one of the provided concepts.
+        
+        Increases the engine's depth by 0.1 (capped at 1.0), increments `dreams_generated`, and briefly marks the engine active while generating the sentence.
+        
+        Parameters:
+        	concepts (List[str]): Candidate concept strings; if non-empty one will be inserted into the generated sentence.
+        
+        Returns:
+        	dream (str): A single composed dream sentence built from fragments, a connector, and optionally a chosen concept.
+        """
         self.active = True
         self.depth = min(1.0, self.depth + 0.1)
 
@@ -71,10 +90,33 @@ class DreamStateEngine:
     DREAM_CHANCE = 0.35
 
     def should_dream(self, growth_stage: int = 0, interaction_count: int = 0) -> bool:
-        """Determine if dream-state processing is appropriate. Flat 35% chance."""
+        """
+        Decides whether the engine should initiate a dream-state.
+        
+        The decision is made by sampling a uniform random value against a fixed 35% chance. The parameters are accepted for signature compatibility but are ignored.
+        
+        Parameters:
+            growth_stage (int): Ignored.
+            interaction_count (int): Ignored.
+        
+        Returns:
+            `true` if a dream should occur, `false` otherwise.
+        """
         return random.random() < self.DREAM_CHANCE
 
     def get_status(self) -> Dict:
+        """
+        Return the current status of the dream engine.
+        
+        The returned mapping contains three fields describing the engine's observable state.
+        
+        Returns:
+            dict: {
+                'depth': float — current dream depth rounded to three decimal places (typically between 0.0 and 1.0),
+                'dreams_generated': int — total number of dreams generated,
+                'active': bool — whether the engine is currently active
+            }
+        """
         return {
             'depth': round(self.depth, 3),
             'dreams_generated': self.dreams_generated,

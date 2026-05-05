@@ -43,6 +43,20 @@ class HilbertEngine:
     """Quantum-state semantic sampler. See module docstring."""
 
     def __init__(self, dim: int = 128):
+        """
+        Initialize the HilbertEngine and its internal quantum state.
+        
+        Parameters:
+            dim (int): Dimension of the Hilbert space used for token embeddings and the density matrix. Defaults to 128.
+        
+        Raises:
+            RuntimeError: If NumPy is not available.
+        
+        Notes:
+            - Creates empty vocabulary structures (`tokens`, `token_index`) and leaves `vectors` and `U` unset.
+            - Initializes the density matrix `rho` to the maximally mixed state (identity / dim).
+            - Initializes `loaded` to False and `sample_count` to 0.
+        """
         if not HAS_NUMPY:
             raise RuntimeError("HilbertEngine requires numpy")
         self.dim = dim
@@ -60,7 +74,19 @@ class HilbertEngine:
     # Persistence
     # ────────────────────────────────────────────────────────────────────
     def load_state(self, path: str) -> None:
-        """Load tokens / vectors / U from .npz. Tries .json sidecar for extras."""
+        """
+        Load a saved Hilbert engine state from a .npz file and initialize the engine's vocabulary, embeddings, and evolution operator.
+        
+        Parameters:
+        	path (str): Path to a .npz file containing `tokens`, `vectors`, and optionally `U`. If the file does not exist, the method logs a warning and returns without modifying the engine state.
+        
+        Details:
+        	- Loads `tokens` (string list) and rebuilds the internal token index.
+        	- Loads `vectors` as complex-valued embeddings; if the saved embedding dimension differs from the current `dim`, updates `dim` and resets `rho` to the maximally mixed state I/dim.
+        	- Loads `U` (unitary evolution). If `U` is absent in the archive, sets `U` to the identity operator (no evolution).
+        	- Attempts to read an optional JSON sidecar (same path with .json extension) for metadata; any errors while reading the sidecar are ignored.
+        	- Marks the engine as loaded and logs a summary of the loaded vocabulary size and dimension.
+        """
         if not os.path.exists(path):
             logger.warning(f"Hilbert state not found: {path}")
             return
@@ -97,6 +123,13 @@ class HilbertEngine:
         logger.info(f"HilbertEngine loaded: {vocab} tokens, dim={self.dim}")
 
     def save_state(self, path: str) -> None:
+        """
+        Persist the engine's vocabulary, embedding vectors, and evolution operator to a .npz file.
+        
+        If the engine has no vectors or no evolution operator, the method does nothing. The parent directory is created if it does not exist; the file at `path` will contain `tokens` (object array), `vectors`, and `U`.
+        Parameters:
+            path (str): Filesystem path where the .npz state file will be written.
+        """
         if self.vectors is None or self.U is None:
             return
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -116,10 +149,15 @@ class HilbertEngine:
 
     def _prepare_state_from_context(self, context_tokens: List[str]) -> "np.ndarray":
         """
-        Build a pure-state ψ from the tokens we know.
-        ψ = normalize( Σ vectors[i]  for each known context token )
-        Then ρ = |ψ⟩⟨ψ|.
-        Unknown tokens are skipped silently.
+        Constructs a density matrix representing a pure state from the provided context tokens.
+        
+        Given known tokens, this builds ψ as the (complex) sum of their embedding vectors, normalizes ψ, and returns the pure-state density matrix |ψ⟩⟨ψ|. If no vectors are loaded, no context tokens are known, or the summed vector has near-zero norm, returns the maximally mixed state I/dim.
+        
+        Parameters:
+            context_tokens (List[str]): Sequence of tokens to build the context state from; tokens not present in the engine's vocabulary are skipped.
+        
+        Returns:
+            np.ndarray: A (dim x dim) complex-valued density matrix equal to |ψ⟩⟨ψ| for the normalized ψ, or I/dim when a pure state cannot be constructed.
         """
         if self.vectors is None or not context_tokens:
             return np.eye(self.dim, dtype=complex) / self.dim
@@ -151,10 +189,17 @@ class HilbertEngine:
         top_k: int = 0,
     ) -> Optional[str]:
         """
-        Sample the next token by Born rule.
-        P(token=i) ∝ ⟨vᵢ | ρ | vᵢ⟩
-        With temperature T, weights = P^(1/T).
-        With top_k > 0, restrict to the top_k most likely tokens.
+        Select a token from the engine's semantic state using Born-rule probabilities.
+        
+        When possible, computes probabilities from the current density matrix (or from a state prepared from `context_tokens`), optionally sharpens them by `temperature`, and optionally restricts to the top `top_k` candidates. After sampling, the engine collapses its internal density matrix to the chosen token's projector, applies the configured unitary evolution, and increments the sample counter.
+        
+        Parameters:
+            context_tokens (Optional[List[str]]): If provided, build a temporary state from these tokens and sample from it; unknown tokens are ignored.
+            temperature (float): Temperature > 0 that adjusts distribution sharpness (1.0 leaves probabilities unchanged).
+            top_k (int): If > 0 and less than the vocabulary size, limit sampling to the top `top_k` tokens by probability.
+        
+        Returns:
+            Optional[str]: The sampled token string, or `None` if sampling cannot be performed (for example, the engine is not loaded, no vectors are available, or probabilities are degenerate).
         """
         if not self.loaded or self.vectors is None or len(self.tokens) == 0:
             return None
@@ -208,7 +253,12 @@ class HilbertEngine:
     # External evolution — call after seeing an externally-supplied token
     # ────────────────────────────────────────────────────────────────────
     def evolve(self, token: str) -> None:
-        """Advance ρ as if `token` were the most recent observation."""
+        """
+        Collapse the internal density matrix to the projector for `token` and then apply the unitary evolution.
+        
+        Parameters:
+            token (str): Token whose embedding will be used to set the state. The lookup is case-insensitive; if the token is unknown or embeddings are missing, the state is not modified.
+        """
         idx = self.token_index.get(token.lower())
         if idx is None or self.vectors is None:
             return
@@ -220,6 +270,17 @@ class HilbertEngine:
 
     # ────────────────────────────────────────────────────────────────────
     def get_status(self) -> Dict:
+        """
+        Report the engine's current status and metadata.
+        
+        Returns:
+            status (dict): A mapping with keys:
+                - "loaded": `True` if state was successfully loaded, `False` otherwise.
+                - "dim": current Hilbert space dimension (int).
+                - "vocab_size": number of tokens in the vocabulary (int).
+                - "samples_drawn": number of tokens sampled so far (int).
+                - "has_U": `True` if a unitary evolution operator is present, `False` otherwise.
+        """
         return {
             "loaded": self.loaded,
             "dim": self.dim,
@@ -233,6 +294,17 @@ class HilbertEngine:
 _INSTANCE: Optional[HilbertEngine] = None
 
 def get_hilbert_engine(dim: int = 128) -> HilbertEngine:
+    """
+    Get the module-level singleton HilbertEngine instance, creating it if necessary.
+    
+    If no instance exists this constructs a new HilbertEngine with the given dimension; subsequent calls return the same instance and ignore the `dim` argument.
+    
+    Parameters:
+        dim (int): Hilbert space dimension to use when creating the singleton (only used on first call).
+    
+    Returns:
+        HilbertEngine: The shared HilbertEngine singleton.
+    """
     global _INSTANCE
     if _INSTANCE is None:
         _INSTANCE = HilbertEngine(dim=dim)

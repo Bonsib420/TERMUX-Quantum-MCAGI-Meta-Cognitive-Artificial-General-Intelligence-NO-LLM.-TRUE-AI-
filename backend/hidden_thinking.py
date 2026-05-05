@@ -79,6 +79,17 @@ FACTUAL_PATTERNS = [
 
 
 def _strip_wiki_markup(text):
+    """
+    Remove common Wikipedia and HTML markup from a text string.
+    
+    This performs a lightweight cleanup suitable for short scraped wiki fragments: it replaces internal wiki links with their displayed text, removes <ref> tags (both block and self-closing), removes simple {{template}} constructs, strips other HTML tags, removes bracketed numeric footnote markers and bare URLs, and normalizes whitespace.
+    
+    Parameters:
+        text (str): Input text potentially containing wiki markup, HTML tags, footnote markers, or URLs.
+    
+    Returns:
+        str: The cleaned text with markup removed and whitespace normalized.
+    """
     text = re.sub(r"\[\[(?:[^|\]]*\|)?([^\]]*)]\]", r"\1", text)
     text = re.sub(r"<ref[^>]*>.*?</ref>", "", text, flags=re.DOTALL)
     text = re.sub(r"<ref[^/]*/>", "", text)
@@ -94,6 +105,16 @@ class HiddenThinkingMode:
     """7-stage cognitive pipeline (Input → Save + return)."""
 
     def __init__(self, cognitive_core, dictionary, universal_explorer):
+        """
+        Initialize HiddenThinkingMode, wiring core subsystems, optional engines, and internal state used by the 8-stage response pipeline.
+        
+        Initializes local components: memory store, Markov chain generator, OrchOR engine, Bloom generator, comprehension and personality engines; loads the local fact cache; attempts to attach optional Hilbert, DreamState, and QuoteEngine modules (silently skipping or warning if unavailable). Also sets runtime flags and last-response bookkeeping used across processing stages.
+        
+        Parameters:
+            cognitive_core: Core cognitive service object (passed-through host dependency; not documented here).
+            dictionary: Shared dictionary/lexicon service (passed-through host dependency; not documented here).
+            universal_explorer: External explorer/service used for environment queries (passed-through host dependency; not documented here).
+        """
         self.memory = LocalMemory()
         self.markov = MarkovEngine(order=2, silent=True)
         self.orch_or = OrchOREngine()
@@ -137,7 +158,14 @@ class HiddenThinkingMode:
     # ─────────────────────────────────────────────────────────────────
 
     def _clean_response(self, text: str) -> str:
-        """Aggressive wiki markup stripping. Targets every junk pattern observed."""
+        """
+        Remove wiki markup, HTML/XML tags, bare and bracketed URLs, citation metadata, bibliographic identifiers, template/table fragments, bracketed/pipe artifacts, stray punctuation/brackets, ISO dates, and other common Wikipedia/markup noise, and normalize whitespace and punctuation spacing.
+        
+        If `text` is falsy, it is returned unchanged.
+        
+        Returns:
+            A cleaned string with markup, links, citations, identifiers, and extraneous whitespace removed.
+        """
         if not text:
             return text
 
@@ -218,17 +246,54 @@ class HiddenThinkingMode:
         return text
 
     def _extract_concepts(self, text: str) -> List[str]:
+        """
+        Extract up to six lowercase alphabetic concept tokens from the input text.
+        
+        Scans the input for alphabetic words of length four or greater, preserves their original order while removing duplicates, and returns at most six tokens in lowercase.
+        
+        Parameters:
+            text (str): Input string to extract concept tokens from.
+        
+        Returns:
+            List[str]: A list of up to six unique, lowercase alphabetic tokens (each at least four characters).
+        """
         words = re.findall(r'\b[a-z]{4,}\b', text.lower())
         return list(dict.fromkeys(words))[:6]
 
     def _load_fact_cache(self):
+        """
+        Load facts from the object's persistent memory into the in-memory fact cache.
+        
+        If `self.memory` has a non-empty `facts` attribute, its entries are copied into `self._fact_cache` in-place; otherwise the cache is left unchanged.
+        """
         if hasattr(self.memory, 'facts') and self.memory.facts:
             self._fact_cache.update(self.memory.facts)
 
     def _get_fact(self, query: str) -> Optional[str]:
+        """
+        Retrieve a stored fact from the local fact cache using a normalized query key.
+        
+        The query is normalized by converting to lowercase and stripping surrounding whitespace before lookup. If a matching entry exists in the internal fact cache, its associated answer string is returned; otherwise `None` is returned.
+        
+        Parameters:
+            query (str): The lookup key to normalize and search for in the fact cache.
+        
+        Returns:
+            Optional[str]: The cached answer string if found, `None` otherwise.
+        """
         return self._fact_cache.get(query.lower().strip())
 
     def _store_fact(self, query: str, answer: str):
+        """
+        Store an answer for a query in the in-memory cache and persist it to the object's memory.
+        
+        Parameters:
+        	query (str): The query text to index; it will be normalized by lowercasing and trimming whitespace.
+        	answer (str): The answer text to associate with the normalized query.
+        
+        Details:
+        	The query is normalized with .lower().strip() before storing. The mapping is written to both the internal fact cache and to self.memory.facts, and self.memory.save_all() is called to persist the change.
+        """
         norm = query.lower().strip()
         self._fact_cache[norm] = answer
         if not hasattr(self.memory, 'facts'):
@@ -237,6 +302,15 @@ class HiddenThinkingMode:
         self.memory.save_all()
 
     def toggle_thinking_display(self, show: bool):
+        """
+        Enable or disable display of internal "thinking" details.
+        
+        Parameters:
+            show (bool): True to enable showing internal thinking/log details, False to disable.
+        
+        Returns:
+            str: Status message of the form "Thinking mode: ON" if enabled or "Thinking mode: OFF" if disabled.
+        """
         self.show_thinking = show
         return f"Thinking mode: {'ON' if show else 'OFF'}"
 
@@ -245,7 +319,12 @@ class HiddenThinkingMode:
     # ─────────────────────────────────────────────────────────────────
 
     def _stage_1_math(self, user_input: str) -> Optional[str]:
-        """Direct arithmetic via cistercian_math. Returns formatted answer or None."""
+        """
+        Attempt to parse and evaluate a direct arithmetic expression from the user's input.
+        
+        Returns:
+            `str`: A single-line result prefixed with "🧮 " containing the computed value, or `None` if no arithmetic expression was recognized.
+        """
         result = process_math(user_input)
         if result:
             # Single clean line, no echo, no duplication
@@ -257,7 +336,16 @@ class HiddenThinkingMode:
     # ─────────────────────────────────────────────────────────────────
 
     def _stage_2_kb_exact(self, user_input: str, fact_query: str = None) -> Optional[str]:
-        """Fast exact lookup in local fact cache."""
+        """
+        Perform a fast exact lookup in the local fact cache using a prioritized key list.
+        
+        Parameters:
+            user_input (str): The original user input used as a fallback lookup key.
+            fact_query (str, optional): A preferred normalized query/key to try before `user_input`.
+        
+        Returns:
+            str or None: The cached answer associated with the first matching key, or `None` if no exact match is found.
+        """
         keys_to_try = []
         if fact_query:
             keys_to_try.append(fact_query)
@@ -273,7 +361,16 @@ class HiddenThinkingMode:
     # ─────────────────────────────────────────────────────────────────
 
     def _stage_3_kb_semantic(self, user_input: str, concepts: List[str]) -> Optional[str]:
-        """Hilbert-based semantic match. Find conceptually-related stored facts."""
+        """
+        Select a stored fact whose query shares semantic overlap with the provided concepts using the Hilbert engine.
+        
+        Parameters:
+        	user_input (str): The original user input (preserved for context; not used in the matching heuristic).
+        	concepts (List[str]): Concept tokens extracted from the input, used to compute overlap with cached fact queries.
+        
+        Returns:
+        	matched_answer (Optional[str]): The stored answer whose cached query shares at least two token overlaps with `concepts` and has the highest overlap; `None` if Hilbert is unavailable, the fact cache is empty, no match meets the threshold, or an error occurs.
+        """
         if not self.hilbert or not getattr(self.hilbert, 'loaded', False):
             return None
         if not self._fact_cache:
@@ -298,9 +395,13 @@ class HiddenThinkingMode:
     # ─────────────────────────────────────────────────────────────────
 
     def _stage_4_kb_cloud(self, user_input: str) -> Optional[str]:
-        """Cloud KB check. Currently a stub — extends later when cloud
-        semantic search is wired. For now relies on cloud_brain pulling
-        on startup, so cloud facts are already in local cache."""
+        """
+        Attempt a cloud knowledge-base lookup for the given user input.
+        
+        Currently unimplemented: always returns `None` (cloud semantic search is not wired).
+        Returns:
+            Optional[str]: A cloud KB match string if found, `None` otherwise.
+        """
         return None
 
     # ─────────────────────────────────────────────────────────────────
@@ -308,7 +409,14 @@ class HiddenThinkingMode:
     # ─────────────────────────────────────────────────────────────────
 
     def _detect_factual_query(self, user_input: str) -> Optional[str]:
-        """Returns the cleaned query if input matches a factual pattern."""
+        """
+        Detects and extracts a candidate factual or entity query from the user's input.
+        
+        If the input matches one of the configured factual question patterns, returns the captured, trimmed query. For short (1–10 word) inputs that do not contain philosophical keywords and are longer than three characters, treats the entire input as a candidate entity lookup. Returns None when no factual query is identified.
+        
+        Returns:
+            str: The cleaned query string when a factual/entity query is detected, `None` otherwise.
+        """
         user_lower = user_input.lower()
         for pat, _ in FACTUAL_PATTERNS:
             m = re.match(pat, user_lower)
@@ -322,7 +430,17 @@ class HiddenThinkingMode:
         return None
 
     def _stage_5_internet(self, query: str) -> Optional[str]:
-        """Wikipedia search. Returns first 2 sentences or None."""
+        """
+        Query English Wikipedia for `query` and return a short summary.
+        
+        Attempts to fetch the Wikipedia page for `query` (English) and returns the first two sentences of the page summary. If the page is a disambiguation, the first disambiguation option is attempted. Returns None when `query` is empty, the wikipedia module is unavailable, no suitable page can be resolved, or any lookup error occurs.
+        
+        Parameters:
+            query (str): Search term to lookup on Wikipedia.
+        
+        Returns:
+            summary (str): The first two sentences of the Wikipedia page summary, ending with a period, or `None` if no summary could be obtained.
+        """
         if not query:
             return None
         try:
@@ -356,11 +474,19 @@ class HiddenThinkingMode:
 
     def _stage_7_language_stylization(self, retrieved_text: str, user_input: str,
                                      concepts: List[str]) -> str:
-        """Takes retrieved truth and re-expresses it in Quantum MCAGI's voice.
-        
-        Pipeline: Retrieved truth → Hilbert semantic mapping → Markov generation
-                 → Re-express in engine's distinctive voice.
         """
+                                     Re-expresses retrieved content or generates a stylized response in the engine's voice using available semantic and generative resources.
+                                     
+                                     If `retrieved_text` is provided, returns a re-stylized version of that text; otherwise generates a Markov-based fallback response from `concepts`. If a Hilbert semantic engine is available and `concepts` are provided, a Hilbert-derived context may be prepended. For inputs mentioning philosophical terms (e.g., "god", "consciousness", "cosmos", "existence"), a fixed cosmology framing sentence is prepended.
+                                     
+                                     Parameters:
+                                         retrieved_text (str): Source text to be re-expressed; may be empty or None to trigger generation.
+                                         user_input (str): Original user query used for context-sensitive framing.
+                                         concepts (List[str]): Extracted concept tokens used to guide generation and semantic lookup.
+                                     
+                                     Returns:
+                                         str: A single-string response stylized in the engine's voice.
+                                     """
         if not retrieved_text:
             # No retrieved text — generate from scratch via Markov
             tokens = self.markov.generate_from_concepts(concepts, length=30)
@@ -390,10 +516,16 @@ class HiddenThinkingMode:
 
     def _stylize_in_engine_voice(self, retrieved_text: str, concepts: List[str]) -> str:
         """
-        Take retrieved factual text and re-express it in Quantum MCAGI's voice.
-        Two strategies based on length:
-          - Short (< 200 chars): concept-graft. Extract entities, weave engine sentence.
-          - Longer: sentence-bloom. Soften function words, keep content nouns intact.
+        Re-express retrieved factual text into the engine's stylistic voice.
+        
+        Transforms the provided text into a stylized response influenced by the supplied concept tokens. Uses a concise grafting strategy for texts shorter than 200 characters and a sentence-bloom rephrasing for longer texts. If `retrieved_text` is falsy, it is returned unchanged.
+        
+        Parameters:
+        	retrieved_text (str): Source factual text to stylize.
+        	concepts (List[str]): Ordered concept tokens used to guide the stylization.
+        
+        Returns:
+        	stylized_text (str): The input text transformed into the engine's voice, or the original input if it was empty or falsy.
         """
         if not retrieved_text:
             return retrieved_text
@@ -405,7 +537,18 @@ class HiddenThinkingMode:
         return self._sentence_bloom(text, concepts)
 
     def _concept_graft(self, text: str, concepts: List[str]) -> str:
-        """For short facts: keep the truth, add a soft engine framing."""
+        """
+        Prepend a deterministic cosmological-style prefix to short factual texts when a proper noun or year is present.
+        
+        If the input contains a capitalized multi-word entity or a four-digit year, the function selects a stable prefix derived from the first such entity and returns the prefix concatenated with the original text; otherwise the original text is returned unchanged.
+        
+        Parameters:
+            text (str): The source text to potentially augment.
+            concepts (List[str]): Concept tokens (present for API consistency; not used by this implementation).
+        
+        Returns:
+            str: The original text with a deterministic prefix added when an entity is found, otherwise the original text.
+        """
         # Pull out key entities (proper nouns, dates, numbers)
         entities = re.findall(r'\b[A-Z][a-z]{2,}(?:\s+[A-Z][a-z]+)*\b|\b\d{4}\b', text)
         if entities:
@@ -422,7 +565,17 @@ class HiddenThinkingMode:
         return text
 
     def _sentence_bloom(self, text: str, concepts: List[str]) -> str:
-        """For longer facts: keep substance, lightly stylize transitions."""
+        """
+        Prefix the given text with a soft framing line that highlights up to three concepts.
+        
+        If `concepts` is non-empty, the framing lists up to the first three concepts and a connective phrase before the original `text`; otherwise a generic framing line is used.
+        
+        Parameters:
+            concepts (List[str]): Optional list of concept tokens; only the first three are included in the framing.
+        
+        Returns:
+            str: The framed text consisting of the generated framing line followed by the original `text`.
+        """
         # Just return text with a soft framing line — preserves accuracy
         if concepts:
             framing = f"Among the concepts in this domain — {', '.join(concepts[:3])} — the record reflects:\n\n"
@@ -431,8 +584,14 @@ class HiddenThinkingMode:
         return framing + text
 
     def _generate_aside(self, concepts: List[str]) -> Optional[str]:
-        """Generate a brief aside (inner‑thought / commentary) based on the concepts.
-        The aside is a literary device, not part of the main answer.
+        """
+        Generate a brief, deterministic literary aside based on up to the first two concepts.
+        
+        Parameters:
+            concepts (List[str]): Concept tokens used to build the aside; only the first two concepts are considered.
+        
+        Returns:
+            Optional[str]: A short aside string referencing the concepts (e.g. "(aside: I keep wondering about X)"), or `None` if `concepts` is empty.
         """
         if not concepts:
             return None
@@ -450,7 +609,30 @@ class HiddenThinkingMode:
                                     conversation_history: List[Dict] = None,
                                     explain_mode: bool = False,
                                     structured_response: str = None) -> Dict:
-        start_time = time.time()
+        """
+                                    Run the HiddenThinkingMode 8-stage response pipeline to produce a stylized reply and analysis for a user input.
+                                    
+                                    Processes input through math detection, local exact and semantic memory lookup, optional cloud and Wikipedia retrieval, a language stylization layer (with optional Markov/Hilbert stylization), probabilistic appends (quotes, asides, dream fragments), and a final collapse analysis; persists memory and returns a structured result.
+                                    
+                                    Parameters:
+                                    	user_input (str): The user's raw input text.
+                                    	context (Dict, optional): Optional contextual metadata for this turn (may be ignored by the pipeline).
+                                    	conversation_history (List[Dict], optional): Prior conversation turns; provided for potential use by engines but typically not required.
+                                    	explain_mode (bool, optional): When True, include the collapse analysis in the `explanation` field of the returned dict; otherwise `explanation` is None.
+                                    	structured_response (str, optional): Placeholder for callers that supply a pre-structured response; not required for normal pipeline operation.
+                                    
+                                    Returns:
+                                    	Dict: A dictionary with keys:
+                                    		- response (str): The final textual response with appended collapse analysis.
+                                    		- thinking_log (List): Internal thinking entries (empty list in current implementation).
+                                    		- internal_questions (List[str]): Generated internal question(s) for follow-up.
+                                    		- research_done (int): Numeric flag for research activity (0 or 1).
+                                    		- confidence (int): Numeric confidence score for the response.
+                                    		- show_thinking (bool): Whether thinking/debug info should be shown.
+                                    		- concepts (List[str]): Extracted concept tokens from the input.
+                                    		- explanation (str|None): The collapse analysis when explain_mode is True, otherwise None.
+                                    """
+                                    start_time = time.time()
         used_engines: List[str] = []
         # Reset per-turn flags
         self._dream_added = False
@@ -614,6 +796,15 @@ class HiddenThinkingMode:
     # ─────────────────────────────────────────────────────────────────
 
     def _compute_tone(self, user_input: str):
+        """
+        Determine the conversational tone of the user's input.
+        
+        Parameters:
+            user_input (str): The raw text provided by the user.
+        
+        Returns:
+            tuple: (tone, score) where `tone` is one of "philosophical", "analytical", or "conversational", and `score` is a float between 0.0 and 1.0 representing the computed tone intensity rounded to two decimals.
+        """
         _lower = user_input.lower()
         _words = _lower.split()
         _tscore = 0.0
@@ -637,7 +828,19 @@ class HiddenThinkingMode:
 
     def _finalize(self, response: str, engines: List[str], start_time: float,
                   concepts: List[str], conf: int) -> Dict:
-        """Common finalize for stages 2/3/4/5: clean + persist + return."""
+        """
+                  Finalize a pipeline stage by cleaning the response, persisting memory growth, and building the standardized response payload.
+                  
+                  Parameters:
+                  	response (str): The text to clean and include in the final response.
+                  	engines (List[str]): Names of engines used to produce the response.
+                  	start_time (float): Epoch timestamp when processing began (used for internal timing).
+                  	concepts (List[str]): Extracted concept tokens associated with this turn.
+                  	conf (int): Confidence score (0–100) to attach to the response.
+                  
+                  Returns:
+                  	result (dict): A response dictionary containing the cleaned `response` plus pipeline metadata (`confidence`, `engines`, `concepts`, `show_thinking`, and related fields).
+                  """
         self.memory.growth["total_interactions"] += 1
         self.memory.save_all()
         return self._make_response(self._clean_response(response),
@@ -645,7 +848,28 @@ class HiddenThinkingMode:
 
     def _make_response(self, text: str, engines: List[str], start_time: float,
                        concepts: List[str], conf: int) -> Dict:
-        elapsed = time.time() - start_time
+        """
+                       Assembles the final response payload by appending a pipeline diagnostic block and packaging response metadata.
+                       
+                       Parameters:
+                           text (str): The main response text to return.
+                           engines (List[str]): Names of engines involved in generating the response; used in the pipeline block and to set `research_done`.
+                           start_time (float): Epoch timestamp recorded at processing start; used to compute elapsed time for diagnostics.
+                           concepts (List[str]): Extracted concepts associated with the response.
+                           conf (int): Confidence percentage to display in the pipeline block and return in the payload.
+                       
+                       Returns:
+                           Dict: A dictionary containing:
+                               - response (str): The response text followed by a formatted pipeline block.
+                               - thinking_log (list): Empty list (reserved for internal thinking traces).
+                               - internal_questions (list): Empty list (reserved for generated internal questions).
+                               - research_done (int): `1` if "WikipediaSearch" is present in `engines`, otherwise `0`.
+                               - confidence (int): The provided confidence percentage.
+                               - show_thinking (bool): The instance's `show_thinking` flag.
+                               - concepts (List[str]): The provided concepts list.
+                               - explanation: Always `None`.
+                       """
+                       elapsed = time.time() - start_time
         pipeline_block = (
             "  ╔══ PIPELINE ═════════════════════════════\n"
             "  ║ Path: UnifiedQuantumBrain preservation pipeline\n"
@@ -667,7 +891,24 @@ class HiddenThinkingMode:
 
     def _build_collapse_analysis(self, user_input, concepts, tone, start_time,
                                  used_engines=None, _tone_depth=0.5, response="") -> str:
-        try:
+        """
+                                 Builds a formatted collapse-analysis dashboard describing memory state, engines used, and evaluation metrics.
+                                 
+                                 This produces a multi-section diagnostic string that includes tone and timing, an entelechy cascade, concept extraction (known/unknown), Markov and OrchOR statistics, growth/graph metrics, and a compact rubric scoring coherence/fluency/uniqueness/growth/personal/importance/emergence. The method will attempt to update the in-memory knowledge tracking state when available; failures during that update are ignored.
+                                 
+                                 Parameters:
+                                     user_input (str): The original user input used to compute overlap and rubric metrics.
+                                     concepts (List[str]): List of extracted concepts to include in the analysis.
+                                     tone (str): Human-readable tone label (e.g., "philosophical", "analytical").
+                                     start_time (float): Epoch timestamp marking pipeline start; used to compute collapse duration.
+                                     used_engines (Optional[Iterable[str]]): Iterable of engine names to report; defaults to a standard set when omitted.
+                                     _tone_depth (float): Numeric tone depth used for display alongside `tone`.
+                                     response (str): Optional response text considered when computing overlap/uniqueness metrics.
+                                 
+                                 Returns:
+                                     str: A formatted, human-readable collapse analysis report suitable for inclusion with the final response.
+                                 """
+                                 try:
             self.memory._update_knowledge_track()
         except Exception:
             pass
@@ -757,6 +998,15 @@ RUBRIC: coh={coherence} | flu={fluency} | uni={uniqueness} | gro={growth} | per=
   Total: {total}/32"""
 
     def _entelechy_cascade(self, concepts):
+        """
+        Produce a formatted "entelechy cascade" block that assigns archetypal roles to up to three concepts and emits a projection line.
+        
+        Parameters:
+        	concepts (list[str]): Concept tokens to include; the function uses at most the first three elements. If fewer than two concepts are provided, a short placeholder string is returned.
+        
+        Returns:
+        	str: A multiline, human-readable cascade block containing role-labeled lines for each concept (with a short parenthetical descriptor), downward arrows between entries when applicable, and a final `[PROJECTION]` line mapping the first concept to the second and third (or to `CONSCIOUSNESS` if a third concept is absent). If `concepts` has fewer than two items, returns "  ║   (no cascade)".
+        """
         if len(concepts) < 2:
             return "  ║   (no cascade)"
         roles = ["THE_LOOK", "THE_SAW", "THE_BEAUTIFUL"]
@@ -789,6 +1039,12 @@ _hidden_thinking = None
 
 
 def get_hidden_thinking(cognitive_core, dictionary, universal_explorer):
+    """
+    Get the module-level singleton instance of HiddenThinkingMode.
+    
+    Returns:
+        HiddenThinkingMode: The singleton initialized with the provided `cognitive_core`, `dictionary`, and `universal_explorer`. The instance is created on first call and the same object is returned on subsequent calls.
+    """
     global _hidden_thinking
     if _hidden_thinking is None:
         _hidden_thinking = HiddenThinkingMode(cognitive_core, dictionary, universal_explorer)

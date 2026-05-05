@@ -39,7 +39,21 @@ except ImportError:
 
 
 def get_python_files(directory):
-    """Get all .py files sorted by name."""
+    """
+    Collects metadata for Python (.py) files in a directory.
+    
+    Scans the given directory, selects files whose names end with `.py` and do not start with `__`, and returns a list of metadata dictionaries for each file sorted by filename. File sizes are reported in bytes. Line counts are computed by reading each file as UTF-8 with errors ignored; if a file cannot be read, its `lines` value will be 0.
+    
+    Parameters:
+        directory (str): Path to the directory to scan.
+    
+    Returns:
+        List[dict]: A list of dictionaries, each containing:
+            - name (str): The filename.
+            - path (str): The full filesystem path to the file.
+            - size (int): File size in bytes.
+            - lines (int): Number of lines in the file (0 if unreadable).
+    """
     files = []
     for f in sorted(os.listdir(directory)):
         if f.endswith('.py') and not f.startswith('__'):
@@ -61,7 +75,17 @@ def get_python_files(directory):
 
 
 def escape_xml(text):
-    """Escape text for ReportLab XML."""
+    """
+    Escape characters in a string for safe inclusion in ReportLab XML.
+    
+    Replaces the characters: & → &amp;, < → &lt;, > → &gt;, " → &quot;.
+    
+    Parameters:
+        text (str): Input text to escape.
+    
+    Returns:
+        str: Escaped text suitable for embedding in ReportLab XML.
+    """
     text = text.replace('&', '&amp;')
     text = text.replace('<', '&lt;')
     text = text.replace('>', '&gt;')
@@ -70,7 +94,15 @@ def escape_xml(text):
 
 
 def build_pdf(source_dir, output_path):
-    """Build the complete code PDF."""
+    """
+    Generate a multi-page PDF containing all Python source files found under source_dir.
+    
+    Builds a styled document with a title page, table of contents, and one section per .py file showing file metadata and the file contents (split into chunks when large). If pypdf is available, embeds each original .py as a PDF attachment for lossless extraction. The function writes the resulting PDF to output_path and prints progress and summary information to stdout.
+    
+    Parameters:
+        source_dir (str): Path to the directory to scan for `.py` files (top-level files only).
+        output_path (str): Filesystem path where the generated PDF will be written.
+    """
     files = get_python_files(source_dir)
     total_lines = sum(f['lines'] for f in files)
     total_size = sum(f['size'] for f in files)

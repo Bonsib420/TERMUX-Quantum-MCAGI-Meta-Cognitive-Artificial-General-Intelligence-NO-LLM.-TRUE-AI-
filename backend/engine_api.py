@@ -244,6 +244,23 @@ class CognitiveEngine:
     """
 
     def __init__(self):
+        """
+        Initialize the CognitiveEngine and conditionally start available subsystems.
+        
+        Creates the engine data directory, attempts a cloud-brain startup pull, and initializes optional components (memory, language, markov, Orch OR, dream, research, and hidden-thinking pipeline) when their import flags are present. Also records the engine start time and restores the interaction counter from persisted memory growth if available.
+        
+        Sets the following instance attributes:
+        - data_dir (Path): engine data directory (~/.quantum-mcagi).
+        - memory: LocalMemory instance or None.
+        - language: language engine instance or None.
+        - markov: Markov engine instance or None.
+        - orch_or: Orch OR engine instance or None.
+        - dream: Dream state engine instance or None.
+        - research: Self-research engine instance or None.
+        - hidden: hidden-thinking pipeline instance or None.
+        - start_time (float): epoch timestamp when the engine was started.
+        - interaction_count (int): restored total interaction count or 0.
+        """
         self.data_dir = Path(os.path.expanduser("~/.quantum-mcagi"))
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -345,8 +362,23 @@ class CognitiveEngine:
         explain_mode: bool = False,
     ) -> Dict[str, Any]:
         """
-        Process user input through the real engines.
-        Returns: {"response": str, "concepts": [...], "explanation": dict|None}
+        Process input text through available engine pipelines to produce a conversational response, extracted concepts, and an optional explanation.
+        
+        Prefers the hidden-thinking pipeline when available, falls back to the language engine pipeline otherwise, triggers Orch OR maintenance if present, and logs the interaction to memory when available. When explain_mode is True, includes a brief explanation payload with engines used, interaction number, and a UTC timestamp.
+        
+        Parameters:
+            text (str): User-provided input text to process.
+            context (Optional[Dict]): Optional context passed to hidden-thinking (if supported).
+            history (Optional[List]): Optional conversational history (not used by all engines).
+            explain_mode (bool): If True, include an `explanation` object in the response.
+        
+        Returns:
+            dict: A mapping containing:
+                - response (str): The generated reply text.
+                - concepts (List[str]): Concepts extracted from the input (may be empty).
+                - explanation (dict | None): Explanation payload when explain_mode is True, otherwise None.
+                - confidence (optional): May be present when produced by the hidden-thinking pipeline.
+                - research_done (optional): May be present (numeric) when produced by the hidden-thinking pipeline.
         """
         text = (text or "").strip()
         if not text:
@@ -362,6 +394,12 @@ class CognitiveEngine:
             try:
                 # process_with_thinking is async; run it synchronously
                 async def _run():
+                    """
+                    Process the input text through the hidden thinking pipeline and return its output.
+                    
+                    Returns:
+                        dict: Result dictionary produced by the hidden thinking pipeline. Typically includes `response`, `concepts`, and `explanation`, and may include additional keys such as `confidence` and `research_done`.
+                    """
                     return await self.hidden.process_with_thinking(
                         text, context=None, explain_mode=explain_mode
                     )
@@ -559,7 +597,11 @@ class CognitiveEngine:
 
     # ────────────────────────────────────────────────────────────────────
     def save_state(self) -> None:
-        """Persist all engine state. Called by chat.py /save."""
+        """
+        Persist engine state to durable storage.
+        
+        Attempts to save the memory store (if present) using its `save_all` method and then saves the language engine state by calling the first available method in this order: `save_state`, `save`, `save_chain`. Operations are best-effort; failures are caught and logged.
+        """
         if self.memory is not None and hasattr(self.memory, "save_all"):
             try:
                 self.memory.save_all()
@@ -583,7 +625,14 @@ _API_INSTANCE: Optional[CognitiveEngine] = None
 
 
 def get_api() -> CognitiveEngine:
-    """Singleton accessor. NEVER instantiate CognitiveEngine() directly elsewhere."""
+    """
+    Get the module-level CognitiveEngine singleton instance.
+    
+    Creates and caches a single CognitiveEngine on first call and returns the same instance on subsequent calls.
+    
+    Returns:
+        CognitiveEngine: The cached CognitiveEngine instance.
+    """
     global _API_INSTANCE
     if _API_INSTANCE is None:
         _API_INSTANCE = CognitiveEngine()
@@ -603,6 +652,12 @@ CORS(app)
 # ─── Serve frontend ─────────────────────────────────────────────────────
 @app.route("/", methods=["GET"])
 def serve_index():
+    """
+    Serve the frontend index page if available; otherwise return a JSON status payload indicating the engine is online and that the frontend was not found.
+    
+    Returns:
+        A Flask response: the served `index.html` file when present, or a JSON object with keys `status`, `version`, and `note` describing the missing frontend.
+    """
     if (FRONTEND_DIR / "index.html").exists():
         return send_from_directory(str(FRONTEND_DIR), "index.html")
     return jsonify({"status": "QUANTUM MCAGI ENGINE ONLINE",
@@ -612,7 +667,15 @@ def serve_index():
 
 @app.route("/<path:filename>", methods=["GET"])
 def serve_static(filename):
-    """Serve frontend assets (CSS, JS, images)."""
+    """
+    Serve a static file from the configured frontend directory.
+    
+    Parameters:
+        filename (str): Relative path to the requested asset within the frontend directory.
+    
+    Returns:
+        The Flask response serving the file when it exists; otherwise the tuple ("Not found", 404).
+    """
     if (FRONTEND_DIR / filename).exists():
         return send_from_directory(str(FRONTEND_DIR), filename)
     return ("Not found", 404)
@@ -620,23 +683,57 @@ def serve_static(filename):
 
 # ─── Helpers ────────────────────────────────────────────────────────────
 def _get_query() -> str:
+    """
+    Extract the user's text query from the current HTTP request JSON body.
+    
+    Checks the parsed JSON payload for the keys "message", "query", and "text" (in that order) and returns the first present value trimmed of surrounding whitespace. If the body is missing or none of those keys exist, returns an empty string.
+    
+    Returns:
+        str: The trimmed query string from "message", "query", or "text", or an empty string if not found.
+    """
     data = request.get_json(silent=True) or {}
     return (data.get("message") or data.get("query") or data.get("text") or "").strip()
 
 
 def _ok(text: str, **extra) -> Any:
+    """
+    Builds a JSON success payload for the API and returns it as a Flask response.
+    
+    Parameters:
+        text (str): The main response text to include under the "response" key.
+        **extra: Additional key/value pairs to merge into the JSON payload.
+    
+    Returns:
+        A Flask Response object containing the JSON-serialized payload with at least a "response" field and any provided extra fields.
+    """
     payload = {"response": text}
     payload.update(extra)
     return jsonify(payload)
 
 
 def _err(msg: str, code: int = 500) -> Any:
+    """
+    Create an HTTP JSON error response with a warning prefix.
+    
+    Parameters:
+        msg (str): Human-readable error message used as the response text (prefixed with a warning emoji).
+        code (int): HTTP status code to return (default 500).
+    
+    Returns:
+        tuple: A Flask-compatible response tuple (body, status_code) where `body` is a JSON object containing
+               `"response"` set to the prefixed message and `"error": True`.
+    """
     return jsonify({"response": f"⚠️ {msg}", "error": True}), code
 
 
 # ─── /chat — real engine ────────────────────────────────────────────────
 @app.route("/chat", methods=["POST"])
 def chat_endpoint():
+    """
+    HTTP POST handler for chat requests that returns a JSON chat response.
+    
+    Reads the request body for a text query, rejects empty messages with a 400 error, and forwards the query to the engine to produce a chat reply. The response JSON always contains "response" (string) and "concepts" (list). When available, it also includes "confidence" (number) and "research_done" (number). If the request enabled explanation mode ("explain_mode" or "verbose"), the response may include an "explanation" object. On internal errors, returns an error JSON describing the failure.
+    """
     msg = _get_query()
     if not msg:
         return _err("Empty message", 400)
@@ -663,6 +760,17 @@ def chat_endpoint():
 # ─── /memory — real ─────────────────────────────────────────────────────
 @app.route("/memory", methods=["POST"])
 def memory_endpoint():
+    """
+    Return a brief memory-engine snapshot or a notice that no memory engine is loaded.
+    
+    On success, returns a JSON response containing a human-readable memory snapshot with:
+      • Interactions count
+      • Total concepts
+      • Growth stage
+      • Data directory path
+    
+    If the memory engine is not available, returns a JSON response stating "Memory engine not loaded." On internal failure, returns an error JSON describing the exception.
+    """
     api = get_api()
     if api.memory is None:
         return _ok("🧠 Memory engine not loaded.")
@@ -685,6 +793,13 @@ def memory_endpoint():
 # ─── /growth — real metrics ─────────────────────────────────────────────
 @app.route("/growth", methods=["POST"])
 def growth_endpoint():
+    """
+    Return a human-readable summary of the engine's growth, Markov, and Orch OR status.
+    
+    Fetches the current engine status and formats stage, concept and interaction counts, Markov states/transitions, and Orch OR summary into a single textual payload.
+    
+    @returns JSON response: on success, a message string containing the formatted growth and Markov metrics and Orch OR summary; on failure, an error payload with a warning and the error message.
+    """
     try:
         s = get_api().get_status()
         g = s["growth"]
@@ -705,6 +820,11 @@ def growth_endpoint():
 # ─── /dream — real ──────────────────────────────────────────────────────
 @app.route("/dream", methods=["POST"])
 def dream_endpoint():
+    """
+    Handle POST /dream requests by invoking the dream engine and returning its generated output.
+    
+    Attempts the dream engine methods in order: `generate_dream`, `dream`, `produce`, `generate`. If a method returns a non-empty string, the response contains that text prefixed with "🌙". If a method returns a dict, the response uses the dict's `"text"` key when present (otherwise the dict itself). If the dream engine is not loaded or no method produces output, returns a descriptive message. On exception, returns an error payload.
+    """
     api = get_api()
     if api.dream is None:
         return _ok("🌙 Dream engine not loaded.")
@@ -724,6 +844,18 @@ def dream_endpoint():
 # ─── /research — real ───────────────────────────────────────────────────
 @app.route("/research", methods=["POST"])
 def research_endpoint():
+    """
+    Handle the /research POST endpoint by invoking the research engine on a topic and returning a formatted result.
+    
+    Uses the request body message (via _get_query()) or "consciousness" when absent. If no research engine is loaded, returns a notice. Calls the first available method on the engine from: "research_topic", "research", "investigate", "query". Formats the engine output as:
+    - If a dict: returns the dict's "summary" key (or the dict itself if "summary" is absent).
+    - If a string: returns the string.
+    - If a list: returns up to the first five items as a bullet list.
+    If no supported method is present, returns a message stating no method matched. Any exception is returned as an error response.
+    
+    Returns:
+        A JSON response string produced by helper functions `_ok` or `_err`, containing the research result, a notice about missing engine, a no-method-matched message, or an error description.
+    """
     api = get_api()
     msg = _get_query()
     if api.research is None:
@@ -748,6 +880,14 @@ def research_endpoint():
 # ─── /analyze — real text analyzer ──────────────────────────────────────
 @app.route("/analyze", methods=["POST"])
 def analyze_endpoint():
+    """
+    Handle analysis requests by running the text analyzer on the provided message and returning a human-readable summary.
+    
+    If the text analyzer feature is unavailable, returns a message stating it is not loaded. On success, returns a formatted summary including sentiment, complexity, topics, and word count. On failure, returns an error message describing the analysis failure.
+    
+    Returns:
+        A JSON-serializable response string containing either the formatted analysis, a not-loaded notice, or an error message.
+    """
     msg = _get_query() or "test"
     if not HAS_TEXT_ANALYZER:
         return _ok("📊 Text analyzer not loaded.")
@@ -768,6 +908,12 @@ def analyze_endpoint():
 # ─── /evolve — status only, no autorun ──────────────────────────────────
 @app.route("/evolve", methods=["POST"])
 def evolve_endpoint():
+    """
+    Report whether the evolution module is loaded and provide a safety-status message.
+    
+    Returns:
+        dict: JSON-compatible response containing a human-readable status message indicating either that the evolution module is not loaded or that the evolution engine is armed but web-triggering is disabled.
+    """
     if not HAS_EVOLUTION:
         return _ok("🔬 Evolution module not loaded.")
     return _ok(
@@ -781,6 +927,14 @@ def evolve_endpoint():
 @app.route("/numerals", methods=["POST"])
 @app.route("/cistercian", methods=["POST"])
 def cistercian_endpoint():
+    """
+    Handle POST requests to produce a Cistercian numeral for a given integer or a random number.
+    
+    Reads the request query text via internal helper `_get_query()`. If the Cistercian engine is not available, returns a JSON response noting that. If a numeric value is provided it is used; otherwise a random integer from 1 to 9999 is chosen. The selected number is converted to a Cistercian numeral via `generate_cistercian()` and returned in the response. On failure returns an error JSON describing the problem.
+    
+    Returns:
+        A JSON response produced by `_ok()` containing the rendered Cistercian numeral and its source number, or an error JSON from `_err()` if an exception occurs.
+    """
     msg = _get_query()
     if not HAS_CISTERCIAN:
         return _ok("📜 Cistercian engine not loaded.")
@@ -798,6 +952,14 @@ def cistercian_endpoint():
 # ─── /image — real ──────────────────────────────────────────────────────
 @app.route("/image", methods=["POST"])
 def image_endpoint():
+    """
+    Handle POST /image requests to generate an image from a text prompt.
+    
+    On success returns a JSON payload with a `response` string describing the generated image; when the image generator returns a mapping that includes a path, the response contains that path. If the optional image engine is not available, returns a JSON success message stating the generator is not loaded. If an exception occurs, returns an error JSON with the exception message.
+    
+    Returns:
+        dict: JSON-compatible response object produced by helpers `_ok` or `_err`, containing a `response` string and, on errors, an error indicator.
+    """
     if not HAS_IMAGE:
         return _ok("🎨 Image generator not loaded.")
     msg = _get_query() or "quantum nebula"
@@ -813,6 +975,14 @@ def image_endpoint():
 # ─── /create — creative generation via language engine ──────────────────
 @app.route("/create", methods=["POST"])
 def create_endpoint():
+    """
+    Handle POST /create requests by asking the CognitiveEngine to create content from the request text.
+    
+    Reads the incoming message from the request body (falls back to "create something new"), prefixes it with "Create: ", and passes it to the engine's process_input. On success returns a JSON success payload whose `response` value is the engine's response prefixed with "✨ ". On exception returns a JSON error payload describing the failure.
+    
+    Returns:
+        A Flask JSON response: success payload with `response` containing the created text prefixed with "✨ ", or an error payload on failure.
+    """
     msg = _get_query() or "create something new"
     try:
         result = get_api().process_input(f"Create: {msg}")
@@ -824,6 +994,14 @@ def create_endpoint():
 # ─── /explore — knowledge base or memory walk ───────────────────────────
 @app.route("/explore", methods=["POST"])
 def explore_endpoint():
+    """
+    Provide an exploration endpoint that returns a topic explanation from the knowledge base when available, otherwise falls back to producing an associative/dream-like string from the dream engine, and if neither produces output returns a prompt asking for an exploration target.
+    
+    If `HAS_KNOWLEDGE` is true and a message is provided, the function attempts to retrieve a topic explanation from the knowledge base and returns it prefixed with "🌐". On failure it logs a warning and continues to the fallback. As a fallback, if the engine's `dream` subsystem exists, it attempts the first available method among `generate_dream`, `dream`, or `produce` and returns that output prefixed with "🌐". If no source produces content, it returns a default prompt asking the caller to send a message body to explore a topic.
+    
+    Returns:
+        A JSON response (via `_ok`) containing an exploration text: the knowledge explanation, a dream-generated string, or a default prompt, each prefixed with "🌐".
+    """
     msg = _get_query()
     if HAS_KNOWLEDGE and msg:
         try:
@@ -848,6 +1026,14 @@ def explore_endpoint():
 # ─── /settings — system status ──────────────────────────────────────────
 @app.route("/settings", methods=["POST"])
 def settings_endpoint():
+    """
+    Provide a human-readable system status summary including uptime, which engines are active or inactive, and the configured QRAM backend.
+    
+    Uses get_api().get_status() to collect status data and returns a formatted JSON response via the module helper functions. On failure returns an error JSON payload describing the problem.
+    
+    Returns:
+        JSON success payload with a `response` string containing the formatted status (uptime, active engines, inactive engines, QRAM backend); on exception returns an error payload containing an `error` flag and an explanatory `response` message.
+    """
     try:
         s = get_api().get_status()
         engines = s["engines"]
@@ -867,18 +1053,38 @@ def settings_endpoint():
 # ─── /theme — ack only ──────────────────────────────────────────────────
 @app.route("/theme", methods=["POST"])
 def theme_endpoint():
+    """
+    Acknowledge the theme endpoint and indicate that the frontend controls the UI theme.
+    
+    Returns:
+        dict: JSON-serializable mapping containing an acknowledgment message under the `response` key.
+    """
     return _ok("🎨 Theme: cyberpunk-neon (frontend-controlled).")
 
 
 # ─── /status — for chat.py compatibility ────────────────────────────────
 @app.route("/status", methods=["GET", "POST"])
 def status_endpoint():
+    """
+    Return the current engine status as a JSON-serializable status object.
+    
+    Returns:
+        dict: A JSON-serializable dictionary describing system status, including keys for
+            `growth` (stage, totals, etc.), `markov` (states/transitions), `orch_or` (activity),
+            `qram` backend info, `uptime_seconds`, and `engines` availability flags.
+    """
     return jsonify(get_api().get_status())
 
 
 # ─── /save — persist state ──────────────────────────────────────────────
 @app.route("/save", methods=["POST"])
 def save_endpoint():
+    """
+    Trigger persistence of the engine's state and return an API response indicating success or failure.
+    
+    Returns:
+        dict: JSON-compatible response object. On success, contains a success message ("💾 State saved."). On failure, contains an error payload with the error message (prefixed by a warning indicator).
+    """
     try:
         get_api().save_state()
         return _ok("💾 State saved.")
@@ -910,6 +1116,12 @@ if __name__ == "__main__":
         from system_safety import Watchdog
         import atexit
         def _cloud_push():
+            """
+            Attempt to push local state to the remote CloudBrain service.
+            
+            This is a best-effort helper that imports CloudBrain and calls its `push()` method.
+            Any import or runtime errors are silently ignored.
+            """
             try:
                 from cloud_brain import CloudBrain
                 CloudBrain().push()

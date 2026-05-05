@@ -72,6 +72,17 @@ class FileRecord:
 
 
 def is_text_file(path: Path) -> bool:
+    """
+    Determine whether a filesystem path refers to a text file.
+    
+    Checks the file suffix against the configured TEXT_EXTS and BINARY_EXTS first. If the extension is inconclusive, reads up to the first 8192 bytes and treats the file as binary if a NUL byte (0x00) is found. Any OSError while opening or reading the file is treated as non-text.
+    
+    Parameters:
+        path (Path): Path to the file to classify.
+    
+    Returns:
+        bool: `True` if the file is classified as text, `False` otherwise.
+    """
     ext = path.suffix.lower()
     if ext in BINARY_EXTS:
         return False
@@ -88,6 +99,20 @@ def is_text_file(path: Path) -> bool:
 
 
 def detect_line_endings(data: bytes) -> str:
+    """
+    Determine the predominant newline style present in the given file bytes.
+    
+    Parameters:
+        data (bytes): Raw file contents to inspect.
+    
+    Returns:
+        str: One of `"crlf"`, `"lf"`, `"cr"`, `"mixed"`, or `"none"`.  
+        - `"crlf"`: only CRLF (`\r\n`) sequences detected.  
+        - `"lf"`: only LF (`\n`) sequences detected (after excluding CRLF).  
+        - `"cr"`: only CR (`\r`) sequences detected (after excluding CRLF).  
+        - `"mixed"`: CRLF plus at least one other newline style present.  
+        - `"none"`: no newline characters detected.
+    """
     has_crlf = b"\r\n" in data
     has_lf = b"\n" in data.replace(b"\r\n", b"")
     has_cr = b"\r" in data.replace(b"\r\n", b"")
@@ -103,6 +128,14 @@ def detect_line_endings(data: bytes) -> str:
 
 
 def detect_mangled_python(path: Path, data: bytes) -> bool:
+    """
+    Detects whether a Python source file appears to be "mangled" by containing an unusually large number of literal backslash-escaped newlines.
+    
+    This check only applies to files with a `.py` suffix and at least 200 bytes of content. It counts physical newline characters and occurrences of the two-character sequence `\n` (a backslash followed by `n`). Returns `True` when the file has either very few physical lines but many literal `\n` sequences (<= 3 lines and >= 10 literal `\n`), or an excessive ratio of literal escapes to physical lines (more than 4 literal `\n` per physical line and more than 20 literal `\n` total).
+    
+    Returns:
+        `True` if the file meets the heuristic for mangled literal escapes, `False` otherwise.
+    """
     if path.suffix != ".py" or len(data) < 200:
         return False
     physical_lines = data.count(b"\n") + 1
@@ -115,10 +148,25 @@ def detect_mangled_python(path: Path, data: bytes) -> bool:
 
 
 def sha256_of(data: bytes) -> str:
+    """
+    Compute the SHA-256 hex digest of the given bytes.
+    
+    Returns:
+        str: Lowercase hexadecimal SHA-256 digest of the input `data`.
+    """
     return hashlib.sha256(data).hexdigest()
 
 
 def walk_text_files(root: Path) -> Iterable[Path]:
+    """
+    Yield text file paths under `root`, skipping configured repository metadata/build directories, dot-directories, symlinks, and files larger than 5 MB.
+    
+    Parameters:
+        root (Path): Root directory to traverse.
+    
+    Returns:
+        Iterable[Path]: An iterator that yields Paths for files classified as text.
+    """
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS and not d.startswith(".")]
         for name in filenames:
@@ -135,6 +183,14 @@ def walk_text_files(root: Path) -> Iterable[Path]:
 
 
 def inspect(path: Path) -> FileRecord:
+    """
+    Create a FileRecord containing metadata extracted from the file at `path`.
+    
+    The record includes the repo-relative path, SHA-256 digest of the file's raw bytes, byte size, line-ending classification (computed on the payload with any UTF-8 BOM removed), a `has_bom` flag, and a `suspect_mangled` flag derived from the Python-specific literal-escape heuristic.
+    
+    Returns:
+        FileRecord: Metadata for the inspected file.
+    """
     data = path.read_bytes()
     has_bom = data.startswith(UTF8_BOM)
     payload = data[len(UTF8_BOM):] if has_bom else data
@@ -149,6 +205,18 @@ def inspect(path: Path) -> FileRecord:
 
 
 def normalize_bytes(data: bytes, *, fix_mangled: bool = False) -> bytes:
+    """
+    Normalize file bytes for repository storage and repair.
+    
+    Strips a UTF-8 BOM if present, converts CRLF and lone CR line endings to LF, optionally replaces literal two-character sequences `\n` and `\t` with actual newline and tab bytes when `fix_mangled` is True, and ensures the result ends with a single trailing newline if the file is non-empty.
+    
+    Parameters:
+        data (bytes): Raw file bytes to normalize.
+        fix_mangled (bool): If True, replace literal backslash sequences (`b"\\n"`, `b"\\t"`) with their actual byte equivalents.
+    
+    Returns:
+        bytes: The normalized byte sequence.
+    """
     if data.startswith(UTF8_BOM):
         data = data[len(UTF8_BOM):]
     data = data.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
@@ -160,6 +228,11 @@ def normalize_bytes(data: bytes, *, fix_mangled: bool = False) -> bytes:
 
 
 def atomic_write(path: Path, data: bytes) -> None:
+    """
+    Atomically write bytes to a file path by writing to a temporary file in the same directory and renaming it into place.
+    
+    This function ensures the provided bytes are flushed and fsynced to the temporary file before performing an atomic rename (os.replace) to the target path, minimizing the risk of partial writes. If an error occurs, it attempts to remove the temporary file before propagating the exception.
+    """
     fd, tmp_name = tempfile.mkstemp(prefix=".integrity_", dir=str(path.parent))
     try:
         with os.fdopen(fd, "wb") as f:
@@ -176,6 +249,20 @@ def atomic_write(path: Path, data: bytes) -> None:
 
 
 def repair_file(path: Path) -> tuple[bool, list]:
+    """
+    Normalize a text file in place when it contains known issues and report what was changed.
+    
+    Reads the file, detects issues (UTF‑8 BOM, CRLF/CR line endings, missing trailing newline, and Python-specific mangled literal escapes), produces a normalized byte sequence, and atomically replaces the file only when changes are needed.
+    
+    Returns:
+        tuple:
+            changed (bool): `True` if the file was modified and written, `False` if no changes were required.
+            actions (list): Ordered list of action tags applied when writing the file. Possible tags:
+                - "unmangle-literal-\\n" — replaced literal backslash-escape sequences like `\n`/`\t` with real newlines/tabs.
+                - "strip-bom" — removed a leading UTF-8 BOM.
+                - "crlf->lf" — normalized CRLF or lone CR line endings to LF.
+                - "add-trailing-newline" — appended a missing trailing newline.
+    """
     original = path.read_bytes()
     payload_for_check = original[len(UTF8_BOM):] if original.startswith(UTF8_BOM) else original
     actions = []
@@ -196,6 +283,14 @@ def repair_file(path: Path) -> tuple[bool, list]:
 
 
 def write_manifest(records):
+    """
+    Write the given file records to the repository integrity manifest file (.integrity_manifest.json).
+    
+    The manifest is written as pretty-printed JSON containing top-level keys "version", "root", and "files". Each record is serialized via dataclasses.asdict and the file list is sorted by record.path. The file is written with UTF-8 encoding and ends with a trailing newline.
+    
+    Parameters:
+        records (Iterable[FileRecord]): Sequence of FileRecord objects to include in the manifest.
+    """
     payload = {
         "version": 1,
         "root": str(REPO_ROOT),
@@ -207,6 +302,14 @@ def write_manifest(records):
 
 
 def read_manifest():
+    """
+    Load the repository integrity manifest and return a mapping of recorded files.
+    
+    If the manifest file does not exist, returns an empty dictionary.
+    
+    Returns:
+        dict[str, FileRecord]: Mapping from repo-relative file path to its FileRecord; empty if the manifest is missing.
+    """
     if not MANIFEST_PATH.exists():
         return {}
     raw = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
@@ -214,6 +317,13 @@ def read_manifest():
 
 
 def cmd_scan(_):
+    """
+    Scan the repository for text files, write an updated integrity manifest, and report files that may need repair.
+    
+    Writes the manifest file at MANIFEST_PATH and prints a summary including the number of indexed files and a list (capped) of files that have a UTF-8 BOM, non-LF line endings, or are suspected of mangled Python literal escapes.
+    Returns:
+        exit_code (int): `0` on success.
+    """
     records = [inspect(p) for p in walk_text_files(REPO_ROOT)]
     write_manifest(records)
     print(f"[scan] {len(records)} text files indexed -> {MANIFEST_PATH.name}")
@@ -230,6 +340,14 @@ def cmd_scan(_):
 
 
 def cmd_verify(_):
+    """
+    Compare the repository's current text files to the saved manifest and print a summary of differences.
+    
+    Reads the manifest from disk and walks current text files under the repository root, computing each file's inspected record and comparing SHA-256 values to the manifest. Prints counts for manifest size, current file count, and the number of changed, new, and missing files. Also prints up to 20 example paths for each category labeled `CHANGED`, `NEW`, and `MISSING`.
+    
+    @returns
+    int: Exit code — `0` if no changed or missing files were detected, `2` if any files are changed or missing, `1` if no manifest was found.
+    """
     expected = read_manifest()
     if not expected:
         print("[verify] no manifest yet — run: python file_integrity.py scan")
@@ -255,6 +373,17 @@ def cmd_verify(_):
 
 
 def cmd_repair(_):
+    """
+    Repair text files in the repository by normalizing detected issues and report a summary.
+    
+    Iterates over text files under the repository root, attempts to repair each file (atomic rewrite when changes are needed), prints per-file error or fix messages with action tags, and prints a final fixed/clean summary and an instruction to re-run the scan command.
+    
+    Parameters:
+        _ (argparse.Namespace): Parsed command-line arguments (unused).
+    
+    Returns:
+        int: Exit code `0` indicating successful completion.
+    """
     fixed = clean = 0
     for path in walk_text_files(REPO_ROOT):
         try:
@@ -273,6 +402,14 @@ def cmd_repair(_):
 
 
 def cmd_status(_):
+    """
+    Print aggregated repository integrity counts and overall health.
+    
+    Prints counts for indexed text files, manifest entries, UTF-8 BOM contamination, CRLF and mixed line endings, and suspected mangled Python files, then prints a health indicator (`OK` or `NEEDS REPAIR`).
+    
+    Returns:
+        int: Exit code `0`.
+    """
     records = [inspect(p) for p in walk_text_files(REPO_ROOT)]
     n = len(records)
     bom = sum(1 for r in records if r.has_bom)
@@ -293,6 +430,13 @@ def cmd_status(_):
 
 
 def main():
+    """
+    Parse command-line arguments and dispatch to the selected subcommand.
+    
+    Defines subcommands: `scan`, `verify`, `repair`, and `status`, each bound to its handler.
+    Returns:
+        exit_code (int): The integer exit code returned by the selected subcommand handler.
+    """
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="cmd", required=True)
     for name, fn in (("scan", cmd_scan), ("verify", cmd_verify),

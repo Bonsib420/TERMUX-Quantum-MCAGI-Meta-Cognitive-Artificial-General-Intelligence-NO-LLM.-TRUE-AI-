@@ -7,6 +7,17 @@ from quantum_language_engine import QuantumLanguageEngine
 EXTRA = os.path.join(os.path.dirname(__file__), "imported_extra")
 
 def extract_pdf_text(path):
+    """
+    Extracts and concatenated visible text from every page of a PDF file.
+    
+    Attempts to read the PDF at `path`, extracts non-empty text from each page, and joins retained page texts with newline separators. If the PDF cannot be read or page extraction fails for all pages, an empty string is returned (an error message is printed on failure).
+    
+    Parameters:
+        path (str): Filesystem path to the PDF file.
+    
+    Returns:
+        str: Concatenated page text with newline separators, or an empty string on failure or when no page text is found.
+    """
     try:
         from pypdf import PdfReader
         reader = PdfReader(path)
@@ -25,12 +36,39 @@ def extract_pdf_text(path):
 
 def clean(text):
     # Strip page numbers, excessive whitespace, control chars
+    """
+    Normalize extracted text by removing null bytes and collapsing excessive whitespace.
+    
+    Replaces null bytes with spaces, collapses runs of three or more newlines into two newlines,
+    collapses runs of two or more spaces into a single space, and strips leading/trailing whitespace.
+    
+    Parameters:
+        text (str): Raw text to clean.
+    
+    Returns:
+        str: The cleaned and normalized text.
+    """
     text = re.sub(r'\x00', ' ', text)
     text = re.sub(r'\n{3,}', '\n\n', text)
     text = re.sub(r' {2,}', ' ', text)
     return text.strip()
 
 def main():
+    """
+    Ingest supplemental files from the imported_extra directory, update a QuantumLanguageEngine with their contents, optionally merge cloudsave concept words, and write an augmented engine snapshot.
+    
+    This function:
+    - Loads PDF, TXT, and PY files under the imported_extra directory, extracts and cleans text, and skips very short inputs.
+    - Trains the engine's TF-IDF component on each full cleaned document and trains the Markov component on sentence-like segments.
+    - Optionally merges alphabetic concept words from imported_extra/cloudsave/latest.json into the TF-IDF word-frequency map.
+    - Writes a JSON snapshot to runtime-data/imported_brain_snapshot.json containing:
+      - kb_topics
+      - tfidf_word_frequencies
+      - tfidf_doc_count
+      - markov_chain (stringified keys to dict)
+      - markov_starters
+    - Emits progress and summary information to standard output.
+    """
     print("[feed] Booting engine...")
     eng = QuantumLanguageEngine()
     before_markov = len(eng.markov.chain_2.chain) if hasattr(eng.markov.chain_2.chain, '__len__') else 0

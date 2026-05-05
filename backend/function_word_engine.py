@@ -29,6 +29,18 @@ class FunctionWordEngine:
 
     def __init__(self, stopwords_set: Optional[set] = None):
         # If no stopwords provided, we'll use a default set (same as ConceptExtractor)
+        """
+        Initialize the FunctionWordEngine with an optional set of function/stop words and prepare internal statistics.
+        
+        Parameters:
+            stopwords_set (Optional[set]): Set of words to track as function/stop words. If omitted, a default stopword set is loaded from ConceptExtractor.STOPWORDS.
+        
+        Notes:
+            Initializes these instance attributes:
+            - stopwords: the provided or default stopword set
+            - stats: defaultdict mapping each tracked word to a dict with keys `freq`, `preceding`, `following`, and `position`
+            - total_function_words: aggregate frequency of all tracked function words
+        """
         if stopwords_set is None:
             from quantum_language_engine import ConceptExtractor
             stopwords_set = ConceptExtractor.STOPWORDS
@@ -42,7 +54,14 @@ class FunctionWordEngine:
         self.total_function_words = 0
 
     def update_from_sentence(self, words: List[str]):
-        """Update statistics from a single sentence (list of words, lower‑cased)."""
+        """
+        Update the engine's statistics using the tokens of a single sentence.
+        
+        Processes the provided list of tokens (case-insensitive) and, for each token that is in the engine's configured stopword set, increments that word's frequency, updates counters for the immediately preceding and following tokens when present, and records whether the token occurred at the start, middle, or end of the sentence. Also increments the engine's aggregate total of tracked function words.
+        
+        Parameters:
+            words (List[str]): Tokens comprising a sentence; tokens may be in any case and will be normalized to lowercase before processing.
+        """
         for i, word in enumerate(words):
             w_low = word.lower()
             if w_low not in self.stopwords:
@@ -68,7 +87,12 @@ class FunctionWordEngine:
                 entry['position']['middle'] += 1
 
     def update_from_text(self, text: str):
-        """Split text into sentences and update from each sentence."""
+        """
+        Split input text on periods into sentence-like segments, tokenize each segment on whitespace, and update the engine's word statistics from each resulting sentence.
+        
+        Parameters:
+            text (str): Raw text containing one or more sentences (sentences are identified by '.' separators).
+        """
         # Simple sentence split
         sentences = [s.strip() for s in text.split('.') if s.strip()]
         for sent in sentences:
@@ -77,7 +101,20 @@ class FunctionWordEngine:
                 self.update_from_sentence(words)
 
     def get_dossier(self, word: str) -> Optional[Dict]:
-        """Return a structured dossier for a function word."""
+        """
+        Produce a structured dossier for a tracked function word.
+        
+        Returns:
+            dict: Dossier containing:
+                - 'word': lowercased word
+                - 'role': fixed string 'function'
+                - 'frequency': total occurrences (int)
+                - 'preceding_neighbors': dict of up to 10 preceding tokens with counts
+                - 'following_neighbors': dict of up to 10 following tokens with counts
+                - 'position_distribution': dict with counts for 'start', 'middle', 'end'
+                - 'notes': short grammatical role label
+            None: If the word has no recorded statistics.
+        """
         w_low = word.lower()
         if w_low not in self.stats:
             return None
@@ -93,7 +130,14 @@ class FunctionWordEngine:
         }
 
     def _infer_job(self, word: str) -> str:
-        """Return a simple rule‑based description of the word's grammatical job."""
+        """
+        Provide a short grammatical-function label for a function/stop word.
+        
+        If the word matches a known class (determiner, preposition, conjunction, negation, copula, modal) the label names that class and gives a brief description; otherwise returns "Function word.".
+        
+        Returns:
+        	A short human-readable label (str) describing the word's grammatical role.
+        """
         if word in ('the', 'a', 'an'):
             return "Determiner: precedes noun phrases."
         if word in ('in', 'on', 'at', 'by', 'for', 'with', 'from', 'to'):
@@ -109,7 +153,12 @@ class FunctionWordEngine:
         return "Function word."
 
     def save(self, filepath: str):
-        """Persist statistics to JSON."""
+        """
+        Persist collected function-word statistics to a JSON file at the given path.
+        
+        Parameters:
+        	filepath (str): Destination file path. The function will create parent directories if needed and write a JSON object mapping each tracked word to a dictionary with keys `freq`, `preceding`, `following`, and `position` (all serializable primitives).
+        """
         data = {}
         for word, entry in self.stats.items():
             data[word] = {
@@ -123,7 +172,20 @@ class FunctionWordEngine:
             json.dump(data, f, indent=2)
 
     def load(self, filepath: str) -> bool:
-        """Load statistics from JSON. Returns True if successful."""
+        """
+        Load saved function-word statistics from a JSON file into the engine.
+        
+        Merges stored per-word counts into the engine's internal stats, updating each word's
+        frequency, preceding/following neighbor counters, position distribution, and
+        incrementing the engine's total function-word count.
+        
+        Parameters:
+            filepath (str): Path to a JSON file previously written by save().
+        
+        Returns:
+            bool: `True` if the file was found and successfully loaded, `False` if the
+            file does not exist or an error occurred while reading/parsing the file.
+        """
         if not os.path.exists(filepath):
             return False
         try:

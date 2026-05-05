@@ -34,6 +34,14 @@ OUTPUT = Path(os.path.expanduser("~/.quantum-mcagi/function_words.json"))
 
 
 def main():
+    """
+    CLI entry point that discovers training text, backfills the FunctionWordEngine dossiers from local corpora and optional chat history, and optionally saves the result to OUTPUT.
+    
+    Parses command-line flags (--dry-run, --limit, --skip-conversations), imports and instantiates FunctionWordEngine, optionally resumes existing dossiers from OUTPUT, walks training directories to ingest .txt files (skipping very short files), optionally ingests ~/.quantum-mcagi/conversations.json, saves updated dossiers unless --dry-run is set, and prints a summary report.
+    
+    Returns:
+        int: Exit code: `0` on successful completion, `1` if the FunctionWordEngine module cannot be imported, or another non-zero value on other failures.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true",
                         help="report what would be ingested without saving")

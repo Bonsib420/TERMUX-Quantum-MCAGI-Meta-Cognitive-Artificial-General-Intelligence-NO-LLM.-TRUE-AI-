@@ -4,6 +4,14 @@ from collections import defaultdict
 
 class MarkovEngine:
     def __init__(self, order=2, data_dir=None, silent=True):
+        """
+        Initialize the MarkovEngine, configure its Markov order and persistence location, and load any saved chain state.
+        
+        Parameters:
+            order (int): Number of tokens in the Markov prefix used for transitions.
+            data_dir (str | None): Path to the directory used for persistent engine state; defaults to "~/.quantum-mcagi" when None.
+            silent (bool): If False, enable optional informational output during state loading; if True, suppress such messages.
+        """
         self.order = order
         self.chain = defaultdict(lambda: defaultdict(int))
         self.starters = []
@@ -16,6 +24,11 @@ class MarkovEngine:
         self._load_saved_state()
 
     def _load_saved_state(self):
+        """
+        Load the persisted Markov chain state from data_dir/engine_state/markov_chain.json into the engine, or train a minimal seed if no saved state exists.
+        
+        If the saved file exists, populate self.chain with prefix→transition-count mappings (stored keys are interpreted as space-joined token tuples), restore self.starters from stored starter prefixes, recompute self.total_tokens, and set self.trained to True. If the file is missing, invoke a minimal seed training and return. When self.silent is False, print a brief status message on successful load or on the missing-file fallback. On any error during load or parse, print a failure message.
+        """
         path = os.path.join(self.data_dir, "engine_state", "markov_chain.json")
         if not os.path.exists(path):
             if not self.silent:
@@ -39,6 +52,14 @@ class MarkovEngine:
             print(f"Failed to load Markov chain: {e}")
 
     def train(self, text):
+        """
+        Train the Markov chain from raw text by extracting ordered-token transitions.
+        
+        Splits input `text` into sentence-like segments using punctuation (.!? followed by whitespace), lowercases and whitespace-tokenizes each sentence, and for every sliding window of `self.order` tokens records the following token as a transition. Short sentences with fewer than `self.order + 1` tokens are ignored. New starting prefixes (first `self.order` tokens of a sentence) are appended to `self.starters` when first observed. Each observed transition increments the corresponding count in `self.chain` and increments `self.total_tokens`. Marks the engine as trained by setting `self.trained = True`.
+        
+        Parameters:
+            text (str): Raw text to ingest for training; may contain multiple sentences separated by punctuation and whitespace.
+        """
         sentences = re.split(r'(?<=[.!?])\s+', text.strip())
         for sent in sentences:
             tokens = sent.lower().split()
@@ -177,9 +198,54 @@ class MarkovEngine:
         return result
 
     def get_status(self):
+        """
+        Report current Markov engine statistics.
+        
+        Returns:
+            dict: A mapping with keys:
+                - 'states' (int): number of distinct prefix states in the Markov chain.
+                - 'transitions' (int): total recorded transition count across all states.
+                - 'trained' (bool): whether the engine has been trained or loaded from state.
+        """
         return {'states': len(self.chain), 'transitions': self.total_tokens, 'trained': self.trained}
 
-    def __getitem__(self, key): return self.chain[key]
-    def get(self, key, default=None): return self.chain.get(key, default)
-    def __contains__(self, key): return key in self.chain
-    def keys(self): return self.chain.keys()
+    def __getitem__(self, key): """
+Retrieve the transition-count mapping for a given prefix.
+
+Parameters:
+    key (tuple): A prefix tuple of tokens used as the Markov state.
+
+Returns:
+    defaultdict(int): Mapping from next-token (str) to its observed count.
+"""
+return self.chain[key]
+    def get(self, key, default=None): """
+Retrieve the transition counts mapping for a given Markov prefix.
+
+Parameters:
+    key (tuple[str] | any): The prefix (typically a tuple of tokens) to look up in the Markov chain.
+    default (any): Value to return if the prefix is not present in the chain (defaults to None).
+
+Returns:
+    mapping (collections.defaultdict[int, int] | any): A mapping from next-token to occurrence count for the given prefix, or `default` if the prefix is not found.
+"""
+return self.chain.get(key, default)
+    def __contains__(self, key): """
+Check whether a prefix exists in the Markov chain.
+
+Parameters:
+    key (hashable): The prefix key to look up; typically a tuple of tokens representing an order-length Markov prefix.
+
+Returns:
+    `true` if the chain contains `key`, `false` otherwise.
+"""
+return key in self.chain
+    def keys(self): """
+Return a dynamic view of the stored Markov chain prefixes.
+
+Each prefix is a tuple of tokens representing a chain state.
+
+Returns:
+	dict_keys: A live view of the engine's prefix keys (each key is a tuple of tokens).
+"""
+return self.chain.keys()

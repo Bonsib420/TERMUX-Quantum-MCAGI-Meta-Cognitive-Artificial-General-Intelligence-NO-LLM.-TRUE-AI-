@@ -204,7 +204,15 @@ class LocalMemory:
 
     @classmethod
     def _classify_domain(cls, concept: str) -> str:
-        """Classify a concept into a knowledge domain via keyword matching."""
+        """
+        Assign the most relevant knowledge domain for a concept using keyword matching.
+        
+        Parameters:
+            concept (str): The concept text to classify.
+        
+        Returns:
+            str: The domain name that best matches the concept. Prefers an exact keyword match; if none, returns the domain with the highest partial-match score (substring matches). Returns `'general'` when no domain keywords match.
+        """
         c = concept.lower()
         best_domain = ''
         best_score = 0
@@ -259,6 +267,20 @@ class LocalMemory:
     ]
 
     def __init__(self, data_dir="~/.quantum-mcagi"):
+        """
+        Initialize LocalMemory storage in data_dir and load persisted state files.
+        
+        Creates the data directory if missing, loads or initializes JSON-backed state for:
+        - conversations (list)
+        - concepts (dict; ensures each concept has a `relationships` list)
+        - growth metrics (dict with stage, counters, and high-water marks)
+        - session_state (dict with session counters)
+        
+        Also initializes internal high-water mark attributes and ensures `last_recorded_stage` exists in growth, then increments `session_state["total_sessions"]` by one.
+        
+        Parameters:
+            data_dir (str): Filesystem path to the directory used for storing JSON state files (defaults to "~/.quantum-mcagi").
+        """
         self.data_dir = Path(data_dir).expanduser()
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.conversations = self._load("conversations.json", [])
@@ -320,6 +342,17 @@ class LocalMemory:
             orch_or.total_moments = data.get("conscious_moments", 0)
 
     def add_exchange(self, user_input, response, concepts, questions):
+        """
+        Append a chat exchange to persistent memory and update concept and growth state.
+        
+        Records the timestamped user input and AI response, updates session and growth counters (interactions, questions, Markov stats, concepts, insights), ensures each concept has metadata and a relationships list, creates undirected edges between co-occurring concepts, and triggers a stage advancement check.
+        
+        Parameters:
+            user_input (str): The raw text provided by the user for this exchange.
+            response (str): The AI-generated text produced in reply to the user_input.
+            concepts (list[str]): Extracted concept labels associated with the exchange; string matching is case-insensitive.
+            questions (list): List of question objects or strings generated for this exchange (used to increment question counters).
+        """
         self.conversations.append({
             "timestamp": datetime.now().isoformat(),
             "user": user_input,
@@ -471,8 +504,19 @@ class LocalMemory:
         return limiting[0]
 
     def get_current_stage(self):
-        """Compute current growth stage from all 12 metric tracks.
-        High watermark protection on diameter and avg_degree -- earned progress never regresses."""
+        """
+        Determine the agent's current growth stage based on tracked metrics and graph topology.
+        
+        Evaluates twelve growth metrics (concepts, connections, questions, insights, interactions, distinct domains, Markov states/transitions, communication score, plus topology measures) against ordered stage thresholds, applies high-watermark protection for average degree and diameter, updates stored high-watermarks and the persistent `growth["stage"]`/`growth["name"]` fields, and computes progress percentages toward the next stage and the current limiting factor.
+        
+        Returns:
+            dict: A result object containing:
+                - stage fields from the matched stage definition (including "stage" and "name").
+                - metrics (dict): measured metrics plus "topology", "hwm_avg_degree", and "hwm_diameter".
+                - progress_to_next (dict): percentage progress for each tracked metric toward the next stage (0–100); empty if at top stage.
+                - next_stage (str or None): name of the next stage if advancement is possible, otherwise None.
+                - limiting_factor (str or None): the single metric identified as the current limiter toward the next stage, or None if not applicable.
+        """
         metrics = {
             "total_concepts": self.growth.get("total_concepts", 0),
             "total_connections": self.count_connections(),
@@ -591,7 +635,16 @@ class LocalMemory:
 
 
 def save_everything(memory, engine, state_dir):
-    """Save all state to disk (local only — use /backup or /cloud-save for cloud sync)."""
+    """
+    Persist local memory and engine state to disk.
+    
+    Saves the memory's JSON-backed state (conversations, concepts, growth, session state) and writes the engine's state to the provided directory.
+    
+    Parameters:
+    	memory (LocalMemory): Memory instance whose persistent files will be written.
+    	engine: Language engine instance exposing save_state(state_dir).
+    	state_dir (str or Path): Filesystem path where the engine should store its state.
+    """
     memory.save_all()
     engine.save_state(state_dir)
 
@@ -599,7 +652,14 @@ def save_everything(memory, engine, state_dir):
 EVOLUTION_ENABLED = True  # Killswitch
 
 def run_chat(verbose=False):
-    """run_chat - Auto-documented by self-evolution."""
+    """
+    Run the interactive terminal chat loop for Quantum MCAGI, handling initialization, command processing, response generation, and periodic persistence.
+    
+    This function initializes engines and optional subsystems (cloud, QRAM, evolution, research, analyzers, generators, personality, quotes, etc.), bootstraps document ingestion and engine state, and then enters a REPL that accepts user commands (prefixed with '/') and free-form inputs. Commands cover lifecycle (save/load/reset/quit), inspection (/status, /export, /copy-last), cloud operations (/cloud-save, /cloud-load, /cloud-status, /backup), research/evolution controls, QRAM management, ingestion/feeds, math helpers, and generator-specific routes. For non-command input it updates Markov state, extracts concepts, generates questions and an understanding context, composes a response via competitive generation (hybrid vs casual), optionally enhances the response, records the exchange in LocalMemory, and auto-saves on configured intervals.
+    
+    Parameters:
+        verbose (bool): If True, print detailed collapse analysis, generation diagnostics, Markov/ORCH metrics, questions, and rubric scoring when available.
+    """
     print()
     print("  Quantum MCAGI - Local Chat")
     print("  Real algorithms. No templates. No LLM.")
@@ -772,6 +832,16 @@ def run_chat(verbose=False):
                     minutes = int(cmd[2]) if len(cmd) > 2 else 30
                     import threading, asyncio
                     def run_research():
+                        """
+                        Execute the autonomous research routine to completion using a fresh asyncio event loop.
+                        
+                        This function creates an isolated event loop, runs research.start_autonomous_research with the module-level
+                        variables `minutes`, `engine`, and `memory`, waits for it to finish, and then closes the loop. It blocks until
+                        the coroutine completes.
+                        
+                        Note:
+                            Uses the module-level `minutes`, `engine`, and `memory` variables rather than function parameters.
+                        """
                         loop = asyncio.new_event_loop()
                         asyncio.set_event_loop(loop)
                         loop.run_until_complete(research.start_autonomous_research(minutes, engine=engine, memory=memory))
