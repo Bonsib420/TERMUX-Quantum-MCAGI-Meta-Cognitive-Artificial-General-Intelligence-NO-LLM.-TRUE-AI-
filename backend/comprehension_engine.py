@@ -83,6 +83,15 @@ class ComprehensionEngine:
     """Understands user input beyond keyword extraction."""
 
     def __init__(self):
+        """
+        Initialize internal state for the ComprehensionEngine instance.
+        
+        Attributes:
+            conversation_thread (list): Recent user turns as records containing input, primary intent, and concepts (bounded to most recent entries).
+            active_claims (list): Accumulated extracted claim dictionaries (kept as a recent-history buffer).
+            active_topic_stack (list): Stack of active concepts/topics, ordered by recency.
+            unresolved_questions (list): Placeholder list for tracking unanswered questions (initialized empty).
+        """
         self.conversation_thread = []
         self.active_claims = []
         self.active_topic_stack = []
@@ -90,7 +99,27 @@ class ComprehensionEngine:
 
     def comprehend(self, user_input: str, concepts: List[str],
                    context: Optional[Dict] = None) -> Dict:
-        text = user_input.strip()
+        """
+                   Analyze a user turn and produce structured comprehension outputs, update internal thread state, and generate engagement directives.
+                   
+                   Parameters:
+                       user_input (str): The raw user message to analyze.
+                       concepts (List[str]): Relevant concept tokens associated with the input, used for complexity and continuity calculations.
+                       context (Optional[Dict]): Optional conversational context (e.g., 'recent_exchanges', 'recent_concepts', 'last_ai_response') used to assess thread position and references.
+                   
+                   Returns:
+                       Dict: A structured result containing:
+                           - 'intent': detected intent summary and flags for the input.
+                           - 'claims': list of extracted claim objects (type, strength, text).
+                           - 'relationships': list of extracted (subject, relation, object) mappings.
+                           - 'stance': counts and inferred stance position.
+                           - 'complexity': metrics and a categorical complexity level.
+                           - 'thread_position': classification of the input's position in the conversation and continuity metrics.
+                           - 'directives': engagement directives guiding response generation (engagement_mode, response_seeds, avoid, etc.).
+                           - 'active_claims': snapshot of recent active claims (up to 5).
+                           - 'topic_stack': snapshot of the active topic stack (up to 3).
+                   """
+                   text = user_input.strip()
         lower = text.lower()
 
         intent = self._detect_intent(text, lower, context)
@@ -119,6 +148,23 @@ class ComprehensionEngine:
         }
 
     def _detect_intent(self, text: str, lower: str, context: Optional[Dict]) -> Dict:
+        """
+        Determine the primary communicative intent of the input text and label each sentence with an intent type.
+        
+        Splits the original text into sentence-like segments and classifies each segment as one of: question (with a question subtype), opinion, counterpoint, agreement, disagreement, argument, brief, or statement. The first detected intent is reported as the primary intent. The optional `context` parameter is accepted but not used by this method.
+        
+        Returns:
+            dict: {
+                'primary': str,                # primary intent type (e.g., 'question', 'statement')
+                'all': List[Dict],             # list of detected intents; each dict has keys:
+                                              #   'type' (intent type), 'text' (original sentence),
+                                              #   and for questions 'subtype' (question classification)
+                'has_question': bool,          # True if any sentence was classified as a question
+                'has_argument': bool,          # True if any sentence was classified as an argument
+                'has_opinion': bool,           # True if any sentence was classified as an opinion
+                'has_counterpoint': bool       # True if any sentence was classified as a counterpoint
+            }
+        """
         sentences = re.split(r'[.!?]+', text)
         sentences = [s.strip() for s in sentences if s.strip()]
 
@@ -158,6 +204,18 @@ class ComprehensionEngine:
         }
 
     def _classify_question(self, sent_lower: str, words: List[str]) -> str:
+        """
+        Classifies a question sentence into a specific subtype based on its leading word and cues.
+        
+        Parameters:
+            sent_lower (str): The sentence converted to lowercase for pattern checks.
+            words (List[str]): Tokenized words of the sentence in original order.
+        
+        Returns:
+            str: One of: 'causal', 'quantitative', 'mechanistic', 'definitional',
+            'hypothetical', 'factual', 'identity', 'yes_no', or 'open', indicating the
+            detected question subtype.
+        """
         first = words[0] if words else ''
         if first == 'why':
             return 'causal'
@@ -180,6 +238,19 @@ class ComprehensionEngine:
         return 'open'
 
     def _extract_claims(self, text: str, lower: str) -> List[Dict]:
+        """
+        Extract claims from the provided text by identifying non-question sentences that express causal/conclusion markers, strong assertions, or longer assertions/opinions.
+        
+        Parameters:
+            text (str): Original user input (preserves casing and punctuation).
+            lower (str): Lowercased version of `text` used for pattern matching.
+        
+        Returns:
+            List[Dict]: A list of claim dictionaries. Each claim contains:
+                - `text` (str): The original sentence text that yielded the claim.
+                - `type` (str): One of the detected claim categories such as `conclusion`, `causation`, `assertion`, `opinion`, or `claim`.
+                - `strength` (str): Strength label such as `strong` or `moderate` indicating confidence/force of the claim.
+        """
         claims = []
         sentences = re.split(r'[.!?]+', text)
 
@@ -221,6 +292,18 @@ class ComprehensionEngine:
         return claims
 
     def _extract_relationships(self, lower: str) -> List[Dict]:
+        """
+        Extract subject–object relationships from a lowercased text using RELATIONSHIP_PATTERNS.
+        
+        Parameters:
+            lower (str): Input text that has already been lowercased and normalized for pattern matching.
+        
+        Returns:
+            List[Dict]: A list of relationship dictionaries, each with keys:
+                - 'subject' (str): the matched subject text (first capture group).
+                - 'object' (str): the matched object text (second capture group).
+                - 'relation' (str): the relation type associated with the matched pattern.
+        """
         relationships = []
         for pattern, rel_type in RELATIONSHIP_PATTERNS:
             matches = re.finditer(pattern, lower)
@@ -234,6 +317,20 @@ class ComprehensionEngine:
         return relationships
 
     def _detect_stance(self, lower: str, context: Optional[Dict]) -> Dict:
+        """
+        Determine the author's stance in the text based on agreement, disagreement, and contrast markers.
+        
+        Parameters:
+            lower (str): Lowercased user input text to scan for stance markers.
+            context (Optional[Dict]): Additional context (not used by this detector).
+        
+        Returns:
+            dict: A dictionary with:
+                - 'position' (str): One of 'opposing', 'aligned', 'nuancing', or 'neutral'.
+                - 'agreement_signals' (int): Count of agreement marker occurrences.
+                - 'disagreement_signals' (int): Count of disagreement marker occurrences.
+                - 'contrast_signals' (int): Count of contrast marker occurrences.
+        """
         agrees = sum(1 for p in AGREEMENT_MARKERS if re.search(p, lower))
         disagrees = sum(1 for p in DISAGREEMENT_MARKERS if re.search(p, lower))
         contrasts = sum(1 for p in CONTRAST_MARKERS if re.search(p, lower))
@@ -255,6 +352,23 @@ class ComprehensionEngine:
         }
 
     def _assess_complexity(self, text: str, lower: str, concepts: List[str]) -> Dict:
+        """
+        Assess the linguistic and structural complexity of a text fragment.
+        
+        Parameters:
+            text (str): Original text (preserves punctuation) used to count sentences.
+            lower (str): Lowercased version of the text used for tokenization and regex checks.
+            concepts (List[str]): Extracted concept tokens used to compute concept density and complexity heuristics.
+        
+        Returns:
+            Dict: Metrics describing complexity:
+                - level (str): One of 'minimal', 'simple', 'moderate', 'complex', or 'elaborate'.
+                - word_count (int): Number of whitespace-separated tokens in `lower`.
+                - sentence_count (int): Number of sentence fragments from splitting `text` on [.!?]+.
+                - subordinate_clauses (int): Count of subordinate/conjunction markers (e.g., because, although).
+                - vocabulary_richness (float): Ratio of unique words to total words, rounded to 3 decimals.
+                - concept_density (float): Ratio of number of `concepts` to word_count, rounded to 3 decimals.
+        """
         words = lower.split()
         sentences = re.split(r'[.!?]+', text)
         sentences = [s for s in sentences if s.strip()]
@@ -284,7 +398,27 @@ class ComprehensionEngine:
 
     def _assess_thread_position(self, text: str, lower: str,
                                  concepts: List[str], context: Optional[Dict]) -> Dict:
-        if not context or not context.get('recent_exchanges'):
+        """
+                                 Determine the conversation thread position and continuity relative to recent exchanges.
+                                 
+                                 Parameters:
+                                     text (str): Original user input (used only for sentence splitting elsewhere; not used here).
+                                     lower (str): Lowercased user input used for token overlap checks.
+                                     concepts (List[str]): Concepts extracted from the current input.
+                                     context (Optional[Dict]): Optional context containing recent conversation info. Expected keys:
+                                         - 'recent_exchanges' (List): recent turns (presence determines depth).
+                                         - 'recent_concepts' (List[str]): concepts from recent exchanges used to compute continuity.
+                                         - 'last_ai_response' (str): last AI reply used to detect explicit references.
+                                 
+                                 Returns:
+                                     Dict: {
+                                         'position': one of 'opening', 'deep_engagement', 'continuing', 'branching', 'new_thread',
+                                         'depth': int number of recent exchanges,
+                                         'topic_continuity': float overlap ratio of current concepts with recent_concepts (rounded to 3 decimals),
+                                         'references_previous': bool indicating whether the current input appears to reference the last AI response
+                                     }
+                                 """
+                                 if not context or not context.get('recent_exchanges'):
             return {'position': 'opening', 'depth': 0, 'topic_continuity': 0.0}
 
         recent = context.get('recent_exchanges', [])
@@ -325,7 +459,18 @@ class ComprehensionEngine:
 
     def _update_thread(self, user_input: str, intent: Dict,
                        claims: List[Dict], concepts: List[str]):
-        self.conversation_thread.append({
+        """
+                       Update the engine's internal thread state with a new user turn and its derived artifacts.
+                       
+                       Appends a record for the given user_input (storing the input, the intent's `primary` value, and the provided concepts) to `conversation_thread` and truncates that list to the most recent 20 entries. Appends each claim in `claims` to `active_claims` and truncates that list to the most recent 10 entries. Adds each concept from `concepts` to `active_topic_stack` if not already present and truncates that stack to the most recent 8 entries.
+                       
+                       Parameters:
+                           user_input (str): The raw user text for this turn.
+                           intent (Dict): Intent object produced by intent detection; `intent['primary']` is stored.
+                           claims (List[Dict]): Extracted claim objects to be recorded in `active_claims`.
+                           concepts (List[str]): Extracted concept identifiers to update the topic stack.
+                       """
+                       self.conversation_thread.append({
             'input': user_input,
             'intent': intent['primary'],
             'concepts': concepts,
@@ -349,7 +494,30 @@ class ComprehensionEngine:
                               relationships: List[Dict], stance: Dict,
                               complexity: Dict, thread_position: Dict,
                               concepts: List[str], context: Optional[Dict]) -> Dict:
-        directives = {
+        """
+                              Builds response directives that guide how the system should reply based on detected intent, claims, relationships, stance, complexity, thread position, and provided concepts.
+                              
+                              Parameters:
+                                  intent (Dict): Intent analysis including keys like 'has_question', 'has_argument', and 'all' (list of detected intent entries, with question entries containing 'type' == 'question' and optional 'subtype').
+                                  claims (List[Dict]): Extracted claims; each claim should include at least 'type' and 'text'.
+                                  relationships (List[Dict]): Extracted relationships where each item contains 'subject', 'relation', and 'object'.
+                                  stance (Dict): Stance summary with counts and a 'position' key (e.g., 'opposing', 'aligned', 'nuancing', 'neutral').
+                                  complexity (Dict): Complexity metrics including a 'level' key (e.g., 'minimal', 'simple', 'moderate', 'complex', 'elaborate').
+                                  thread_position (Dict): Thread position info containing at least 'position' (e.g., 'opening', 'new_thread', 'deep_engagement') and 'depth'.
+                                  concepts (List[str]): List of concept tokens extracted from the input; used to seed responses.
+                                  context (Optional[Dict]): Additional context (accepted but not used by this function).
+                              
+                              Returns:
+                                  Dict: A directives dictionary with the following keys:
+                                      - 'respond_to_argument' (bool): whether to engage identified arguments/claims.
+                                      - 'answer_question' (bool): whether to answer a detected question.
+                                      - 'acknowledge_stance' (bool): whether to acknowledge the user's stance.
+                                      - 'match_complexity' (str): complexity level copied from `complexity['level']`.
+                                      - 'engagement_mode' (str): chosen engagement strategy (e.g., 'explain_why', 'engage_argument', 'build_on', 'conversational').
+                                      - 'response_seeds' (List[str]): short seed strings to steer response content (e.g., relationship or claim seeds).
+                                      - 'avoid' (List[str]): list of behaviors or topics to avoid (e.g., 'repeat_previous_point').
+                              """
+                              directives = {
             'respond_to_argument': False,
             'answer_question': False,
             'acknowledge_stance': False,
@@ -431,6 +599,16 @@ class ComprehensionEngine:
         return directives
 
     def get_status(self) -> Dict:
+        """
+        Return a snapshot of the engine's current thread and claim state.
+        
+        Returns:
+            status (dict): A dictionary containing:
+                - thread_length (int): Number of entries in the conversation thread.
+                - active_claims (int): Count of stored active claims.
+                - topic_stack (List[Any]): Last five items from the active topic stack (most recent topics).
+                - last_intent (Optional[Any]): The primary intent of the most recent conversation turn, or `None` if the thread is empty.
+        """
         return {
             'thread_length': len(self.conversation_thread),
             'active_claims': len(self.active_claims),

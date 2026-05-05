@@ -19,10 +19,37 @@ logger = logging.getLogger("quantum_image_gen")
 
 
 def _seed_from_prompt(prompt: str) -> int:
+    """
+    Produce a deterministic integer seed derived from a text prompt.
+    
+    Parameters:
+    	prompt (str): Input prompt used to compute the seed; identical prompts yield identical seeds.
+    
+    Returns:
+    	seed (int): Integer parsed from the first 8 hexadecimal characters of the MD5 hash of `prompt`.
+    """
     return int(hashlib.md5(prompt.encode()).hexdigest()[:8], 16)
 
 
 def _fbm_noise(shape, octaves=6, persistence=0.5, seed=42, lacunarity=2.0):
+    """
+    Generate a 2D fractal Brownian motion (fBm)-style noise field.
+    
+    Produces a float64 array of the given shape by summing multiple Gaussian-smoothed noise octaves.
+    Each octave is sampled at an increased frequency (controlled by `lacunarity`) and added with
+    decreasing amplitude (controlled by `persistence`). The result is normalized by the total
+    amplitude so values fall in the range [0, 1].
+    
+    Parameters:
+        shape (tuple[int, int]): Output array shape as (rows, cols).
+        octaves (int): Number of noise octaves to sum. Higher values add finer detail.
+        persistence (float): Amplitude multiplier for each successive octave (0 < persistence <= 1).
+        seed (int): Integer seed for the internal RNG to produce deterministic noise.
+        lacunarity (float): Frequency multiplier between successive octaves (> 1 increases high-frequency content).
+    
+    Returns:
+        numpy.ndarray: A float64 2D array of shape `shape` containing the normalized fBm noise in [0, 1].
+    """
     rng = np.random.RandomState(seed)
     result = np.zeros(shape, dtype=np.float64)
     amplitude = 1.0
@@ -46,6 +73,21 @@ def _fbm_noise(shape, octaves=6, persistence=0.5, seed=42, lacunarity=2.0):
 
 
 def _domain_warp_noise(shape, octaves=6, persistence=0.5, seed=42, warp_strength=0.5):
+    """
+    Produce a domain-warped fractal Brownian motion (FBM) noise field.
+    
+    Generates two low-frequency FBM offset fields to perturb sampling coordinates and then samples a base FBM field at those warped coordinates to produce spatially coherent, curled/warped noise useful for organic textures.
+    
+    Parameters:
+        shape (tuple[int, int]): Height and width of the output array (h, w).
+        octaves (int): Number of FBM octaves for the base noise; higher values add finer detail.
+        persistence (float): Amplitude falloff between successive octaves for the base FBM.
+        seed (int): Integer seed controlling deterministic noise generation.
+        warp_strength (float): Scale of the coordinate warp as a fraction of image dimensions.
+    
+    Returns:
+        numpy.ndarray: Float array with shape `shape` containing domain-warped FBM noise (values approximately in [0, 1]).
+    """
     warp_x = _fbm_noise(shape, octaves=3, seed=seed + 1000) - 0.5
     warp_y = _fbm_noise(shape, octaves=3, seed=seed + 2000) - 0.5
     h, w = shape
@@ -57,6 +99,15 @@ def _domain_warp_noise(shape, octaves=6, persistence=0.5, seed=42, warp_strength
 
 
 def _aces_tonemap(img):
+    """
+    Apply an ACES-inspired tone mapping curve to an image array.
+    
+    Parameters:
+        img (ndarray): Input image or luminance array with HDR-like linear values (any shape).
+    
+    Returns:
+        ndarray: Tone-mapped array with values clipped to the range [0, 1], same shape as `img`.
+    """
     a = 2.51
     b = 0.03
     c = 2.43
@@ -67,6 +118,16 @@ def _aces_tonemap(img):
 
 
 def _multi_bloom(img_array, passes=3):
+    """
+    Apply a multi-pass bloom effect followed by ACES tone mapping to an 8-bit RGB image array.
+    
+    Parameters:
+        img_array (numpy.ndarray): Input image as an 8-bit RGB array with shape (H, W, 3) and values in [0, 255].
+        passes (int): Number of bloom passes to perform; each pass increases blur radius and accumulates glow.
+    
+    Returns:
+        numpy.ndarray: Processed 8-bit RGB image array with bloom and ACES-style tone mapping applied.
+    """
     result = img_array.astype(np.float64) / 255.0
     for i in range(passes):
         threshold = 0.6 - i * 0.15
@@ -80,6 +141,18 @@ def _multi_bloom(img_array, passes=3):
 
 
 def _radial_gradient(shape, cx=None, cy=None):
+    """
+    Create a normalized radial distance field for an image grid.
+    
+    Parameters:
+        shape (tuple[int, int]): (height, width) of the output array.
+        cx (float | None): X-coordinate of the center in pixel space; defaults to width / 2.
+        cy (float | None): Y-coordinate of the center in pixel space; defaults to height / 2.
+    
+    Returns:
+        numpy.ndarray: Float array of shape `shape` where each element is the distance from (cx, cy)
+        normalized by the maximum distance in the array (values range from 0.0 at the center up to 1.0).
+    """
     h, w = shape
     if cx is None:
         cx = w / 2
@@ -92,12 +165,33 @@ def _radial_gradient(shape, cx=None, cy=None):
 
 
 def _vignette(shape, strength=0.7):
+    """
+    Compute a vignette mask that attenuates image brightness toward the edges.
+    
+    Parameters:
+        shape (tuple): Image shape as (height, width) (or any 2-tuple) defining the output mask size.
+        strength (float): Vignette intensity multiplier; 0 produces a flat mask of 1.0, larger values increase edge darkening.
+    
+    Returns:
+        numpy.ndarray: 2-D float array in [0, 1] with values near 1 at the center and decreasing toward the edges according to `strength`.
+    """
     r = _radial_gradient(shape)
     v = 1.0 - (r**2.2) * strength
     return np.clip(v, 0, 1)
 
 
 def _blackbody_color(temp):
+    """
+    Approximate the RGB color of a blackbody at a given temperature.
+    
+    Compute an empirical approximation of a blackbody radiator's color for the input temperature (in Kelvin). Values are clamped to the 0–1 range and returned as linear RGB channel components.
+    
+    Parameters:
+        temp (float): Temperature in Kelvin.
+    
+    Returns:
+        tuple[float, float, float]: (r, g, b) channel values each between 0.0 and 1.0.
+    """
     t = temp / 100.0
     if t <= 66:
         r = 1.0
@@ -122,6 +216,15 @@ def _blackbody_color(temp):
 
 
 def _blackbody_array(temps):
+    """
+    Convert temperature values (Kelvin) to approximate RGB colors using a piecewise blackbody approximation.
+    
+    Parameters:
+        temps (array-like): Scalar or array of temperatures in Kelvin. Can be a NumPy array or any array-like; shape is preserved.
+    
+    Returns:
+        ndarray: Array of shape (..., 3) with RGB color values in the range [0, 1], representing the approximate blackbody color for each input temperature.
+    """
     r = np.zeros_like(temps)
     g = np.zeros_like(temps)
     b = np.zeros_like(temps)
@@ -147,6 +250,19 @@ def _blackbody_array(temps):
 
 
 def _star_field_v2(shape, density=1200, seed=42):
+    """
+    Generate a procedurally seeded star field with HDR-like intensities and glow.
+    
+    Produces a three-channel float image of size (height, width) representing stars with multiple populations (faint background points, medium soft stars, and bright stars with small disks and spike glows), modulated by fractal dust attenuation and a soft overall glow. The result is clipped to the range [0, 500].
+    
+    Parameters:
+        shape (tuple[int, int]): (height, width) of the output image.
+        density (int | float): Base density parameter controlling the relative number of stars; larger values produce more stars.
+        seed (int): Integer seed for deterministic randomness.
+    
+    Returns:
+        numpy.ndarray: Float64 RGB array of shape (height, width, 3) with values clipped to [0, 500].
+    """
     rng = np.random.RandomState(seed)
     h, w = shape
     stars = np.zeros((h, w, 3), dtype=np.float64)
@@ -222,6 +338,16 @@ def _star_field_v2(shape, density=1200, seed=42):
 
 
 def _color_map(value, palette):
+    """
+    Map scalar value(s) in [0, 1] to RGB colors by linearly interpolating across a palette.
+    
+    Parameters:
+        value (float or ndarray): Scalar or array of scalars in the range [0, 1]. Values outside this range are clipped to the nearest bound.
+        palette (Sequence[Sequence[float]]): Ordered list of RGB triplets (iterables of three numeric channel values). The palette defines color stops; interpolation occurs between adjacent entries.
+    
+    Returns:
+        ndarray: An array of shape (..., 3) of dtype float64 containing the interpolated RGB color(s) corresponding to `value`.
+    """
     value = np.clip(value, 0, 1)
     n = len(palette) - 1
     idx = value * n
@@ -262,6 +388,20 @@ ACCRETION_PALETTE_COOL = [
 
 
 def render_black_hole(w, h, seed, params=None):
+    """
+    Render a stylized black hole scene with accretion disk, photon ring, optional jets, debris, and star field.
+    
+    Parameters:
+        w (int): Output image width in pixels.
+        h (int): Output image height in pixels.
+        seed (int): Deterministic RNG seed used for noise, stars, and random placement.
+        params (dict, optional): Rendering modifiers. Recognized keys:
+            - "tilt" (float): Disk tilt factor where 0 is face-on and 1 is edge-on (default 0.25).
+            - "jets" (bool): Whether to render bipolar jets (default True).
+    
+    Returns:
+        numpy.ndarray: HxWx3 uint8 RGB image array containing the rendered scene.
+    """
     params = params or {}
     rng = np.random.RandomState(seed)
     img = np.zeros((h, w, 3), dtype=np.float64)
@@ -440,6 +580,14 @@ def render_black_hole(w, h, seed, params=None):
 
 
 def _render_merging_black_holes(w, h, seed, params=None):
+    """
+    Render a pair of merging black holes with lensing, accretion disks, a luminous inter-bridge, rings, debris streaks, and multi-pass bloom.
+    
+    Generates a float HDR-like accumulation of star-field sampling, per-black-hole gravitational lensing and tilted accretion-disk emission (spirals, Doppler-like shifts, multi-scale glow and photon rings), a noisy luminous bridge with radial waves and peripheral rings, randomized debris streaks, and a vignette. The result is tone-mapped with an ACES-like curve and processed with a multi-pass bloom before being converted to 8-bit.
+    
+    Returns:
+        img (numpy.ndarray): uint8 RGB image array of shape (h, w, 3) ready for conversion to a PIL Image.
+    """
     rng = np.random.RandomState(seed)
     img = np.zeros((h, w, 3), dtype=np.float64)
     stars = _star_field_v2((h, w), density=1200, seed=seed)
@@ -651,6 +799,19 @@ DUAL_TONE_PAIRS = {
 
 
 def render_nebula(w, h, seed, params=None):
+    """
+    Generate a colored procedural nebula image with layered volumetric clouds, filaments, embedded stars, and multi-scale glow.
+    
+    Parameters:
+        w (int): Image width in pixels.
+        h (int): Image height in pixels.
+        seed (int): Deterministic RNG seed used to produce consistent procedural detail.
+        params (dict, optional): Renderer options. Recognized key:
+            - "palette" (str): Base palette name to drive warm/cool tone pairing (default "cosmic").
+    
+    Returns:
+        np.ndarray: An uint8 RGB image array of shape (h, w, 3) containing the rendered nebula.
+    """
     params = params or {}
     palette_name = params.get("palette", "cosmic")
     rng = np.random.RandomState(seed)
@@ -868,6 +1029,16 @@ def render_nebula(w, h, seed, params=None):
 
 
 def _v2_post_process(img_array, bloom_passes=2):
+    """
+    Apply the standard V2 post-processing pipeline: vignette, ACES-inspired tonemapping, and multi-pass bloom.
+    
+    Parameters:
+        img_array (numpy.ndarray): HDR-like RGB image array (height x width x 3). Values will be clipped to the range [0, 500] before processing.
+        bloom_passes (int): Number of bloom passes to apply (controls strength/iterations of the multi-pass bloom).
+    
+    Returns:
+        numpy.ndarray: 8-bit RGB image array (uint8) with vignette, tonemapping, and bloom applied.
+    """
     img = np.clip(img_array.astype(np.float64), 0, 500)
     vig = _vignette(img.shape[:2], 0.45)
     for c in range(3):
@@ -880,6 +1051,14 @@ def _v2_post_process(img_array, bloom_passes=2):
 
 
 def _import_v1_renderers():
+    """
+    Load and return legacy V1 renderer callables and the V1 scene-detection function for interoperability.
+    
+    Dynamically imports selected renderers from the legacy `image_generator` module and returns a mapping of scene names to those renderer functions along with the `_detect_scene` function.
+    
+    Returns:
+        tuple: (renderers, detect_scene) where `renderers` is a dict mapping V1 scene names to renderer callables (e.g., "galaxy", "wormhole", "planet", etc.) and `detect_scene` is the V1 scene-detection function.
+    """
     from image_generator import (
         render_galaxy,
         render_quantum_state,
@@ -1156,6 +1335,15 @@ EXTRA_SCENE_KEYWORDS = {
 
 
 def _detect_mood_palette(prompt):
+    """
+    Select the mood palette name whose keywords best match the given prompt.
+    
+    Parameters:
+        prompt (str): User prompt text to analyze for mood keywords.
+    
+    Returns:
+        palette_name (str): The palette name whose mood keywords most closely match the prompt; "cosmic" if no mood keywords are found.
+    """
     prompt_lower = prompt.lower()
     best_score = 0
     best_palette = "cosmic"
@@ -1168,6 +1356,17 @@ def _detect_mood_palette(prompt):
 
 
 def _detect_extra_scene(prompt):
+    """
+    Select an extra scene name by matching prompt substrings against EXTRA_SCENE_KEYWORDS.
+    
+    Checks each scene's keywords and scores them by the total length of keywords found in the prompt; returns the scene with the highest positive score.
+    
+    Parameters:
+        prompt (str): The input prompt to search for scene keywords.
+    
+    Returns:
+        str or None: The best-matching extra scene name if any keywords matched, otherwise `None`.
+    """
     prompt_lower = prompt.lower()
     best_score = 0
     best_scene = None
@@ -1180,6 +1379,21 @@ def _detect_extra_scene(prompt):
 
 
 def render_landscape(w, h, seed, params=None):
+    """
+    Generate a stylized procedural landscape image using seeded noise and mood-driven palettes.
+    
+    Creates a sky gradient, domain-warped clouds, layered ridges below a horizon, ground shading, a horizon glow, and a sparse starfield. Scene appearance is deterministic from `seed` and influenced by the optional `_prompt` in `params` which selects the mood/palette.
+    
+    Parameters:
+        w (int): Image width in pixels.
+        h (int): Image height in pixels.
+        seed (int): Deterministic seed for all procedural randomness.
+        params (dict, optional): Optional renderer parameters. Recognized keys:
+            _prompt (str): Text used to detect a mood palette (affects colors).
+    
+    Returns:
+        numpy.ndarray: An uint8 RGB image array of shape (h, w, 3) representing the rendered landscape.
+    """
     params = params or {}
     rng = np.random.RandomState(seed)
     palette_name = _detect_mood_palette(params.get("_prompt", ""))
@@ -1249,6 +1463,19 @@ def render_landscape(w, h, seed, params=None):
 
 
 def render_creature(w, h, seed, params=None):
+    """
+    Render an abstract creature silhouette using procedural noise, palette-driven coloring, and post-processing.
+    
+    Parameters:
+        w (int): Output image width in pixels.
+        h (int): Output image height in pixels.
+        seed (int): Deterministic seed used for all procedural randomness.
+        params (dict, optional): Additional options. Recognized key:
+            - "_prompt" (str): Text used to detect mood and select a color palette.
+    
+    Returns:
+        PIL.Image.Image: RGB image with tone mapping, vignette, and multi-pass bloom applied.
+    """
     params = params or {}
     rng = np.random.RandomState(seed)
     palette_name = _detect_mood_palette(params.get("_prompt", ""))
@@ -1323,6 +1550,20 @@ def render_creature(w, h, seed, params=None):
 
 
 def render_structure(w, h, seed, params=None):
+    """
+    Render a stylized city/temple-like structure scene as an RGB image array.
+    
+    Constructs multiple tapering towers with window patterns, edge highlights, ground shading, fog, and a sky glow using seeded procedural noise and palette selection driven by the prompt. The result is run through the shared V2 post-processing (vignette, ACES-like tonemapping, and multi-pass bloom).
+    
+    Parameters:
+        w (int): Output image width in pixels.
+        h (int): Output image height in pixels.
+        seed (int): Deterministic seed used for all procedural randomness.
+        params (dict, optional): Additional renderer options. If provided, params["_prompt"] is used to choose the mood palette.
+    
+    Returns:
+        numpy.ndarray: uint8 RGB image array of shape (h, w, 3) with values in [0, 255].
+    """
     params = params or {}
     rng = np.random.RandomState(seed)
     palette_name = _detect_mood_palette(params.get("_prompt", ""))
@@ -1395,6 +1636,18 @@ def render_structure(w, h, seed, params=None):
 
 
 def render_abstract(w, h, seed, params=None):
+    """
+    Generate an abstract, symmetrical procedural image using layered domain-warped and FBM noise mapped to nebula palettes.
+    
+    Parameters:
+    	w (int): Output image width in pixels.
+    	h (int): Output image height in pixels.
+    	seed (int): Deterministic seed for all procedural noise and random choices.
+    	params (dict, optional): Optional renderer parameters; may include "_prompt" to influence palette selection.
+    
+    Returns:
+    	numpy.ndarray: An H×W×3 uint8 RGB image array produced after tone mapping, vignette, and multi-pass bloom.
+    """
     params = params or {}
     rng = np.random.RandomState(seed)
     palette_name = _detect_mood_palette(params.get("_prompt", ""))
@@ -1457,6 +1710,18 @@ def render_abstract(w, h, seed, params=None):
 
 
 def render_energy(w, h, seed, params=None):
+    """
+    Generate an "energy core" scene featuring a glowing central core, radial shockwaves, lightning-like bolts, particles, and ambient glow.
+    
+    The renderer composes starfield background, a bright core and halo, multiple angular bolts with noise-driven detail, concentric shockwave rings, particle field, and low-frequency ambient glow; palette selection is influenced by params["_prompt"] when present. Image is post-processed with vignette, ACES-like tonemapping, and multi-pass bloom.
+    
+    Parameters:
+        params (dict, optional): Scene modifiers. Recognized key:
+            "_prompt" (str): Source prompt used to pick a mood palette.
+    
+    Returns:
+        numpy.ndarray: RGB image array of shape (height, width, 3) with dtype uint8 and values in [0, 255].
+    """
     params = params or {}
     rng = np.random.RandomState(seed)
     palette_name = _detect_mood_palette(params.get("_prompt", ""))
@@ -1543,6 +1808,18 @@ EXTRA_RENDERERS = {
 def generate_image(
     prompt: str, width: int = 512, height: int = 512, variation_seed: int = None
 ) -> Image.Image:
+    """
+    Generate an image from a text prompt by selecting and running a procedural renderer, then return it as a PIL Image.
+    
+    Parameters:
+        prompt (str): Text prompt used to deterministically seed and select the scene and style.
+        width (int): Output image width in pixels.
+        height (int): Output image height in pixels.
+        variation_seed (int | None): Optional integer added to the deterministic seed to produce a consistent variation.
+    
+    Returns:
+        PIL.Image.Image: Rendered RGB image for the chosen scene.
+    """
     seed = _seed_from_prompt(prompt)
     if variation_seed is not None:
         seed = (seed + variation_seed) % (2**31)
@@ -1579,6 +1856,12 @@ def generate_image(
 
 
 def get_available_scenes():
+    """
+    List all supported scene names available to the generator.
+    
+    Returns:
+        all_scenes (list[str]): Combined list of scene names including V2 renderers, V1 renderers that are not duplicated by V2, and extra renderer keys.
+    """
     v1_renderers, _ = _import_v1_renderers()
     all_scenes = list(RENDERERS_V2.keys()) + [
         k for k in v1_renderers if k not in RENDERERS_V2

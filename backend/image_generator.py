@@ -17,10 +17,32 @@ logger = logging.getLogger("quantum_image_gen")
 
 
 def _seed_from_prompt(prompt: str) -> int:
+    """
+    Derives a deterministic integer seed from a text prompt.
+    
+    Parameters:
+        prompt (str): Input text used to derive the seed.
+    
+    Returns:
+        int: Integer seed computed from the first 8 hex digits of the prompt's MD5 hash (range 0 to 2^32 - 1).
+    """
     return int(hashlib.md5(prompt.encode()).hexdigest()[:8], 16)
 
 
 def _fbm_noise(shape, octaves=6, persistence=0.5, seed=42):
+    """
+    Generate a fractal Brownian motion (fBm)-style noise field.
+    
+    Parameters:
+        shape (tuple[int, int]): Output array shape as (height, width).
+        octaves (int): Number of noise octaves to combine; higher values add finer detail.
+        persistence (float): Amplitude multiplier for each successive octave (typical range 0–1).
+        seed (int): Integer seed for the deterministic random number generator.
+    
+    Returns:
+        numpy.ndarray: A float64 array with the given `shape` containing the synthesized fBm noise,
+        normalized by the sum of octave amplitudes.
+    """
     rng = np.random.RandomState(seed)
     result = np.zeros(shape, dtype=np.float64)
     amplitude = 1.0
@@ -43,6 +65,18 @@ def _fbm_noise(shape, octaves=6, persistence=0.5, seed=42):
 
 
 def _radial_gradient(shape, cx=None, cy=None):
+    """
+    Compute a normalized radial distance map from a specified center.
+    
+    Parameters:
+        shape (tuple[int, int]): Image shape as (height, width).
+        cx (float, optional): X-coordinate of the center in pixel units. Defaults to image center.
+        cy (float, optional): Y-coordinate of the center in pixel units. Defaults to image center.
+    
+    Returns:
+        numpy.ndarray: 2D array of shape `shape` where each element is the Euclidean distance
+        from the center normalized by the maximum distance (values in [0, 1], center ≈ 0).
+    """
     h, w = shape
     if cx is None:
         cx = w / 2
@@ -55,6 +89,18 @@ def _radial_gradient(shape, cx=None, cy=None):
 
 
 def _bloom(img_array, threshold=200, radius=8, intensity=0.6):
+    """
+    Add a soft bloom/glow effect by blending a blurred map of pixels brighter than a threshold back into the image.
+    
+    Parameters:
+        img_array (numpy.ndarray): Input image array (H, W, C) or (H, W), values expected in [0, 255].
+        threshold (int | float): Brightness cutoff; only intensity above this value contributes to the bloom.
+        radius (int | float): Gaussian blur sigma controlling bloom spread.
+        intensity (float): Scalar multiplier for the blurred bright map added back to the image.
+    
+    Returns:
+        numpy.ndarray: Image array with bloom applied, dtype uint8 and values clipped to [0, 255].
+    """
     bright = np.clip(img_array.astype(np.float64) - threshold, 0, 255)
     blurred = ndimage.gaussian_filter(bright, sigma=radius)
     result = img_array.astype(np.float64) + blurred * intensity
@@ -62,12 +108,33 @@ def _bloom(img_array, threshold=200, radius=8, intensity=0.6):
 
 
 def _vignette(shape, strength=0.7):
+    """
+    Compute a radial vignette mask for the given image shape.
+    
+    Parameters:
+        shape (tuple[int, int]): Image height and width as (h, w).
+        strength (float): Multiplier controlling edge darkening; larger values increase vignette intensity (default 0.7).
+    
+    Returns:
+        numpy.ndarray: Float mask of shape (h, w) with values in [0, 1], where 1 is unchanged center and values near 0 darken the edges.
+    """
     r = _radial_gradient(shape)
     v = 1.0 - (r ** 1.8) * strength
     return np.clip(v, 0, 1)
 
 
 def _star_field(shape, density=800, seed=42):
+    """
+    Generate a procedural star field as an RGB float array.
+    
+    Parameters:
+    	shape (tuple[int, int]): Image height and width as (h, w).
+    	density (int): Number of stars to place.
+    	seed (int): Random seed used to deterministically sample star positions, brightnesses, and temperatures.
+    
+    Returns:
+    	stars (numpy.ndarray): Float RGB image of shape (h, w, 3) with values clipped to the range [0, 255].
+    """
     rng = np.random.RandomState(seed)
     h, w = shape
     stars = np.zeros((h, w, 3), dtype=np.float64)
@@ -100,6 +167,15 @@ def _star_field(shape, density=800, seed=42):
 
 
 def _blackbody_color(temp):
+    """
+    Approximate the RGB color of a blackbody at the given temperature.
+    
+    Parameters:
+        temp (float): Color temperature in Kelvin.
+    
+    Returns:
+        tuple: (r, g, b) each a float in the range [0, 1], representing an RGB approximation of the blackbody color (clamped).
+    """
     t = temp / 100.0
     if t <= 66:
         r = 1.0
@@ -119,6 +195,16 @@ def _blackbody_color(temp):
 
 
 def _color_map(value, palette):
+    """
+    Map a normalized scalar field to RGB by linearly interpolating a given palette.
+    
+    Parameters:
+        value (array-like): Scalar field with values expected in the range [0, 1]; will be clipped to that range.
+        palette (sequence): Ordered sequence of palette colors where each entry is an (r, g, b) tuple or list of floats (color component scale should match desired output scale).
+    
+    Returns:
+        np.ndarray: Float RGB array shaped (*value.shape, 3) where each pixel is the linear interpolation of adjacent palette entries corresponding to the input value.
+    """
     value = np.clip(value, 0, 1)
     n = len(palette) - 1
     idx = value * n
@@ -144,6 +230,22 @@ NEBULA_PALETTES = {
 
 
 def render_black_hole(w, h, seed, params=None):
+    """
+    Render a procedural black hole scene with lensing, accretion disk, photon ring, and optional jets.
+    
+    Generates a deterministic RGB image array showing a lensed star background, tilted accretion disk with Doppler-like modulation and fractal detail, a bright photon ring, a dark event-horizon region, vignette and bloom post-processing, and optional bipolar jets.
+    
+    Parameters:
+        w (int): Output image width in pixels.
+        h (int): Output image height in pixels.
+        seed (int): Deterministic random seed controlling star placement, noise fields, and other randomized elements.
+        params (dict, optional): Optional rendering controls. Supported keys:
+            - 'tilt' (float): Disk tilt factor in [0,1], default 0.3, where larger values tilt the accretion disk more.
+            - 'jets' (bool): Whether to render bipolar jets, default True.
+    
+    Returns:
+        numpy.ndarray: uint8 RGB image array of shape (h, w, 3) with values in [0, 255].
+    """
     params = params or {}
     rng = np.random.RandomState(seed)
     img = np.zeros((h, w, 3), dtype=np.float64)
@@ -233,6 +335,21 @@ def render_black_hole(w, h, seed, params=None):
 
 
 def render_nebula(w, h, seed, params=None):
+    """
+    Generate a colorful nebula image as a NumPy uint8 RGB array.
+    
+    Creates a layered nebula by combining oriented Gaussian cloud centers, multi-octave fractal noise (for detail, fine structure, warp, and filaments), a starfield background, secondary color layers, localized hot spots, and a small number of embedded glowing stars. Applies a vignette and bloom before returning.
+    
+    Parameters:
+        w (int): Output image width in pixels.
+        h (int): Output image height in pixels.
+        seed (int): Deterministic random seed used for procedural variation.
+        params (dict, optional): Optional renderer parameters. Recognized keys:
+            - 'palette' (str): Name of the nebula color palette to use (defaults to 'cosmic').
+    
+    Returns:
+        numpy.ndarray: An (h, w, 3) uint8 RGB image with values in [0, 255].
+    """
     params = params or {}
     palette_name = params.get('palette', 'cosmic')
     palette = NEBULA_PALETTES.get(palette_name, NEBULA_PALETTES['cosmic'])
@@ -321,6 +438,22 @@ def render_nebula(w, h, seed, params=None):
 
 
 def render_galaxy(w, h, seed, params=None):
+    """
+    Render a tilted spiral galaxy scene.
+    
+    Generates a procedural spiral galaxy composed of a starfield background, spiral arms modulated by fractal noise, a bright core glow, and many discrete galactic stars with blackbody-based coloring. The function applies vignette and bloom and returns a clamped uint8 RGB image.
+    
+    Parameters:
+        w (int): Image width in pixels.
+        h (int): Image height in pixels.
+        seed (int): Integer seed for deterministic random noise and star placement.
+        params (dict, optional): Rendering options. Recognized keys:
+            - 'tilt' (float): Disk tilt factor (default 0.6) that squashes vertical coordinates for perspective.
+            - 'arms' (int): Number of spiral arms (default 2).
+    
+    Returns:
+        numpy.ndarray: RGB image array with shape (h, w, 3), dtype uint8, and values in [0, 255].
+    """
     params = params or {}
     rng = np.random.RandomState(seed)
     img = np.zeros((h, w, 3), dtype=np.float64)
@@ -394,6 +527,14 @@ def render_galaxy(w, h, seed, params=None):
 
 
 def render_quantum_state(w, h, seed, params=None):
+    """
+    Generate a quantum-state–inspired RGB image as a NumPy uint8 array.
+    
+    Creates a visual representation of a wavefunction by mapping a computed phase field to a color palette, modulating color intensity by the probability density, and compositing starfield, interference fringes, contour highlights, vignette, and bloom to produce a stylized quantum-state visualization.
+    
+    Returns:
+        img (np.ndarray): uint8 RGB image array of shape (h, w, 3) with values in [0, 255].
+    """
     params = params or {}
     rng = np.random.RandomState(seed)
     img = np.zeros((h, w, 3), dtype=np.float64)
@@ -458,6 +599,18 @@ def render_quantum_state(w, h, seed, params=None):
 
 
 def render_wormhole(w, h, seed, params=None):
+    """
+    Generate a procedural wormhole tunnel visual.
+    
+    Parameters:
+        w (int): Image width in pixels.
+        h (int): Image height in pixels.
+        seed (int): Deterministic random seed used by internal noise and starfield generators.
+        params (dict, optional): Reserved for renderer-specific options (not used by this implementation).
+    
+    Returns:
+        numpy.ndarray: uint8 RGB image array of shape (h, w, 3) with values in the range [0, 255].
+    """
     params = params or {}
     img = np.zeros((h, w, 3), dtype=np.float64)
 
@@ -524,6 +677,20 @@ def render_wormhole(w, h, seed, params=None):
 
 
 def render_supernova(w, h, seed, params=None):
+    """
+    Render a procedural supernova scene and return it as an RGB image array.
+    
+    Builds a deterministic supernova composition including a bright core glow, radiating rays with blackbody-derived colors, an outer noisy shell and inner shell, and a background starfield; applies vignette and bloom as post-processing.
+    
+    Parameters:
+        w (int): Output image width in pixels.
+        h (int): Output image height in pixels.
+        seed (int): Integer seed for deterministic random and noise generation.
+        params (dict, optional): Additional renderer options (currently unused).
+    
+    Returns:
+        np.ndarray: uint8 RGB image array of shape (h, w, 3) with values in [0, 255].
+    """
     params = params or {}
     rng = np.random.RandomState(seed)
     img = np.zeros((h, w, 3), dtype=np.float64)
@@ -587,6 +754,19 @@ def render_supernova(w, h, seed, params=None):
 
 
 def render_planet(w, h, seed, params=None):
+    """
+    Render a shaded, stylized planet composited over a starfield with selectable surface types and atmospheric glow.
+    
+    Parameters:
+        w (int): Image width in pixels.
+        h (int): Image height in pixels.
+        seed (int): Deterministic seed for procedural noise and random choices.
+        params (dict, optional): Optional renderer parameters. Supported keys:
+            - 'type' (str): Surface type, one of 'rocky', 'gas', 'ice', or 'lava'. If omitted, a type is chosen randomly based on the seed.
+    
+    Returns:
+        numpy.ndarray: uint8 RGB image array with shape (h, w, 3) and values in the range [0, 255].
+    """
     params = params or {}
     rng = np.random.RandomState(seed)
     img = np.zeros((h, w, 3), dtype=np.float64)
@@ -682,6 +862,21 @@ def render_planet(w, h, seed, params=None):
 
 
 def render_fractal(w, h, seed, params=None):
+    """
+    Render a Mandelbrot-like fractal scene.
+    
+    Generates a zoomed, randomized complex-plane fractal using the provided seed, maps normalized escape iteration counts to colors via a selectable palette, and darkens interior (non-escaping) points. The result is post-processed with a subtle bloom.
+    
+    Parameters:
+        w (int): Image width in pixels.
+        h (int): Image height in pixels.
+        seed (int): Random seed to control fractal center, zoom, and palette choice.
+        params (dict, optional): Optional renderer settings. Supported keys:
+            - 'palette' (str): Palette name to use for coloring (defaults to a random choice among 'cosmic', 'fire', 'ice').
+    
+    Returns:
+        np.ndarray: An (h, w, 3) uint8 RGB image with values in [0, 255].
+    """
     params = params or {}
     rng = np.random.RandomState(seed)
 
@@ -730,6 +925,21 @@ def render_fractal(w, h, seed, params=None):
 
 
 def render_neural(w, h, seed, params=None):
+    """
+    Render a neural/network-like scene with nodes and connecting synapse-like lines.
+    
+    Generates a noise-based RGB background, places a set of nodes (positions and radii) determined by `seed` (or overridden via `params`), draws probabilistic connecting lines with occasional pulse ellipses, renders layered node rings and cores, applies a vignette and bloom, and returns the final image array.
+    
+    Parameters:
+        w (int): Output image width in pixels.
+        h (int): Output image height in pixels.
+        seed (int): Deterministic random seed used for node placement and procedural variations.
+        params (dict, optional): Optional renderer settings. Supported keys:
+            - 'nodes' (int): If provided, the exact number of nodes to generate; otherwise a random count in [15, 40] is chosen.
+    
+    Returns:
+        numpy.ndarray: uint8 RGB image array of shape (h, w, 3) with values in [0, 255].
+    """
     params = params or {}
     rng = np.random.RandomState(seed)
     img = np.zeros((h, w, 3), dtype=np.float64)
@@ -799,6 +1009,20 @@ def render_neural(w, h, seed, params=None):
 
 
 def render_consciousness(w, h, seed, params=None):
+    """
+    Render a "consciousness" themed procedural RGB image as a NumPy array.
+    
+    Generates a stylized scene composed of multiple colored tubular structures radiating from the center, a pulsating central core, concentric faint rings, and a radial decoherence mask; applies vignette and bloom post-processing before returning the final image. The function uses the provided seed for deterministic randomness.
+    
+    Parameters:
+        w (int): Output image width in pixels.
+        h (int): Output image height in pixels.
+        seed (int): Integer seed for deterministic random number generation.
+        params (dict, optional): Reserved for renderer options (not required by default).
+    
+    Returns:
+        np.ndarray: uint8 RGB image array with shape (h, w, 3) and values in the range [0, 255].
+    """
     params = params or {}
     rng = np.random.RandomState(seed)
     img = np.zeros((h, w, 3), dtype=np.float64)
@@ -911,6 +1135,22 @@ RENDERERS = {
 
 
 def _detect_scene(prompt: str) -> tuple:
+    """
+    Selects the most relevant scene type for a prompt and extracts scene-specific parameters.
+    
+    Parameters:
+        prompt (str): Natural-language description used to choose a scene and detect modifiers.
+    
+    Returns:
+        tuple: (scene_name, params) where `scene_name` is the selected key from available renderers
+        (e.g., 'nebula', 'black_hole', 'galaxy', 'planet', etc.). `params` is a dict with optional
+        scene modifiers inferred from the prompt, for example:
+          - For 'black_hole': 'merging' (True) and/or 'jets' (True).
+          - For 'nebula': 'palette' (str) to select a palette name.
+          - For 'planet': 'type' (one of 'gas', 'ice', 'lava', 'rocky').
+          - For 'galaxy': 'arms' (int).
+        If no keywords match, returns ('nebula', {}).
+    """
     prompt_lower = prompt.lower()
     scores = {}
     for scene, keywords in SCENE_KEYWORDS.items():
@@ -963,6 +1203,20 @@ def _detect_scene(prompt: str) -> tuple:
 
 
 def _render_merging_black_holes(w, h, seed, params=None):
+    """
+    Render a deterministic merging black holes scene composed into an RGB image.
+    
+    Generates a float-to-uint8 RGB image of two nearby black holes with lensed background stars, accretion disks with Doppler-like modulation, bright photon rings, a luminous bridge between the holes, a vignette, and a final bloom pass. Layout and visual characteristics are derived from the provided width, height, and seed to ensure reproducible outputs.
+    
+    Parameters:
+        w (int): Output image width in pixels.
+        h (int): Output image height in pixels.
+        seed (int): Base PRNG seed used to produce deterministic procedural elements.
+        params (dict | None): Optional renderer parameters (currently unused by this function).
+    
+    Returns:
+        np.ndarray: uint8 RGB image array of shape (h, w, 3) with values in the range [0, 255].
+    """
     img = np.zeros((h, w, 3), dtype=np.float64)
     stars = _star_field((h, w), density=1000, seed=seed)
 
@@ -1033,7 +1287,21 @@ def _render_merging_black_holes(w, h, seed, params=None):
 
 def generate_image(prompt: str, width: int = 512, height: int = 512,
                    variation_seed: int = None) -> Image.Image:
-    seed = _seed_from_prompt(prompt)
+    """
+                   Generate a procedural RGB image described by a text prompt.
+                   
+                   The function derives a numeric seed from the prompt (optionally offset by variation_seed), detects a scene type and parameters from the prompt text, invokes the corresponding procedural renderer, and returns the rendered image as a PIL Image.
+                   
+                   Parameters:
+                       prompt (str): Text prompt used to select and parameterize the scene.
+                       width (int): Image width in pixels.
+                       height (int): Image height in pixels.
+                       variation_seed (int | None): Optional integer added to the prompt-derived seed to produce a deterministic variation.
+                   
+                   Returns:
+                       PIL.Image.Image: Rendered RGB image.
+                   """
+                   seed = _seed_from_prompt(prompt)
     if variation_seed is not None:
         seed = (seed + variation_seed) % (2 ** 31)
 
@@ -1049,6 +1317,12 @@ def generate_image(prompt: str, width: int = 512, height: int = 512,
 
 
 def get_available_scenes():
+    """
+    Get the available renderer scene names.
+    
+    Returns:
+        scene_names (list[str]): List of scene keys supported by the renderer mapping.
+    """
     return list(RENDERERS.keys())
 
 

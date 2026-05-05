@@ -5,6 +5,19 @@ import json
 import re
 
 def parse_document(file_path=None, file_bytes=None, filename=None):
+    """
+    Determine the file type from provided path/bytes/filename and extract plain text and basic metadata.
+    
+    If file_path is given, the file is read and filename defaults to the basename of file_path when not provided. If either filename or file_bytes is missing, returns {"error": "No file provided", "text": ""}. The function dispatches to an extension-specific parser for known formats (text, JSON, CSV, DOCX, DOC, PDF, XLSX/ODS, HTML/XML, RTF, etc.). For unknown extensions it attempts to decode bytes as UTF-8 and returns the decoded text with format "unknown_text". If a parser succeeds its result dictionary is augmented with a "format" key set to the detected extension; on parser failure returns {"error": "Parse error (<ext>): <message>", "text": ""}.
+    
+    Parameters:
+        file_path (str|None): Path to a file to read. If provided and file_bytes is not, the file will be read as bytes.
+        file_bytes (bytes|None): Raw file bytes to parse. Required if file_path is not provided.
+        filename (str|None): Filename used to determine the extension. If not provided and file_path is given, basename(file_path) is used.
+    
+    Returns:
+        dict: On success, a dictionary containing at minimum "text" (extracted plain text) and "format" (detected extension), and often additional metadata such as "chars", "rows", "pages", or "paragraphs". On failure returns {"error": <message>, "text": ""}.
+    """
     if file_path:
         filename = filename or os.path.basename(file_path)
         with open(file_path, 'rb') as f:
@@ -81,11 +94,35 @@ def parse_document(file_path=None, file_bytes=None, filename=None):
 
 
 def _parse_txt(data, filename=""):
+    """
+    Decode UTF-8 bytes into a string (replacing invalid sequences) and return it with its character count.
+    
+    Parameters:
+        filename (str): Optional filename (unused, accepted for API compatibility).
+    
+    Returns:
+        dict: A dictionary with keys:
+            - "text": the decoded string with invalid UTF-8 sequences replaced,
+            - "chars": the number of characters in "text".
+    """
     text = data.decode('utf-8', errors='replace')
     return {"text": text, "chars": len(text)}
 
 
 def _parse_json(data, filename=""):
+    """
+    Parse JSON bytes and return a flattened textual representation.
+    
+    Attempts to decode `data` as UTF-8 and parse it as JSON. If parsing succeeds, returns a newline-separated, flattened string representation of the JSON structure; if parsing fails, returns the decoded raw text.
+    
+    Parameters:
+        data (bytes): The JSON content as raw bytes.
+    
+    Returns:
+        dict: A mapping with keys:
+            - "text" (str): The flattened JSON text on success or the decoded raw text on failure.
+            - "chars" (int): The number of characters in the returned "text".
+    """
     text = data.decode('utf-8', errors='replace')
     try:
         obj = json.loads(text)
@@ -96,6 +133,16 @@ def _parse_json(data, filename=""):
 
 
 def _flatten_json(obj, prefix=""):
+    """
+    Flatten a JSON-like object into a newline-separated string of simple key/value lines.
+    
+    Parameters:
+        obj: The JSON-decoded object to flatten (dict, list, or primitive). Dictionaries produce "key: value" lines for string/number/bool values and recurse for nested structures; lists produce one line per item.
+        prefix (str): Internal key prefix used during recursion to build nested keys (e.g., "parent.child."). Omit or pass an empty string when calling externally.
+    
+    Returns:
+        str: A single string with flattened lines separated by newlines.
+    """
     parts = []
     if isinstance(obj, dict):
         for k, v in obj.items():
@@ -117,6 +164,18 @@ def _flatten_json(obj, prefix=""):
 
 
 def _parse_csv(data, filename=""):
+    """
+    Parse CSV bytes into plain text where each CSV row becomes a line and each field within a row is joined by spaces.
+    
+    Decodes `data` as UTF-8 using replacement for invalid bytes, parses CSV rows, joins fields with a single space per row, and joins rows with newline characters.
+    
+    Returns:
+        dict: {
+            "text": joined text of all rows separated by `\n`,
+            "chars": number of characters in `text`,
+            "rows": number of parsed rows
+        }
+    """
     text = data.decode('utf-8', errors='replace')
     reader = csv.reader(io.StringIO(text))
     rows = []
@@ -127,6 +186,16 @@ def _parse_csv(data, filename=""):
 
 
 def _parse_docx(data, filename=""):
+    """
+    Extracts readable text from a .docx file by collecting non-empty paragraphs and table rows.
+    
+    Returns:
+        dict: {
+            "text": concatenated text blocks separated by double newlines,
+            "chars": number of characters in "text",
+            "paragraphs": count of extracted paragraph/table blocks
+        }
+    """
     from docx import Document
     doc = Document(io.BytesIO(data))
     paragraphs = []
@@ -144,6 +213,20 @@ def _parse_docx(data, filename=""):
 
 
 def _parse_doc(data, filename=""):
+    """
+    Convert legacy .doc file bytes to cleaned plain text by decoding and stripping control characters and excess whitespace.
+    
+    Parameters:
+    	data (bytes): Raw file bytes of the .doc content.
+    
+    Returns:
+    	result (dict): On success, a dict with keys:
+    		- "text": the cleaned text extracted from the input
+    		- "chars": integer count of characters in "text"
+    		On failure (parsing error), a dict with:
+    		- "error": "Legacy .doc format — save as .docx for best results"
+    		- "text": ""
+    """
     try:
         text = data.decode('utf-8', errors='replace')
         text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', ' ', text)
@@ -154,6 +237,19 @@ def _parse_doc(data, filename=""):
 
 
 def _parse_pdf(data, filename=""):
+    """
+    Extract plain text from PDF bytes and return extracted text with simple page metadata.
+    
+    Parameters:
+        data (bytes): Raw PDF file bytes to parse.
+        filename (str, optional): Optional filename for context (not used by the parser).
+    
+    Returns:
+        dict: A mapping with:
+            - "text": The extracted text with pages separated by blank lines.
+            - "chars": Number of characters in "text".
+            - "pages": Number of pages from which text was extracted.
+    """
     from PyPDF2 import PdfReader
     reader = PdfReader(io.BytesIO(data))
     pages = []
@@ -166,6 +262,16 @@ def _parse_pdf(data, filename=""):
 
 
 def _parse_xlsx(data, filename=""):
+    """
+    Extract text from an XLSX workbook into plain-text lines organized by sheet and row.
+    
+    Returns:
+        dict: {
+            "text": str — newline-separated lines containing "Sheet: <name>" headers and row values joined with " | ",
+            "chars": int — number of characters in `text`,
+            "rows": int — number of output lines in `text` (including sheet header lines)
+        }
+    """
     from openpyxl import load_workbook
     wb = load_workbook(io.BytesIO(data), read_only=True, data_only=True)
     rows = []
@@ -181,6 +287,19 @@ def _parse_xlsx(data, filename=""):
 
 
 def _parse_ods(data, filename=""):
+    """
+    Extracts plain text from an ODS spreadsheet by reading sheets, rows, and cells.
+    
+    Parameters:
+        data (bytes): Raw bytes of an ODS (.ods) file.
+        filename (str): Optional filename (unused by the parser, kept for API consistency).
+    
+    Returns:
+        dict: A dictionary with:
+            - "text": string of extracted lines where sheet headers are prefixed with "Sheet: {name}", cells in a row are joined with " | ", and lines are separated by newlines.
+            - "chars": integer count of characters in "text".
+            - "rows": integer count of output lines (including sheet header lines).
+    """
     from odf.opendocument import load as odf_load
     from odf.table import Table, TableRow, TableCell
     from odf.text import P
@@ -205,6 +324,19 @@ def _parse_ods(data, filename=""):
 
 
 def _parse_html(data, filename=""):
+    """
+    Extract plain text from HTML bytes by removing markup, script/style content, and collapsing whitespace.
+    
+    Parameters:
+        data (bytes): Raw HTML file bytes to decode and extract text from.
+        filename (str, optional): Optional filename (not required for extraction).
+    
+    Returns:
+        dict: {
+            "text": cleaned plain-text string extracted from the HTML,
+            "chars": integer count of characters in `text`
+        }
+    """
     text = data.decode('utf-8', errors='replace')
     text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.DOTALL)
     text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.DOTALL)
@@ -214,6 +346,18 @@ def _parse_html(data, filename=""):
 
 
 def _parse_xml(data, filename=""):
+    """
+    Extract plain text from XML bytes by removing tags and collapsing whitespace.
+    
+    Parameters:
+        data (bytes): Raw XML file bytes to parse.
+        filename (str, optional): Unused; provided for API consistency.
+    
+    Returns:
+        dict: Mapping with keys:
+            - "text": the XML content with all tags removed and consecutive whitespace collapsed to single spaces.
+            - "chars": integer length of the resulting text.
+    """
     text = data.decode('utf-8', errors='replace')
     text = re.sub(r'<[^>]+>', ' ', text)
     text = re.sub(r'\s+', ' ', text).strip()
@@ -221,6 +365,20 @@ def _parse_xml(data, filename=""):
 
 
 def _parse_rtf(data, filename=""):
+    """
+    Extract plain text from RTF file bytes.
+    
+    Decodes the provided RTF bytes, removes RTF control words and grouping braces, collapses consecutive whitespace, and returns the cleaned text along with its character count.
+    
+    Parameters:
+        data (bytes): Raw RTF file contents.
+        filename (str, optional): Optional filename for context; not used in parsing.
+    
+    Returns:
+        dict: A mapping with keys:
+            - "text" (str): The extracted plain text.
+            - "chars" (int): Number of characters in the extracted text.
+    """
     text = data.decode('utf-8', errors='replace')
     text = re.sub(r'\\[a-z]+\d*\s?', '', text)
     text = re.sub(r'[{}]', '', text)

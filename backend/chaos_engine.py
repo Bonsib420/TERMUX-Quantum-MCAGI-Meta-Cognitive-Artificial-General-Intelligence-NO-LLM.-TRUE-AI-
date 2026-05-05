@@ -58,6 +58,15 @@ class ChaosEngine:
     """
 
     def __init__(self, chaos_level: float = 0.3):
+        """
+        Initialize the ChaosEngine with a base chaos level and reset internal injection state.
+        
+        Parameters:
+            chaos_level (float): Initial chaos intensity in the range 0.0 to 1.0; values outside this range are clamped.
+            
+        Description:
+            Stores the clamped chaos level, sets the injection counter to zero, and clears the last injection type.
+        """
         self.chaos_level = max(0.0, min(1.0, chaos_level))
         self.injection_count = 0
         self.last_injection_type = None
@@ -75,6 +84,20 @@ class ChaosEngine:
         concepts: List[str] = None,
         growth_stage: int = 0,
     ) -> str:
+        """
+        Possibly appends a single personality or content fragment to the given response based on the engine's chaos level and available content engines.
+        
+        Parameters:
+            response (str): Base text to return or augment.
+            markov_engine (optional): Engine providing generate_from_concepts(concepts, length, wild) to produce a bracketed fragment when available and chaos_level > 0.3.
+            quote_engine (optional): Engine providing get_quote_for_concepts(concepts) and format_quote(quote) to supply a concept-driven quote.
+            dream_engine (optional): Accepted but not used by this method.
+            concepts (List[str], optional): Concepts guiding Markov or quote generation; defaults to an empty list.
+            growth_stage (int, optional): Accepted but not used by this method.
+        
+        Returns:
+            str: The original response, or the response followed by a single injected fragment separated by a space.
+        """
         concepts = concepts or []
 
         candidates = []
@@ -117,9 +140,24 @@ class ChaosEngine:
             return response
 
     def set_chaos_level(self, level: float):
+        """
+        Clamp and set the engine's chaos level to a value between 0.0 and 1.0.
+        
+        Parameters:
+            level (float): Desired chaos level; values below 0.0 are set to 0.0 and values above 1.0 are set to 1.0.
+        """
         self.chaos_level = max(0.0, min(1.0, level))
 
     def get_status(self) -> Dict:
+        """
+        Return current engine status including chaos level, total injection calls, and last injection type.
+        
+        Returns:
+            status (Dict): Mapping with keys:
+                - 'chaos_level' (float): chaos level rounded to three decimals.
+                - 'injections' (int): total number of inject calls made.
+                - 'last_type' (str or None): type of the last chosen injection, or None if no injection was selected.
+        """
         return {
             'chaos_level': round(self.chaos_level, 3),
             'injections': self.injection_count,

@@ -357,11 +357,15 @@ def ingest_document(source, max_chars=100000):
 
 def handle_ingest_command(cmd_parts, engine=None, memory=None):
     """
-    Handle /ingest commands from chat.py
-
-    /ingest URL                 — fetch and train from URL
-    /ingest /path/to/file       — train from local file
-    /ingest /sdcard/Download/x  — train from phone storage
+    Process an '/ingest' chat command: ingest text from a URL or file, optionally train an engine, update memory, and return a human-readable status.
+    
+    Parameters:
+    	cmd_parts (list): Tokenized command parts (e.g., ['/ingest', 'URL-or-path']).
+    	engine (optional): Learning engine to train with the extracted text; when provided, the function will call the engine's learning routine and include training details in the returned status.
+    	memory (optional): Memory-like object to update with extracted concepts when present.
+    
+    Returns:
+    	status (str): A one- or multi-line human-readable status or help message. Possible outcomes include a help string (when command is incomplete), a failure message starting with "  Failed:", a success message reporting extraction status, or a success message including training summary and chain state counts when an engine is supplied.
     """
     if len(cmd_parts) < 2:
         return """  Ingest Commands:

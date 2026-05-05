@@ -127,11 +127,24 @@ class KnowledgeBase:
     """Knowledge base with 22 topics and semantic graph traversal."""
 
     def __init__(self):
+        """
+        Initialize the KnowledgeBase with the module's topic mapping and a query counter.
+        
+        Sets self.topics to the module-level TOPICS dictionary and initializes self.queries to 0.
+        """
         self.topics = TOPICS
         self.queries = 0
 
     def lookup(self, concept: str) -> Optional[Dict]:
-        """Look up a concept, fuzzy matching."""
+        """
+        Finds a topic entry by fuzzy, case-insensitive matching against topic names and their subtopics.
+        
+        Parameters:
+            concept (str): The search term to match against known topics and subtopics.
+        
+        Returns:
+            dict: A topic entry dictionary with an added `'topic'` key for the matched topic name (includes `description`, `subtopics`, `related`), or `None` if no match is found.
+        """
         concept_lower = concept.lower()
         if concept_lower in self.topics:
             self.queries += 1
@@ -149,12 +162,33 @@ class KnowledgeBase:
         return None
 
     def get_topic_explanation(self, topic: str) -> Optional[str]:
-        """Compatibility alias for callers expecting the old API."""
+        """
+        Return the description for a topic using the knowledge base's fuzzy lookup.
+        
+        Perform a case-insensitive, partial, and subtopic-aware lookup for `topic` and return the matched topic's description when found.
+        
+        Parameters:
+        	topic (str): Topic name or search term to look up.
+        
+        Returns:
+        	description (str): The matched topic's description, or `None` if no match is found.
+        """
         entry = self.lookup(topic)
         return entry['description'] if entry else None
 
     def get_related(self, concept: str, depth: int = 1) -> List[str]:
-        """Get related concepts at given traversal depth."""
+        """
+        Retrieve related topic names from the knowledge graph up to the specified depth.
+        
+        Performs a lookup for `concept` (using the engine's fuzzy matching). If no match is found, returns an empty list. For depth == 1, returns the entry's direct `related` topics. For depth > 1, also adds up to the first two `related` topics from each direct related topic.
+        
+        Parameters:
+            concept (str): Topic name or term to look up (case-insensitive, supports partial/subtopic matching).
+            depth (int): Traversal depth (1 returns direct related topics; values >1 expand one additional hop as described).
+        
+        Returns:
+            List[str]: A list of related topic names (order not guaranteed).
+        """
         entry = self.lookup(concept)
         if not entry:
             return []
@@ -169,7 +203,15 @@ class KnowledgeBase:
         return list(related)
 
     def suggest_for_concepts(self, concepts: List[str]) -> List[Dict]:
-        """Get knowledge base entries relevant to a list of concepts."""
+        """
+        Collects up to three unique topic entries matching the provided concept queries.
+        
+        Parameters:
+            concepts (List[str]): Query strings to match against the knowledge base.
+        
+        Returns:
+            List[Dict]: A list (maximum length 3) of topic entry dictionaries. Each entry includes keys such as 'topic', 'description', 'subtopics', and 'related'.
+        """
         results = []
         seen = set()
         for concept in concepts:
@@ -180,14 +222,39 @@ class KnowledgeBase:
         return results[:3]
 
     def get_random_topic(self) -> Dict:
-        """Get a random topic for exploration."""
+        """
+        Return a randomly selected topic entry from the knowledge base.
+        
+        Returns:
+            dict: A topic entry containing:
+                - 'topic' (str): the selected topic name.
+                - 'description' (str): the topic's short definition.
+                - 'subtopics' (List[str]): associated subtopic terms.
+                - 'related' (List[str]): related topic names.
+        """
         name = random.choice(list(self.topics.keys()))
         return {'topic': name, **self.topics[name]}
 
     def list_all_topics(self) -> List[str]:
+        """
+        List all topic keys in the knowledge base.
+        
+        Returns:
+            topics (List[str]): A list of all topic names available in the knowledge base.
+        """
         return list(self.topics.keys())
 
     def get_status(self) -> Dict:
+        """
+        Provide a summary of the knowledge base statistics.
+        
+        Returns:
+            dict: A mapping containing:
+                - 'total_topics' (int): number of topics in the knowledge base.
+                - 'topics' (List[str]): list of topic keys.
+                - 'total_subtopics' (int): total count of all subtopics across topics.
+                - 'queries' (int): number of lookup queries performed.
+        """
         return {
             'total_topics': len(self.topics),
             'topics': list(self.topics.keys()),
@@ -198,6 +265,14 @@ class KnowledgeBase:
 
 _kb_instance = None
 def get_knowledge_base():
+    """
+    Access the shared KnowledgeBase singleton.
+    
+    Creates a new KnowledgeBase on first call and returns the single shared instance thereafter.
+    
+    Returns:
+        kb (KnowledgeBase): The singleton KnowledgeBase instance.
+    """
     global _kb_instance
     if _kb_instance is None:
         _kb_instance = KnowledgeBase()

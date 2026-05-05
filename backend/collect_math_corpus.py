@@ -120,7 +120,22 @@ ARXIV_FEEDS = [
 
 # ────────────────────────────────────────────────────────────────────
 def fetch(url: str, timeout: int = 30) -> str:
-    """Fetch URL as text with proper UA. Returns content or raises."""
+    """
+    Download the resource at `url` using the configured User-Agent and return the response body decoded to a Python string.
+    
+    Attempts to decode using 'utf-8' first, then 'latin-1', and finally falls back to decoding with 'utf-8' while ignoring errors if necessary.
+    
+    Parameters:
+        url (str): The target URL to fetch.
+        timeout (int): Seconds to wait for the request before timing out (default: 30).
+    
+    Returns:
+        str: The decoded response body.
+    
+    Raises:
+        urllib.error.HTTPError: If the HTTP request returns an error status.
+        urllib.error.URLError: For other network-related errors.
+    """
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         raw = resp.read()
@@ -134,20 +149,48 @@ def fetch(url: str, timeout: int = 30) -> str:
 
 
 def save(filename: str, content: str) -> Path:
-    """Save content to TARGET_DIR/filename.txt. Returns path."""
+    """
+    Write content to TARGET_DIR as a UTF-8 text file named "<filename>.txt".
+    
+    Returns:
+        Path: Path to the written file.
+    """
     path = TARGET_DIR / f"{filename}.txt"
     path.write_text(content, encoding="utf-8")
     return path
 
 
 def already_have(filename: str) -> bool:
+    """
+    Check whether a previously saved text file for the given slug exists and is larger than 1000 bytes.
+    
+    Parameters:
+        filename (str): Base filename/slug (without extension) to check inside the target directory.
+    
+    Returns:
+        bool: `true` if TARGET_DIR/<filename>.txt exists and its size is greater than 1000 bytes, `false` otherwise.
+    """
     p = TARGET_DIR / f"{filename}.txt"
     return p.exists() and p.stat().st_size > 1000
 
 
 # ────────────────────────────────────────────────────────────────────
 def collect_wikipedia(skip_existing: bool, filter_text: str = None) -> int:
-    """Pull Wikipedia article plain-text via the REST API."""
+    """
+    Collect plain-text extracts of the configured Wikipedia topics and save them as files.
+    
+    Applies an optional case-insensitive substring filter to topic titles and, when
+    skip_existing is True, skips topics whose output file already exists and meets
+    the cache criteria. Only extracts that meet the script's minimum-length check
+    are saved.
+    
+    Parameters:
+        skip_existing (bool): If True, do not re-download topics that already exist.
+        filter_text (str | None): Case-insensitive substring used to limit which topics are processed.
+    
+    Returns:
+        int: Number of topics that were saved or counted as cached.
+    """
     print(f"\n[Wikipedia] {len(WIKI_TOPICS)} topics")
     count = 0
     for topic in WIKI_TOPICS:
@@ -189,7 +232,18 @@ def collect_wikipedia(skip_existing: bool, filter_text: str = None) -> int:
 
 
 def collect_sep(skip_existing: bool, filter_text: str = None) -> int:
-    """Stanford Encyclopedia of Philosophy entries."""
+    """
+    Download and save plain-text main content for the configured Stanford Encyclopedia of Philosophy entries.
+    
+    Fetches each entry page, extracts the section between the page's main content and its bibliography, strips scripts/styles and HTML tags, collapses whitespace, and saves the cleaned text as "sep_<entry>.txt" when the resulting content length exceeds 1000 bytes.
+    
+    Parameters:
+        skip_existing (bool): If True, skip entries that already exist locally with sufficient size.
+        filter_text (str | None): Optional case-insensitive substring filter applied to the entry slug; only matching entries are processed.
+    
+    Returns:
+        int: Number of entries saved or counted as cached.
+    """
     print(f"\n[Stanford Encyclopedia of Philosophy] {len(SEP_ENTRIES)} entries")
     count = 0
     for entry in SEP_ENTRIES:
@@ -226,7 +280,16 @@ def collect_sep(skip_existing: bool, filter_text: str = None) -> int:
 
 
 def collect_gutenberg(skip_existing: bool, filter_text: str = None) -> int:
-    """Project Gutenberg classical math books."""
+    """
+    Downloads selected Project Gutenberg books from the predefined list and saves them as UTF-8 `.txt` files in the target directory.
+    
+    Parameters:
+        skip_existing (bool): If True, skip books whose output file already exists and exceeds the minimum cached size.
+        filter_text (str | None): Optional case-insensitive substring to filter which book slugs are processed.
+    
+    Returns:
+        int: Number of books that were saved or found cached.
+    """
     print(f"\n[Project Gutenberg] {len(GUTENBERG_BOOKS)} books")
     count = 0
     for slug, url in GUTENBERG_BOOKS:
@@ -252,7 +315,16 @@ def collect_gutenberg(skip_existing: bool, filter_text: str = None) -> int:
 
 
 def collect_arxiv(skip_existing: bool, filter_text: str = None) -> int:
-    """arXiv listing pages (HTML — abstracts get extracted)."""
+    """
+    Collects arXiv listing pages, cleans them to plain text, and saves each as "<slug>.txt" in the target directory.
+    
+    Parameters:
+        skip_existing (bool): If True, skip items whose output file already exists and appears complete.
+        filter_text (str | None): If provided, only process feeds whose slug contains this substring (case-insensitive).
+    
+    Returns:
+        int: Number of feeds saved or counted as cached.
+    """
     print(f"\n[arXiv math feeds] {len(ARXIV_FEEDS)} feeds")
     count = 0
     for slug, url in ARXIV_FEEDS:
@@ -283,7 +355,15 @@ def collect_arxiv(skip_existing: bool, filter_text: str = None) -> int:
 
 
 def collect_stacks_project(skip_existing: bool) -> int:
-    """The Stacks Project — open algebraic geometry textbook (chapters in HTML)."""
+    """
+    Download selected chapters from the Stacks Project, clean HTML to plain text, and save each as a UTF-8 `.txt` file.
+    
+    Parameters:
+    	skip_existing (bool): If True, skip chapters whose output file already exists and appears populated.
+    
+    Returns:
+    	int: Number of chapters saved or counted as cached.
+    """
     print("\n[Stacks Project] selected chapters")
     chapters = [
         ("stacks_intro", "https://stacks.math.columbia.edu/tag/0001"),
@@ -316,7 +396,17 @@ def collect_stacks_project(skip_existing: bool) -> int:
 
 
 def collect_nlab(skip_existing: bool) -> int:
-    """nLab — category theory & higher math wiki."""
+    """
+    Download a curated set of nLab pages, clean their HTML, and save each as a UTF-8 plain-text file.
+    
+    Iterates a fixed list of nLab page slugs, optionally skips items that already exist locally, removes script/style blocks and HTML tags, collapses whitespace, and writes pages that exceed an 800-byte content threshold as "<slug>.txt" in the target directory.
+    
+    Parameters:
+        skip_existing (bool): If True, skip pages that are already present (and considered complete) in the target directory.
+    
+    Returns:
+        int: Number of pages saved or counted as cached.
+    """
     print("\n[nLab] selected pages")
     pages = [
         "category", "functor", "natural_transformation", "topos",
@@ -350,6 +440,11 @@ def collect_nlab(skip_existing: bool) -> int:
 
 # ────────────────────────────────────────────────────────────────────
 def main():
+    """
+    Parse command-line options, run the selected collection routines, and print a summary and next-step instructions.
+    
+    Parses --skip-existing, --topic-filter, and --source flags, invokes the corresponding collectors (wiki, sep, gutenberg, arxiv, stacks, nlab or all), accumulates the number of saved or cached files, prints the target directory and a final "COLLECTED N FILES" summary, and shows example /ingest commands for the saved files.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--skip-existing", action="store_true",
                         help="don't re-download files already in target dir")

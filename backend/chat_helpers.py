@@ -15,7 +15,15 @@ logger = logging.getLogger("quantum_ai")
 # ============================================================================
 
 async def get_memory_summary(session_id: str) -> str:
-    """Generate a summary of what the AI has learned"""
+    """
+    Builds a formatted status report summarizing the AI's current memory, growth metrics, recent concepts/insights, session statistics, and available uploaded documents.
+    
+    Parameters:
+        session_id (str): Identifier of the chat session used to report session-specific message counts.
+    
+    Returns:
+        str: A multiline, human-readable status string containing growth stage and description, progress toward the next stage (if any), learning metrics (connections, concepts, questions, insights, graph topology, growth rate), up to five recent concepts, up to three recent insights (each truncated to 80 characters), session message counts, and a short listing of up to five uploaded files. On internal failure, returns an error message beginning with "🧠 Memory status unavailable:".
+    """
     try:
         # Get growth metrics
         metrics = await state.cognitive_core.growth_tracker.calculate_metrics()
@@ -81,7 +89,17 @@ _Use `!research <topic>` to learn and grow!_"""
 
 
 async def do_deep_research(topic: str) -> str:
-    """Perform deep research on a topic using web search and document processing"""
+    """
+    Perform a multi-source research pass on a topic and record the result as a growth event.
+    
+    Performs a web search, consults semantic memory, and optionally looks up dictionary definitions; compiles findings into a user-facing summary and records a `deep_research` growth event in the growth tracker.
+    
+    Parameters:
+        topic (str): The subject to research.
+    
+    Returns:
+        str: A formatted summary of findings (web snippets, memory recall, and dictionary definition when available) that notes knowledge was added to memory when applicable, or an error message beginning with "🔍 Research error:" if the operation fails.
+    """
     try:
         results = []
         
@@ -159,7 +177,14 @@ async def get_most_recent_document_text():
 
 
 async def analyze_book_characters():
-    """Extract characters from uploaded book using native generation."""
+    """
+    Generate a character-extraction response for the most recently uploaded book.
+    
+    Attempts to extract characters from the latest uploaded document; if no document is found returns a prompt to upload one, and if extraction is not implemented returns a placeholder message. On unexpected errors returns an error message.
+    
+    Returns:
+        str: A user-facing message — either a prompt when no document is available, a placeholder character-extraction header that includes the filename, or an error string prefixed with "📚 Character analysis error:".
+    """
     try:
         text, filename = await get_most_recent_document_text()
         if not text:
@@ -171,7 +196,14 @@ async def analyze_book_characters():
 
 
 async def analyze_book_timeline():
-    """Generate timeline from uploaded book using native generation."""
+    """
+    Generate a timeline summary from the most recently uploaded book.
+    
+    If a supported uploaded document is found, returns a user-facing message that begins with a timeline header for the file and either the extracted timeline or a placeholder indicating native timeline extraction is not implemented. If no document is available, returns a message prompting the user to upload a book. On internal errors, returns an error message prefixed with "📅 Timeline analysis error:".
+    
+    Returns:
+        str: A message to present to the user (timeline header and content, upload prompt, or error message).
+    """
     try:
         text, filename = await get_most_recent_document_text()
         if not text:
@@ -183,7 +215,14 @@ async def analyze_book_timeline():
 
 
 async def analyze_book_worldbuilding():
-    """Extract world/setting details from uploaded book using native generation."""
+    """
+    Generate a worldbuilding summary from the most recently uploaded document.
+    
+    If no uploaded document is found, returns a user-facing prompt asking to upload a book. If a document is found, returns a placeholder header indicating native worldbuilding extraction is not yet implemented and suggests using `/analyze`. On unexpected errors, returns an error message prefixed with "🌍 Worldbuilding analysis error:" that includes the exception text.
+    
+    Returns:
+        str: A user-facing status or result message (no-document prompt, placeholder worldbuilding header for the found file, or an error message).
+    """
     try:
         text, filename = await get_most_recent_document_text()
         if not text:
@@ -195,7 +234,14 @@ async def analyze_book_worldbuilding():
 
 
 async def analyze_book_feedback():
-    """Get writing feedback on uploaded book using native generation."""
+    """
+    Produce writing feedback for the most recently uploaded document.
+    
+    Checks the most recently uploaded document and returns a user-facing message: if no document is available, returns the prompt "✍️ No document found. Please upload a book first."; if a document is found, returns a header indicating writing feedback for the file and a placeholder message noting native feedback is not implemented; on internal errors returns a string beginning with "✍️ Feedback error:" followed by the error text.
+    
+    Returns:
+        str: A formatted message describing the feedback result or an error.
+    """
     try:
         text, filename = await get_most_recent_document_text()
         if not text:
@@ -207,7 +253,16 @@ async def analyze_book_feedback():
 
 
 async def process_shared_link(url: str) -> str:
-    """Process a shared link and download the file"""
+    """
+    Process a shared link, download the referenced file, and return a user-facing status message.
+    
+    Returns:
+        str: A status message describing the outcome:
+            - An "Unknown Link Type" message listing supported services if the link detector cannot identify the source.
+            - A success message containing the downloaded filename, size (in KB), and the normalized source name when the download succeeds.
+            - A failure message with the downloader's error details when the download fails.
+            - An error message including the exception text if an unexpected exception occurs.
+    """
     try:
         # Detect link type
         link_type = state.shared_link.detect_link_type(url)
@@ -240,7 +295,12 @@ The file is now available for analysis. Ask me about it or use `!read {filename}
 
 
 async def list_all_documents() -> str:
-    """List all uploaded documents with details"""
+    """
+    Return a formatted listing of uploaded documents with basic metadata.
+    
+    Returns:
+        str: A multi-line string containing a header and one line per file with an icon, bolded filename, size in KB (one decimal), and last-modified timestamp. If no upload directory or no files are found, returns "📁 **No Documents**\nUpload files using the Explorer tab or `!link <url>`". On unexpected errors, returns "📁 Error listing documents: <error>".
+    """
     try:
         import os
         upload_dir = "/app/uploads"

@@ -22,10 +22,14 @@ from typing import Optional, Tuple, Dict, List
 # ============================================================================
 
 def _digit_to_ascii_ones(d: int) -> List[str]:
-    """Render digit 0-9 in top-right quadrant (3 rows × 3 cols).
+    """
+    Provide a 3-row ASCII-art pattern for a digit in the ones (top-right) quadrant.
     
-    The staff is the leftmost column (col 0).
-    Rows: 0=top, 1=middle, 2=bottom of quadrant.
+    Parameters:
+        d (int): Digit 0–9 to render. Values outside this range fall back to the pattern for 0.
+    
+    Returns:
+        List[str]: Three 3-character strings representing the top, middle, and bottom rows of the quadrant.
     """
     # Each digit is a 3×3 grid: [row0, row1, row2]
     # '│' = staff, '─' = horizontal, '╲' = diagonal down, '╱' = diagonal up
@@ -45,7 +49,15 @@ def _digit_to_ascii_ones(d: int) -> List[str]:
 
 
 def _digit_to_ascii_tens(d: int) -> List[str]:
-    """Render digit 0-9 in top-left quadrant (mirrored)."""
+    """
+    Return a 3-row ASCII-art pattern for a digit placed in the tens (top-left) quadrant, mirrored for the Cistercian layout.
+    
+    Parameters:
+        d (int): Digit value expected in the range 0–9. Values outside this range will be treated as 0.
+    
+    Returns:
+        List[str]: Three 3-character strings representing the top-left quadrant rows for the digit.
+    """
     patterns = {
         0: ["   ", "   ", "   "],
         1: ["╶──", "   ", "   "],
@@ -62,7 +74,15 @@ def _digit_to_ascii_tens(d: int) -> List[str]:
 
 
 def _digit_to_ascii_hundreds(d: int) -> List[str]:
-    """Render digit 0-9 in bottom-right quadrant (vertically mirrored from ones)."""
+    """
+    Return a 3-row ASCII-art pattern for a digit placed in the bottom-right (hundreds) quadrant.
+    
+    Parameters:
+        d (int): Digit 0–9; values outside this range return the pattern for 0.
+    
+    Returns:
+        List[str]: Three strings (one per row) representing the bottom-right quadrant glyph.
+    """
     patterns = {
         0: ["   ", "   ", "   "],
         1: ["   ", "   ", "──╴"],
@@ -79,7 +99,15 @@ def _digit_to_ascii_hundreds(d: int) -> List[str]:
 
 
 def _digit_to_ascii_thousands(d: int) -> List[str]:
-    """Render digit 0-9 in bottom-left quadrant (mirrored from hundreds)."""
+    """
+    Return a 3-row ASCII-art representation of a single digit (0–9) for the thousands (bottom-left) quadrant.
+    
+    Parameters:
+        d (int): Digit in the range 0–9; values outside this range fall back to the representation for 0.
+    
+    Returns:
+        List[str]: A list of three strings, each representing a row of the 3x3 quadrant for the thousands place.
+    """
     patterns = {
         0: ["   ", "   ", "   "],
         1: ["   ", "   ", "╶──"],
@@ -99,13 +127,15 @@ def render_cistercian_ascii(number: int) -> str:
     """
     Render a Cistercian numeral as ASCII art for terminal display.
     
-    Returns a multi-line string showing the glyph on a vertical staff.
-    Numbers 0-9999.
+    Clamps the input to the range 0–9999 and renders the corresponding glyph as a 7×7 layout
+    consisting of four quadrant digit patterns separated by a central vertical staff.
     
-    Layout (7 rows × 7 cols):
-        tens  │ ones     (top 3 rows)
-              │          (staff middle)
-        thous │ hundreds (bottom 3 rows)
+    Parameters:
+        number (int): The value to render; will be clamped to 0–9999.
+    
+    Returns:
+        str: A multi-line string (7 lines of 7 characters) representing the Cistercian glyph,
+             with the staff on the fourth column (middle row is the staff line).
     """
     n = max(0, min(9999, int(number)))
     ones = n % 10
@@ -133,10 +163,12 @@ def render_cistercian_ascii(number: int) -> str:
 
 def render_expression_ascii(a: int, op: str, b: int, result: int) -> str:
     """
-    Render a full arithmetic expression as Cistercian ASCII art.
+    Render an arithmetic expression as side-by-side Cistercian ASCII art including an operator and equals sign.
     
-    Shows:  𝕮(a)  op  𝕮(b)  =  𝕮(result)
-    with the glyphs side by side.
+    Produces a header line like "𝕮(a) op 𝕮(b) = 𝕮(result)" followed by a 7-row ASCII-art block that places the three Cistercian glyphs side-by-side; the operator and equals sign are centered on the middle row.
+    
+    Returns:
+        str: A multi-line string containing the header and the 7-row ASCII-art representation.
     """
     op_display = {'+': '+', '-': '−', '*': '×', '/': '÷'}.get(op, op)
     
@@ -188,7 +220,15 @@ _EXPR_PATTERNS = [
 
 
 def _extract_number(match_groups: tuple) -> Optional[int]:
-    """Extract number from regex groups (handles Cistercian vs Arabic capture groups)."""
+    """
+    Return the first capture group that can be parsed as an integer.
+    
+    Parameters:
+        match_groups (tuple): Sequence of regex capture group values (strings or None).
+    
+    Returns:
+        int or None: The integer parsed from the first convertible group, or None if no group can be parsed.
+    """
     for g in match_groups:
         if g is not None:
             try:
@@ -200,11 +240,17 @@ def _extract_number(match_groups: tuple) -> Optional[int]:
 
 def detect_math(text: str) -> Optional[Dict]:
     """
-    Detect arithmetic expressions in user input.
+    Detect simple two-operand arithmetic expressions in the given text.
     
-    Returns dict with {a, op, b} if math is found, None otherwise.
-    Handles: "50 - 20", "50 - 20 =", "what is 42 + 73", 
-             "𝕮(50) - 𝕮(20)", "cist(42) + cist(73)"
+    Recognizes plain Arabic forms like "50 - 20", optional prefixed prompts like "what is 42 + 73", and Cistercian forms such as "𝕮(50) - 𝕮(20)" / "cist(42) + cist(73)". Operators supported: + - * / and the Unicode × ÷.
+    
+    Returns:
+        dict: A mapping with keys:
+            - 'a' (int): left operand
+            - 'op' (str): operator token as found (one of '+', '-', '*', '/', '×', '÷')
+            - 'b' (int): right operand
+            - 'cistercian_input' (bool): True if both operands were written in Cistercian form, False otherwise
+        None: if no supported expression is detected.
     """
     text = text.strip()[:60]  # cap length to prevent ReDoS
     
@@ -229,13 +275,27 @@ def detect_math(text: str) -> Optional[Dict]:
 
 def evaluate_math(expr: Dict) -> Dict:
     """
-    Evaluate a detected math expression.
+    Evaluate a detected two-operand arithmetic expression and normalize its result for Cistercian display.
     
-    Args:
-        expr: dict from detect_math() with {a, op, b, cistercian_input}
+    Parameters:
+        expr (dict): Detection result from `detect_math` containing keys:
+            - a (int): left operand
+            - op (str): operator token as detected (one of "+ - * / × ÷")
+            - b (int): right operand
+            - cistercian_input (bool, optional): whether the input used Cistercian notation
     
     Returns:
-        dict with {a, op, b, result, error, cistercian_range, clamped, overflow}
+        dict: Evaluation summary with keys:
+            - a (int): left operand (copied)
+            - b (int): right operand (copied)
+            - op (str): normalized operator ("+", "-", "*", "/")
+            - op_display (str): operator for display ("+", "−", "×", "÷")
+            - result (int): computed integer result (uses floor division for "/"); 0 when an error occurred
+            - clamped (int): `result` clamped to the Cistercian range 0..9999 (or 0 if an error)
+            - error (str | None): error message on failure (e.g., division by zero), otherwise None
+            - cistercian_range (bool): True if both operands fall within 0..9999
+            - overflow (bool): True if `result` differed from `clamped` (indicates clamping occurred)
+            - cistercian_input (bool): copied from input (defaults to False if absent)
     """
     a = expr['a']
     op_raw = expr['op']
@@ -280,14 +340,22 @@ def evaluate_math(expr: Dict) -> Dict:
 
 def format_math_response(ev: Dict, show_ascii: bool = True) -> str:
     """
-    Format a math evaluation result for terminal display.
+    Format an evaluated arithmetic result into a human-readable terminal string with optional Cistercian notation and ASCII art.
     
-    Args:
-        ev: dict from evaluate_math()
-        show_ascii: whether to include Cistercian ASCII art
+    Parameters:
+        ev (Dict): Evaluation dictionary produced by `evaluate_math`. Expected keys used here include:
+            - 'a', 'b' (int): operands
+            - 'op' (str): raw operator for ASCII rendering
+            - 'op_display' (str): operator formatted for human display
+            - 'result' (int): computed result (unclamped)
+            - 'clamped' (int): result clamped to 0..9999
+            - 'cistercian_range' (bool): whether operands are within 0..9999
+            - 'overflow' (bool): whether the result was clamped
+            - 'error' (Optional[str]): error message, if any
+        show_ascii (bool): If True, include the combined Cistercian ASCII-art rendering when applicable.
     
     Returns:
-        Formatted string for terminal output
+        str: A multi-line string suitable for terminal output. If `ev['error']` is set, the string contains the error message; otherwise it contains a human-readable equation, optional Cistercian notation and, when enabled and applicable, ASCII-art rendering.
     """
     if ev['error']:
         return f"🧮 {ev['error']}"
@@ -340,7 +408,18 @@ if __name__ == '__main__':
             print(f"Input: {t} → not detected as math")
 
 def process_math(text, show_ascii=False):
-    """Top-level entry: scan for math, evaluate, format. Returns string or None."""
+    """
+    Detects a simple arithmetic expression in `text`, evaluates it, and returns a formatted response.
+    
+    If an expression is found, evaluates it (with Cistercian range handling) and returns the human-readable response; otherwise returns `None`.
+    
+    Parameters:
+        text (str): Input text to scan for an arithmetic expression.
+        show_ascii (bool): Whether to include Cistercian ASCII-art rendering when applicable.
+    
+    Returns:
+        str or None: Formatted result string when an expression was detected, `None` if no expression was found.
+    """
     detected = detect_math(text)
     if not detected:
         return None

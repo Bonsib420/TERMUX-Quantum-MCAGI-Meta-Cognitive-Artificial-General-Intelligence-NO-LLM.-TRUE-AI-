@@ -19,6 +19,21 @@ class HybridGenerator:
     """
 
     def __init__(self, markov_engine, tfidf_engine, orch_or_engine):
+        """
+        Initialize the HybridGenerator with the provided Markov, TF-IDF, and Orch‑OR engines and default generation settings.
+        
+        Parameters:
+            markov_engine: Markov-style generation engine used to produce candidate text from concepts; expected to expose a `generate_from_concepts` method and a `chain` attribute.
+            tfidf_engine: TF-IDF extraction/scoring engine used to derive concept importance from candidate text; expected to expose an `extract_concepts` method.
+            orch_or_engine: Orch‑OR weighting engine used to provide collapse weights for final candidate weighting; expected to expose a `get_collapse_weights` method.
+        
+        Attributes initialized:
+            self.markov: assigned markov_engine
+            self.tfidf: assigned tfidf_engine
+            self.orch_or: assigned orch_or_engine
+            self.num_candidates (int): default number of candidates to generate (12)
+            self.generation_count (int): counter of how many generations have been produced (starts at 0)
+        """
         self.markov = markov_engine
         self.tfidf = tfidf_engine
         self.orch_or = orch_or_engine
@@ -31,6 +46,24 @@ class HybridGenerator:
         growth_stage: int = 0,
         length: int = 18,
     ) -> Dict:
+        """
+        Generate multiple candidate texts from provided concepts, score them by relevance, coherence, and concept coverage, and select a winner using Orch-OR collapse weights.
+        
+        Parameters:
+        	concepts (List[str]): Seed concepts used to guide Markov generation.
+        	growth_stage (int): Higher values increase chance of "wild" (creative) generations; defaults to 0.
+        	length (int): Base token length for generation; each candidate may vary slightly above this value.
+        
+        Returns:
+        	dict: A summary containing:
+        		- winner (str): The selected winning text.
+        		- winner_idx (int): Index of the winner within the returned candidates.
+        		- scores (List[dict]): Per-candidate records with keys `text`, `relevance`, `coherence`, `coverage`, and `composite` (each numeric, rounded to 4 decimals).
+        		- collapse_weights (List[float]): Orch-OR collapse weights used (rounded to 4 decimals).
+        		- final_scores (List[float]): Final blended scores combining composite score and collapse weight (rounded to 4 decimals).
+        		- candidates (int): Number of candidates evaluated.
+        		- method (str): Generation method identifier (always `'hybrid_orch_or'` or `'fallback'` when no candidates were created).
+        """
         candidates = []
         for i in range(self.num_candidates):
             wild = (i >= 7) or (growth_stage >= 4 and random.random() < 0.2)
@@ -91,6 +124,16 @@ class HybridGenerator:
         }
 
     def _score_relevance(self, text: str, concepts: List[str]) -> float:
+        """
+        Compute how well the given text matches the provided concepts by combining direct word matches and TF-IDF-derived concept overlap.
+        
+        Parameters:
+            text (str): The candidate text to evaluate.
+            concepts (List[str]): Target concept strings to measure against.
+        
+        Returns:
+            float: A relevance score between 0.0 and 1.0. If `concepts` is empty returns 0.5; if no valid words are extracted from `text` returns 0.0. The score blends direct concept word hits and TF-IDF overlap with a small baseline and is capped at 1.0.
+        """
         if not concepts:
             return 0.5
 
@@ -108,6 +151,17 @@ class HybridGenerator:
         return min(1.0, direct_hits * 0.6 + tfidf_overlap * 0.4 + 0.1)
 
     def _score_coherence(self, text: str) -> float:
+        """
+        Compute a coherence score for a candidate text based on Markov bigram transitions and simple heuristics.
+        
+        Evaluates how well the text's word transitions match the Markov chain stored in self.markov.chain, then adjusts that raw transition score with length-based adjustments, a repetition/uniqueness bonus, a small sentence-ending bonus, and a penalty for long gaps of unmatched transitions. Very short or unmatchable texts receive a low baseline score.
+        
+        Parameters:
+            text (str): Candidate sentence to evaluate.
+        
+        Returns:
+            float: Coherence score in the range 0.0–1.0 (`0.1` is used as a low baseline for very short or unmatchable texts).
+        """
         words = text.lower().split()
         if len(words) < 4:
             return 0.1
@@ -157,6 +211,16 @@ class HybridGenerator:
         return max(0.0, min(1.0, score))
 
     def _score_concept_coverage(self, text: str, concepts: List[str]) -> float:
+        """
+        Estimate how well the given text covers the provided concepts.
+        
+        Parameters:
+            text (str): Candidate text to evaluate.
+            concepts (List[str]): List of concept strings to check for as substrings in `text`.
+        
+        Returns:
+            float: Coverage score between 0.0 and 1.0 where each concept found as a case-insensitive substring increments the score; final value is hits/len(concepts) plus 0.1, capped at 1.0. If `concepts` is empty, returns 0.5.
+        """
         if not concepts:
             return 0.5
         text_lower = text.lower()
@@ -164,9 +228,25 @@ class HybridGenerator:
         return min(1.0, hits / len(concepts) + 0.1)
 
     def has_sufficient_states(self) -> bool:
+        """
+        Indicates whether the Markov model currently contains enough states for reliable generation.
+        
+        Returns:
+            bool: `True` if the Markov chain has at least 30 states, `False` otherwise.
+        """
         return len(self.markov.chain) >= 30
 
     def get_status(self) -> Dict:
+        """
+        Return a snapshot of the generator's runtime status and configuration.
+        
+        Returns:
+            status (dict): A dictionary containing:
+                - generations (int): Total number of generation calls performed.
+                - num_candidates (int): Configured number of candidates produced per generation.
+                - sufficient_states (bool): True if the Markov chain has at least 30 states.
+                - markov_states (int): Current number of states in the Markov chain.
+        """
         return {
             'generations': self.generation_count,
             'num_candidates': self.num_candidates,

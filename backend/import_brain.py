@@ -12,12 +12,30 @@ BRAIN_DIR = os.path.join(os.path.dirname(__file__), 'imported_brain')
 
 
 def load_json(path):
+    """
+    Load and parse a UTF-8 encoded JSON file from the given filesystem path.
+    
+    Parameters:
+        path (str): Filesystem path to the JSON file to read.
+    
+    Returns:
+        The parsed JSON value (e.g., dict, list, string, number, boolean, or None).
+    """
     with open(path, 'r', encoding='utf-8') as f:
         return json.load(f)
 
 
 def import_facts_to_tfidf(engine):
-    """fact_store.json -> TF-IDF (treats each fact as a sentence)."""
+    """
+    Import facts from fact_store.json into the engine's TF-IDF by converting valid fact entries into sentence strings and teaching them to the engine.
+    
+    Reads BRAIN_DIR/fact_store.json, builds sentence representations for each accepted fact entry, concatenates them and feeds the resulting text to engine.tfidf.learn(). If the JSON file is missing, no learning occurs.
+    
+    Returns:
+        (sentences_added, topic_keys) (tuple):
+            sentences_added (int): Number of sentences generated and fed to TF-IDF.
+            topic_keys (int): Number of top-level keys present in the loaded fact_store.json (zero if the file was not found).
+    """
     path = os.path.join(BRAIN_DIR, 'fact_store.json')
     if not os.path.exists(path):
         return 0, 0
@@ -48,7 +66,17 @@ def import_facts_to_tfidf(engine):
 
 
 def import_kg_to_knowledge_base(engine):
-    """knowledge_graph.json (Wikidata-style) -> KnowledgeBase.topics."""
+    """
+    Populate the engine's knowledge topics from the Termux-style knowledge_graph.json in the imported brain directory.
+    
+    Loads backend/imported_brain/knowledge_graph.json and inserts new topic entries into engine.knowledge.topics when a topic has a non-empty description (<= 500 chars) and valid relation targets. Relation targets are validated and trimmed; up to 8 subtopics and 8 related entries are stored per topic. Existing topics are not overwritten.
+    
+    Parameters:
+        engine: The language engine whose knowledge.topics mapping will be populated.
+    
+    Returns:
+        int: The number of topics added to engine.knowledge.topics.
+    """
     path = os.path.join(BRAIN_DIR, 'knowledge_graph.json')
     if not os.path.exists(path):
         return 0
@@ -67,6 +95,17 @@ def import_kg_to_knowledge_base(engine):
         related = []
         bad_id = re.compile(r'^[0-9]+(-[0-9]+)?$|^Q[0-9]+$|^P[0-9]+$')
         def _ok(name):
+            """
+            Validate a candidate topic/relation name for insertion into the knowledge base.
+            
+            Checks that `name` is a string whose length is between 2 and 59 characters, does not match internal ID-like patterns, and does not contain the substrings `[[`, `]]`, or `|`.
+            
+            Parameters:
+                name (str): Candidate name to validate.
+            
+            Returns:
+                bool: `True` if `name` meets the validation rules, `False` otherwise.
+            """
             return (isinstance(name, str) and 1 < len(name) < 60
                     and not bad_id.match(name)
                     and not re.search(r'\[\[|\]\]|\|', name))
@@ -88,8 +127,15 @@ def import_kg_to_knowledge_base(engine):
 
 def import_concepts_to_markov(engine, max_states=20000):
     """
-    Sample the Termux Markov chain into our chain.
-    The 252MB chain is too big to load directly — we sample top transitions.
+    Import a Termux-format Markov chain into the engine's Markov model by sampling the largest states.
+    
+    Reads the backup file engine_state/markov_chain.json, selects the top states by total outgoing weight (up to max_states), and merges their transitions into the engine's matching-order Markov chain. During import, tokens that match common bad patterns or exceed length limits are skipped. If present, sentence starters from the backup and inferred starters from imported states are added to the engine's sentence_starters set. Marks the target chain as trained.
+    
+    Parameters:
+        max_states (int): Maximum number of states to sample and import from the source chain.
+    
+    Returns:
+        int: Number of state entries processed and incorporated into the target Markov chain.
     """
     path = os.path.join(BRAIN_DIR, 'engine_state', 'markov_chain.json')
     if not os.path.exists(path):
@@ -160,7 +206,14 @@ def import_concepts_to_markov(engine, max_states=20000):
 
 
 def import_concepts_seed(engine):
-    """concepts.json -> ensure all concepts known to TF-IDF vocabulary."""
+    """
+    Seed the engine's TF-IDF vocabulary from concepts.json.
+    
+    Reads BRAIN_DIR/concepts.json, selects keys that are alphabetic strings of length 3–29, and feeds them in small batches to the engine's TF-IDF learner so those tokens enter the vocabulary.
+    
+    Returns:
+        int: Number of concept tokens seeded.
+    """
     path = os.path.join(BRAIN_DIR, 'concepts.json')
     if not os.path.exists(path):
         return 0
@@ -179,6 +232,11 @@ def import_concepts_seed(engine):
 
 
 def main():
+    """
+    Orchestrates a one-time import of a Termux "MCAGI_BACKUP" brain into a fresh QuantumLanguageEngine and persists a JSON snapshot.
+    
+    Initializes a new engine, runs the knowledge-graph, fact-store, concept-seed, and Markov import steps in order, prints progress and final statistics, and writes the resulting snapshot to runtime-data/imported_brain_snapshot.json. Exits with status 1 if the expected imported_brain directory is not found.
+    """
     print("=" * 60)
     print("Importing Termux brain into Replit engine")
     print("=" * 60)

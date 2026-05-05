@@ -107,11 +107,20 @@ class ChatStore:
                 self.conversations = {}
 
     def _save(self):
-        """Save to local file"""
+        """
+        Persist the in-memory conversation cache to the configured storage file.
+        
+        This triggers writing a serializable mapping of all cached conversations to the module's
+        CHAT_HISTORY_FILE so the current state is saved to disk.
+        """
         self._save_to_file()
 
     def _save_to_file(self):
-        """Save to pickle file"""
+        """
+        Serialize the in-memory conversations and persist them to the configured pickle file.
+        
+        Writes a mapping of conversation id -> conversation dict (as produced by ChatConversation.to_dict()) to CHAT_HISTORY_FILE, overwriting the file on success.
+        """
         data = {conv.id: conv.to_dict() for conv in self.conversations.values()}
         with open(CHAT_HISTORY_FILE, 'wb') as f:
             pickle.dump(data, f)

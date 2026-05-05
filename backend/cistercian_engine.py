@@ -82,6 +82,15 @@ THOUSANDS_DRAWS = {
 
 
 def _polyline_to_segments(point_labels):
+    """
+    Convert an ordered sequence of labeled glyph points into straight-line segments.
+    
+    Parameters:
+        point_labels (list[str]): Ordered list of point labels that reference positions in the module-level POINTS mapping.
+    
+    Returns:
+        list[dict]: A list of segment dictionaries with keys `x1`, `y1`, `x2`, `y2` representing each straight line between consecutive points.
+    """
     segments = []
     for i in range(len(point_labels) - 1):
         p1 = POINTS[point_labels[i]]
@@ -94,6 +103,21 @@ def _polyline_to_segments(point_labels):
 
 
 def generate_cistercian(number: int):
+    """
+    Produce the Cistercian numeral strokes and related metadata for a given integer in the range 0–9999.
+    
+    Parameters:
+        number (int): Integer to convert to a Cistercian glyph; must be between 0 and 9999 inclusive.
+    
+    Returns:
+        dict: On success, a dictionary with:
+            - "number" (int): the original input number.
+            - "strokes" (list): list of line-segment dictionaries, each with keys "x1","y1","x2","y2" describing glyph strokes.
+            - "staff" (dict): dictionary with keys "x1","y1","x2","y2" describing the central staff line.
+            - "digits" (dict): decomposition with integer keys "units","tens","hundreds","thousands".
+        If `number` is outside 0–9999, returns:
+            {"error": "Number must be between 0 and 9999", "strokes": [], "staff": {}}
+    """
     if number < 0 or number > 9999:
         return {"error": "Number must be between 0 and 9999", "strokes": [], "staff": {}}
 
@@ -188,6 +212,33 @@ THRYZUNEL_COUNTING = {
 
 
 def get_thryzunel_data():
+    """
+    Builds structured Thryzunel data sets (alphabet, punctuation, counting), attaching a Cistercian glyph to each token.
+    
+    Returns:
+        dict: {
+            "alphabet": list of dicts, each with:
+                - "letter" (str): single-letter key
+                - "name" (str): conventional name
+                - "code" (int): numeric code used to generate the glyph
+                - "phoneme" (str): phonetic value
+                - "novatmpcais" (str): alternate orthography metadata
+                - "position" (str|int): position metadata in the ordering
+                - "origin" (str): origin or etymology note
+                - "glyph" (dict): Cistercian glyph structure for the code
+            "punctuation": list of dicts, each with:
+                - "code" (int): punctuation code
+                - "symbol" (str): glyph symbol
+                - "name" (str): punctuation name
+                - "desc" (str): short description
+                - "glyph" (dict): Cistercian glyph structure for the code
+            "counting": list of dicts, each with:
+                - "code" (int): counting token code
+                - "value" (int|None): numeric value or None
+                - "name" (str): counting token name
+                - "glyph" (dict): Cistercian glyph structure for the code
+        }
+    """
     alphabet = []
     for letter in KEFQUWMNEX_ORDER:
         info = THRYZUNEL_ALPHABET[letter]
@@ -232,6 +283,20 @@ def get_thryzunel_data():
 
 
 def get_status():
+    """
+    Metadata describing the Cistercian numeral engine and available Thryzunel datasets.
+    
+    Returns:
+        status (dict): Dictionary containing:
+            - engine (str): Engine identifier ("cistercian").
+            - range (str): Supported numeric range as a string ("0-9999").
+            - quadrants (list[str]): Descriptions of the four digit quadrants and their positional meanings.
+            - thryzunel (dict): Counts for Thryzunel data:
+                - alphabet_count (int): Number of alphabet entries.
+                - punctuation_count (int): Number of punctuation entries.
+                - counting_tokens (int): Number of counting tokens.
+            - description (str): Short human-readable description of the engine and encoding.
+    """
     return {
         "engine": "cistercian",
         "range": "0-9999",

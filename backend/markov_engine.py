@@ -53,6 +53,21 @@ class MarkovEngine:
     """Order‑N Markov chain with automatic quantum upgrade if PennyLane is present."""
 
     def __init__(self, order: int = 2):
+        """
+        Initialize the MarkovEngine with the specified Markov order and seed its internal state from the built-in corpus.
+        
+        Parameters:
+            order (int): Number of tokens in the prefix (Markov order).
+        
+        Notes:
+            - Initializes these attributes:
+                - chain: mapping from prefix tuples to suffix count dicts.
+                - starters: list of observed starting prefixes.
+                - total_tokens: total number of recorded transitions.
+                - trained: whether the chain contains any transitions.
+                - _quantum_enabled: True if PennyLane is available; when True, _init_quantum() is called.
+            - Immediately trains the classical chain using the module-level SEED_CORPUS, so the instance may be trained on construction.
+        """
         self.order = order
 
         # Classical structures (always present)
@@ -70,13 +85,25 @@ class MarkovEngine:
         self.train(SEED_CORPUS)
 
     def _init_quantum(self):
-        """Set up quantum device and state structures."""
+        """
+        Initialize quantum runtime resources used by the engine.
+        
+        Creates a PennyLane default.qubit device assigned to `self.dev` and initializes
+        `self._quantum_amplitudes` as an empty mapping for storing learned quantum state
+        amplitudes.
+        """
         self.dev = qml.device('default.qubit', wires=4)
         self._quantum_amplitudes = {}
 
     def train(self, text: str):
         """
-        Train the Markov chain from text (classical training).
+        Train the Markov chain using the provided text corpus.
+        
+        Parameters:
+            text (str): Raw text to learn from. Sentences are split on sentence-ending punctuation (., !, ?) followed by whitespace; each sentence is lowercased and tokenized on whitespace. Sentences shorter than (order + 1) tokens are ignored.
+        
+        Description:
+            Updates the engine's internal transition table and related state: records starter prefixes, increments transition counts in `self.chain`, updates `self.total_tokens`, and sets `self.trained`. If quantum support is enabled, delegates additional processing to `_train_quantum(text)`.
         """
         sentences = re.split(r'(?<=[.!?])\s+', text.strip())
         for sentence in sentences:
@@ -100,13 +127,27 @@ class MarkovEngine:
             self._train_quantum(text)
 
     def _train_quantum(self, text: str):
-        """Placeholder – extend with your quantum logic."""
+        """
+        Train or update any quantum model or amplitude cache using the provided training text.
+        
+        Currently a placeholder that performs no action; intended to extract features from `text` and update quantum-related state (for example, amplitude priors or circuit parameters) when a quantum backend is available.
+        
+        Parameters:
+            text (str): Training corpus used to build or update quantum initialization/state.
+        """
         pass
 
     def generate_from_concepts(self, concepts: List[str], length: int = 16, wild: bool = False) -> List[str]:
         """
-        Generate a sequence of tokens.
-        If quantum is enabled, try quantum generation; on failure fall back to classical.
+        Generate a sequence of tokens conditioned on the provided concept strings, using a quantum generator when available.
+        
+        Parameters:
+        	concepts (List[str]): Concept terms used to bias the starting prefix selection.
+        	length (int): Target number of tokens to produce (generation may stop slightly earlier or later).
+        	wild (bool): If true, allow more exploratory (less constrained) generation behavior.
+        
+        Returns:
+        	List[str]: Generated sequence of tokens. If quantum generation is enabled but fails, falls back to classical generation.
         """
         if self._quantum_enabled:
             try:
@@ -117,7 +158,19 @@ class MarkovEngine:
         return self._generate_classical(concepts, length, wild)
 
     def _generate_classical(self, concepts: List[str], length: int, wild: bool) -> List[str]:
-        """Original classical generation logic (copied from markov_engine.py)."""
+        """
+        Generate a token sequence from the classical Markov chain conditioned on the provided concepts.
+        
+        Attempts to choose an initial prefix that contains any of the given concepts, falling back to a recorded starter prefix or an empty result if none exist. Produces up to `length * 2` steps of tokens by sampling next-token probabilities from the learned transition table and stops early when a minimum word count is reached and a terminal punctuation token is produced, or when a soft maximum is exceeded.
+        
+        Parameters:
+            concepts (List[str]): Concept substrings used to bias selection of the initial prefix.
+            length (int): Target length hint for the generated sequence (affects stopping thresholds).
+            wild (bool): Placeholder flag for more freeform generation; currently unused by the classical generator.
+        
+        Returns:
+            List[str]: Generated sequence of tokens (words and punctuation).
+        """
         # Pick a seed prefix based on concepts
         seed = None
         for concept in concepts:
@@ -157,26 +210,75 @@ class MarkovEngine:
 
     def _generate_quantum(self, concepts: List[str], length: int, wild: bool) -> List[str]:
         """
-        Quantum generation using PennyLane – placeholder.
-        Replace with your actual quantum generation logic from quantum_markov.py.
+        Generate a token sequence conditioned on the provided concepts using the quantum generator.
+        
+        This is a placeholder: it currently falls back to the classical generator and should be replaced with the PennyLane-based quantum generation implementation.
+        
+        Returns:
+            list[str]: A list of generated tokens.
         """
         # Fallback to classical for now
         return self._generate_classical(concepts, length, wild)
 
     # --- Forward dictionary methods for compatibility ---
     def __getitem__(self, key):
+        """
+        Return the transition counts mapping for the given prefix.
+        
+        Parameters:
+            key (tuple[str, ...]): A prefix tuple of tokens representing a state in the Markov chain.
+        
+        Returns:
+            dict[str, int]: Mapping from next-token strings to observed occurrence counts for that prefix.
+        """
         return self.chain[key]
 
     def get(self, key, default=None):
+        """
+        Retrieve the transition mapping for the given prefix.
+        
+        Parameters:
+            key (tuple[str, ...] | any): Prefix tuple used as the lookup key in the chain.
+            default (optional): Value to return if the key is not present.
+        
+        Returns:
+            dict[str, int] | any: A dictionary mapping next-token strings to their observed counts for `key`, or `default` if the prefix is not found.
+        """
         return self.chain.get(key, default)
 
     def __contains__(self, key):
+        """
+        Check whether the specified prefix key exists in the Markov chain's transition table.
+        
+        Parameters:
+            key: The prefix tuple (or key) to look up in the internal transition mapping.
+        
+        Returns:
+            `true` if the key is present in the chain, `false` otherwise.
+        """
         return key in self.chain
 
     def keys(self):
+        """
+        Return a view of all known prefix states in the Markov chain.
+        
+        Returns:
+            keys_view (KeysView[tuple[str, ...]]): A dynamic view of the chain's prefix keys (each key is a tuple of tokens).
+        """
         return self.chain.keys()
 
     def get_transitions_for(self, word: str) -> Dict[str, float]:
+        """
+        Return an aggregated probability distribution of next tokens for prefixes that contain `word`.
+        
+        Searches learned prefixes for any prefix-word that contains `word` (case-insensitive substring). For each matching prefix, the suffix counts are normalized to a probability distribution (counts divided by that prefix's total), and those probabilities are summed across all matching prefixes.
+        
+        Parameters:
+            word (str): Substring to match against words in stored prefixes (case-insensitive).
+        
+        Returns:
+            Dict[str, float]: Mapping from next-token to aggregated probability (sum of per-prefix normalized probabilities).
+        """
         matches = {}
         for prefix, suffixes in self.chain.items():
             if word.lower() in [w.lower() for w in prefix]:
@@ -186,6 +288,17 @@ class MarkovEngine:
         return matches
 
     def get_status(self) -> Dict:
+        """
+        Provide a summary of the engine's current training and configuration state.
+        
+        Returns:
+            status (Dict): A dictionary with the following keys:
+                - 'states' (int): Number of distinct prefix states learned.
+                - 'transitions' (int): Total number of observed transition occurrences.
+                - 'trained' (bool): `True` if the model has any learned transitions, `False` otherwise.
+                - 'order' (int): The Markov order used by the chain.
+                - 'quantum' (bool): `True` if the optional quantum path is enabled, `False` otherwise.
+        """
         return {
             'states': len(self.chain),
             'transitions': self.total_tokens,
