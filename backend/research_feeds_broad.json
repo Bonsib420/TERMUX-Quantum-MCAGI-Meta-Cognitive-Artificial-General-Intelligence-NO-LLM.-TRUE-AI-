@@ -1,0 +1,382 @@
+{
+  "history_ancient": {
+    "label": "Ancient History",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Ancient_history",
+      "https://en.wikipedia.org/wiki/Ancient_Egypt",
+      "https://en.wikipedia.org/wiki/Ancient_Greece",
+      "https://en.wikipedia.org/wiki/Ancient_Rome",
+      "https://en.wikipedia.org/wiki/Mesopotamia",
+      "https://en.wikipedia.org/wiki/Indus_Valley_Civilisation",
+      "https://en.wikipedia.org/wiki/Ancient_China",
+      "https://en.wikipedia.org/wiki/Maya_civilization",
+      "https://en.wikipedia.org/wiki/Aztec",
+      "https://en.wikipedia.org/wiki/Inca_Empire"
+    ]
+  },
+  "history_modern": {
+    "label": "Modern History",
+    "urls": [
+      "https://en.wikipedia.org/wiki/World_War_I",
+      "https://en.wikipedia.org/wiki/World_War_II",
+      "https://en.wikipedia.org/wiki/Cold_War",
+      "https://en.wikipedia.org/wiki/Industrial_Revolution",
+      "https://en.wikipedia.org/wiki/French_Revolution",
+      "https://en.wikipedia.org/wiki/American_Revolution",
+      "https://en.wikipedia.org/wiki/Renaissance",
+      "https://en.wikipedia.org/wiki/Age_of_Enlightenment",
+      "https://en.wikipedia.org/wiki/Colonialism",
+      "https://en.wikipedia.org/wiki/Civil_rights_movement"
+    ]
+  },
+  "medicine_biology": {
+    "label": "Medicine and Biology",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Medicine",
+      "https://en.wikipedia.org/wiki/Human_body",
+      "https://en.wikipedia.org/wiki/Cell_(biology)",
+      "https://en.wikipedia.org/wiki/DNA",
+      "https://en.wikipedia.org/wiki/Evolution",
+      "https://en.wikipedia.org/wiki/Genetics",
+      "https://en.wikipedia.org/wiki/Neuroscience",
+      "https://en.wikipedia.org/wiki/Immune_system",
+      "https://en.wikipedia.org/wiki/Cancer",
+      "https://en.wikipedia.org/wiki/Virus",
+      "https://en.wikipedia.org/wiki/Bacteria",
+      "https://en.wikipedia.org/wiki/Photosynthesis",
+      "https://en.wikipedia.org/wiki/Ecosystem",
+      "https://en.wikipedia.org/wiki/Biodiversity",
+      "https://en.wikipedia.org/wiki/Human_brain"
+    ]
+  },
+  "psychology": {
+    "label": "Psychology and Mind",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Psychology",
+      "https://en.wikipedia.org/wiki/Cognitive_psychology",
+      "https://en.wikipedia.org/wiki/Behavioral_psychology",
+      "https://en.wikipedia.org/wiki/Developmental_psychology",
+      "https://en.wikipedia.org/wiki/Social_psychology",
+      "https://en.wikipedia.org/wiki/Emotion",
+      "https://en.wikipedia.org/wiki/Memory",
+      "https://en.wikipedia.org/wiki/Perception",
+      "https://en.wikipedia.org/wiki/Learning",
+      "https://en.wikipedia.org/wiki/Motivation",
+      "https://en.wikipedia.org/wiki/Consciousness",
+      "https://en.wikipedia.org/wiki/Sigmund_Freud",
+      "https://en.wikipedia.org/wiki/Carl_Jung",
+      "https://en.wikipedia.org/wiki/Abraham_Maslow",
+      "https://en.wikipedia.org/wiki/Cognitive_bias"
+    ]
+  },
+  "economics": {
+    "label": "Economics and Finance",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Economics",
+      "https://en.wikipedia.org/wiki/Macroeconomics",
+      "https://en.wikipedia.org/wiki/Microeconomics",
+      "https://en.wikipedia.org/wiki/Capitalism",
+      "https://en.wikipedia.org/wiki/Socialism",
+      "https://en.wikipedia.org/wiki/Supply_and_demand",
+      "https://en.wikipedia.org/wiki/Inflation",
+      "https://en.wikipedia.org/wiki/Gross_domestic_product",
+      "https://en.wikipedia.org/wiki/Stock_market",
+      "https://en.wikipedia.org/wiki/Cryptocurrency",
+      "https://en.wikipedia.org/wiki/Globalization",
+      "https://en.wikipedia.org/wiki/Adam_Smith",
+      "https://en.wikipedia.org/wiki/John_Maynard_Keynes",
+      "https://en.wikipedia.org/wiki/Game_theory",
+      "https://en.wikipedia.org/wiki/Behavioral_economics"
+    ]
+  },
+  "sociology_anthropology": {
+    "label": "Sociology and Anthropology",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Sociology",
+      "https://en.wikipedia.org/wiki/Anthropology",
+      "https://en.wikipedia.org/wiki/Culture",
+      "https://en.wikipedia.org/wiki/Society",
+      "https://en.wikipedia.org/wiki/Social_class",
+      "https://en.wikipedia.org/wiki/Gender",
+      "https://en.wikipedia.org/wiki/Race_(human_categorization)",
+      "https://en.wikipedia.org/wiki/Religion",
+      "https://en.wikipedia.org/wiki/Ritual",
+      "https://en.wikipedia.org/wiki/Myth",
+      "https://en.wikipedia.org/wiki/Language",
+      "https://en.wikipedia.org/wiki/Communication",
+      "https://en.wikipedia.org/wiki/Family",
+      "https://en.wikipedia.org/wiki/Power_(social_and_political)",
+      "https://en.wikipedia.org/wiki/Social_norm"
+    ]
+  },
+  "art_culture": {
+    "label": "Art and Culture",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Art",
+      "https://en.wikipedia.org/wiki/Painting",
+      "https://en.wikipedia.org/wiki/Sculpture",
+      "https://en.wikipedia.org/wiki/Architecture",
+      "https://en.wikipedia.org/wiki/Photography",
+      "https://en.wikipedia.org/wiki/Film",
+      "https://en.wikipedia.org/wiki/Theatre",
+      "https://en.wikipedia.org/wiki/Dance",
+      "https://en.wikipedia.org/wiki/Literature",
+      "https://en.wikipedia.org/wiki/Poetry",
+      "https://en.wikipedia.org/wiki/Surrealism",
+      "https://en.wikipedia.org/wiki/Renaissance_art",
+      "https://en.wikipedia.org/wiki/Abstract_art",
+      "https://en.wikipedia.org/wiki/Leonardo_da_Vinci",
+      "https://en.wikipedia.org/wiki/Pablo_Picasso"
+    ]
+  },
+  "music": {
+    "label": "Music",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Music",
+      "https://en.wikipedia.org/wiki/Music_theory",
+      "https://en.wikipedia.org/wiki/Classical_music",
+      "https://en.wikipedia.org/wiki/Jazz",
+      "https://en.wikipedia.org/wiki/Blues",
+      "https://en.wikipedia.org/wiki/Rock_music",
+      "https://en.wikipedia.org/wiki/Hip_hop_music",
+      "https://en.wikipedia.org/wiki/Electronic_music",
+      "https://en.wikipedia.org/wiki/Rhythm",
+      "https://en.wikipedia.org/wiki/Harmony",
+      "https://en.wikipedia.org/wiki/Melody",
+      "https://en.wikipedia.org/wiki/Ludwig_van_Beethoven",
+      "https://en.wikipedia.org/wiki/Wolfgang_Amadeus_Mozart",
+      "https://en.wikipedia.org/wiki/Bob_Dylan",
+      "https://en.wikipedia.org/wiki/Miles_Davis"
+    ]
+  },
+  "mathematics": {
+    "label": "Mathematics",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Mathematics",
+      "https://en.wikipedia.org/wiki/Number_theory",
+      "https://en.wikipedia.org/wiki/Algebra",
+      "https://en.wikipedia.org/wiki/Calculus",
+      "https://en.wikipedia.org/wiki/Geometry",
+      "https://en.wikipedia.org/wiki/Topology",
+      "https://en.wikipedia.org/wiki/Statistics",
+      "https://en.wikipedia.org/wiki/Probability_theory",
+      "https://en.wikipedia.org/wiki/Set_theory",
+      "https://en.wikipedia.org/wiki/Logic",
+      "https://en.wikipedia.org/wiki/Graph_theory",
+      "https://en.wikipedia.org/wiki/Chaos_theory",
+      "https://en.wikipedia.org/wiki/Fractal",
+      "https://en.wikipedia.org/wiki/Prime_number",
+      "https://en.wikipedia.org/wiki/Infinity"
+    ]
+  },
+  "physics": {
+    "label": "Physics",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Physics",
+      "https://en.wikipedia.org/wiki/Classical_mechanics",
+      "https://en.wikipedia.org/wiki/Thermodynamics",
+      "https://en.wikipedia.org/wiki/Electromagnetism",
+      "https://en.wikipedia.org/wiki/Special_relativity",
+      "https://en.wikipedia.org/wiki/General_relativity",
+      "https://en.wikipedia.org/wiki/Quantum_mechanics",
+      "https://en.wikipedia.org/wiki/Standard_Model",
+      "https://en.wikipedia.org/wiki/Dark_matter",
+      "https://en.wikipedia.org/wiki/Black_hole",
+      "https://en.wikipedia.org/wiki/String_theory",
+      "https://en.wikipedia.org/wiki/Entropy",
+      "https://en.wikipedia.org/wiki/Wave%E2%80%93particle_duality",
+      "https://en.wikipedia.org/wiki/Uncertainty_principle",
+      "https://en.wikipedia.org/wiki/Schr%C3%B6dinger%27s_cat"
+    ]
+  },
+  "chemistry": {
+    "label": "Chemistry",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Chemistry",
+      "https://en.wikipedia.org/wiki/Atom",
+      "https://en.wikipedia.org/wiki/Chemical_element",
+      "https://en.wikipedia.org/wiki/Periodic_table",
+      "https://en.wikipedia.org/wiki/Chemical_bond",
+      "https://en.wikipedia.org/wiki/Organic_chemistry",
+      "https://en.wikipedia.org/wiki/Inorganic_chemistry",
+      "https://en.wikipedia.org/wiki/Biochemistry",
+      "https://en.wikipedia.org/wiki/Polymer",
+      "https://en.wikipedia.org/wiki/Enzyme"
+    ]
+  },
+  "linguistics": {
+    "label": "Linguistics and Language",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Linguistics",
+      "https://en.wikipedia.org/wiki/Phonology",
+      "https://en.wikipedia.org/wiki/Syntax",
+      "https://en.wikipedia.org/wiki/Semantics",
+      "https://en.wikipedia.org/wiki/Pragmatics",
+      "https://en.wikipedia.org/wiki/Morphology_(linguistics)",
+      "https://en.wikipedia.org/wiki/Language_acquisition",
+      "https://en.wikipedia.org/wiki/Bilingualism",
+      "https://en.wikipedia.org/wiki/Noam_Chomsky",
+      "https://en.wikipedia.org/wiki/Sapir%E2%80%93Whorf_hypothesis",
+      "https://en.wikipedia.org/wiki/Writing_system",
+      "https://en.wikipedia.org/wiki/Etymology",
+      "https://en.wikipedia.org/wiki/Metaphor",
+      "https://en.wikipedia.org/wiki/Narrative",
+      "https://en.wikipedia.org/wiki/Rhetoric"
+    ]
+  },
+  "philosophy_extended": {
+    "label": "Philosophy Extended",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Plato",
+      "https://en.wikipedia.org/wiki/Aristotle",
+      "https://en.wikipedia.org/wiki/Immanuel_Kant",
+      "https://en.wikipedia.org/wiki/Friedrich_Nietzsche",
+      "https://en.wikipedia.org/wiki/Ren%C3%A9_Descartes",
+      "https://en.wikipedia.org/wiki/David_Hume",
+      "https://en.wikipedia.org/wiki/John_Locke",
+      "https://en.wikipedia.org/wiki/Stoicism",
+      "https://en.wikipedia.org/wiki/Existentialism",
+      "https://en.wikipedia.org/wiki/Phenomenology_(philosophy)",
+      "https://en.wikipedia.org/wiki/Utilitarianism",
+      "https://en.wikipedia.org/wiki/Nihilism",
+      "https://en.wikipedia.org/wiki/Determinism",
+      "https://en.wikipedia.org/wiki/Free_will",
+      "https://en.wikipedia.org/wiki/Philosophy_of_mind"
+    ]
+  },
+  "religion_spirituality": {
+    "label": "Religion and Spirituality",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Christianity",
+      "https://en.wikipedia.org/wiki/Islam",
+      "https://en.wikipedia.org/wiki/Judaism",
+      "https://en.wikipedia.org/wiki/Hinduism",
+      "https://en.wikipedia.org/wiki/Buddhism",
+      "https://en.wikipedia.org/wiki/Taoism",
+      "https://en.wikipedia.org/wiki/Confucianism",
+      "https://en.wikipedia.org/wiki/Sikhism",
+      "https://en.wikipedia.org/wiki/Mysticism",
+      "https://en.wikipedia.org/wiki/Meditation",
+      "https://en.wikipedia.org/wiki/Prayer",
+      "https://en.wikipedia.org/wiki/Afterlife",
+      "https://en.wikipedia.org/wiki/Soul",
+      "https://en.wikipedia.org/wiki/God",
+      "https://en.wikipedia.org/wiki/Atheism"
+    ]
+  },
+  "political_science": {
+    "label": "Political Science",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Political_science",
+      "https://en.wikipedia.org/wiki/Democracy",
+      "https://en.wikipedia.org/wiki/Authoritarianism",
+      "https://en.wikipedia.org/wiki/Communism",
+      "https://en.wikipedia.org/wiki/Fascism",
+      "https://en.wikipedia.org/wiki/Liberalism",
+      "https://en.wikipedia.org/wiki/Conservatism",
+      "https://en.wikipedia.org/wiki/Anarchism",
+      "https://en.wikipedia.org/wiki/Nation_state",
+      "https://en.wikipedia.org/wiki/Human_rights",
+      "https://en.wikipedia.org/wiki/Justice",
+      "https://en.wikipedia.org/wiki/Power_(social_and_political)",
+      "https://en.wikipedia.org/wiki/Revolution",
+      "https://en.wikipedia.org/wiki/Social_contract",
+      "https://en.wikipedia.org/wiki/Geopolitics"
+    ]
+  },
+  "technology": {
+    "label": "Technology and Innovation",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Technology",
+      "https://en.wikipedia.org/wiki/Internet",
+      "https://en.wikipedia.org/wiki/Artificial_intelligence",
+      "https://en.wikipedia.org/wiki/Robotics",
+      "https://en.wikipedia.org/wiki/Nanotechnology",
+      "https://en.wikipedia.org/wiki/Biotechnology",
+      "https://en.wikipedia.org/wiki/Space_exploration",
+      "https://en.wikipedia.org/wiki/Nuclear_power",
+      "https://en.wikipedia.org/wiki/Renewable_energy",
+      "https://en.wikipedia.org/wiki/Climate_change",
+      "https://en.wikipedia.org/wiki/Virtual_reality",
+      "https://en.wikipedia.org/wiki/Blockchain",
+      "https://en.wikipedia.org/wiki/Cybersecurity",
+      "https://en.wikipedia.org/wiki/Transhumanism",
+      "https://en.wikipedia.org/wiki/Singularity_(technological)"
+    ]
+  },
+  "literature": {
+    "label": "Literature and Writing",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Literature",
+      "https://en.wikipedia.org/wiki/Novel",
+      "https://en.wikipedia.org/wiki/Short_story",
+      "https://en.wikipedia.org/wiki/Poetry",
+      "https://en.wikipedia.org/wiki/Drama",
+      "https://en.wikipedia.org/wiki/Mythology",
+      "https://en.wikipedia.org/wiki/Symbolism_(arts)",
+      "https://en.wikipedia.org/wiki/William_Shakespeare",
+      "https://en.wikipedia.org/wiki/James_Joyce",
+      "https://en.wikipedia.org/wiki/Franz_Kafka",
+      "https://en.wikipedia.org/wiki/Gabriel_Garc%C3%ADa_M%C3%A1rquez",
+      "https://en.wikipedia.org/wiki/Fyodor_Dostoevsky",
+      "https://en.wikipedia.org/wiki/Leo_Tolstoy",
+      "https://en.wikipedia.org/wiki/Jorge_Luis_Borges",
+      "https://en.wikipedia.org/wiki/Magical_realism"
+    ]
+  },
+  "neuroscience": {
+    "label": "Neuroscience",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Neuroscience",
+      "https://en.wikipedia.org/wiki/Neuron",
+      "https://en.wikipedia.org/wiki/Synapse",
+      "https://en.wikipedia.org/wiki/Neurotransmitter",
+      "https://en.wikipedia.org/wiki/Cerebral_cortex",
+      "https://en.wikipedia.org/wiki/Hippocampus",
+      "https://en.wikipedia.org/wiki/Amygdala",
+      "https://en.wikipedia.org/wiki/Neuroplasticity",
+      "https://en.wikipedia.org/wiki/Sleep",
+      "https://en.wikipedia.org/wiki/Dream",
+      "https://en.wikipedia.org/wiki/Emotion",
+      "https://en.wikipedia.org/wiki/Pain",
+      "https://en.wikipedia.org/wiki/Addiction",
+      "https://en.wikipedia.org/wiki/Mental_disorder",
+      "https://en.wikipedia.org/wiki/Cognitive_neuroscience"
+    ]
+  },
+  "ecology_environment": {
+    "label": "Ecology and Environment",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Ecology",
+      "https://en.wikipedia.org/wiki/Climate_change",
+      "https://en.wikipedia.org/wiki/Biodiversity",
+      "https://en.wikipedia.org/wiki/Deforestation",
+      "https://en.wikipedia.org/wiki/Ocean",
+      "https://en.wikipedia.org/wiki/Atmosphere_of_Earth",
+      "https://en.wikipedia.org/wiki/Food_web",
+      "https://en.wikipedia.org/wiki/Natural_selection",
+      "https://en.wikipedia.org/wiki/Extinction",
+      "https://en.wikipedia.org/wiki/Sustainability"
+    ]
+  },
+  "cosmology_astronomy": {
+    "label": "Cosmology and Astronomy",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Cosmology",
+      "https://en.wikipedia.org/wiki/Big_Bang",
+      "https://en.wikipedia.org/wiki/Universe",
+      "https://en.wikipedia.org/wiki/Galaxy",
+      "https://en.wikipedia.org/wiki/Milky_Way",
+      "https://en.wikipedia.org/wiki/Solar_System",
+      "https://en.wikipedia.org/wiki/Black_hole",
+      "https://en.wikipedia.org/wiki/Dark_energy",
+      "https://en.wikipedia.org/wiki/Multiverse",
+      "https://en.wikipedia.org/wiki/Fermi_paradox",
+      "https://en.wikipedia.org/wiki/Extraterrestrial_life",
+      "https://en.wikipedia.org/wiki/Time",
+      "https://en.wikipedia.org/wiki/Space",
+      "https://en.wikipedia.org/wiki/Spacetime",
+      "https://en.wikipedia.org/wiki/Anthropic_principle"
+    ]
+  }
+}

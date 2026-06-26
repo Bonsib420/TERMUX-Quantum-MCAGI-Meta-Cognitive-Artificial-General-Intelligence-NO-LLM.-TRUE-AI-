@@ -1,0 +1,1037 @@
+{
+  "mathematics_number_theory": {
+    "label": "Number Theory",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Number_theory",
+      "https://en.wikipedia.org/wiki/Prime_number",
+      "https://en.wikipedia.org/wiki/Riemann_hypothesis",
+      "https://en.wikipedia.org/wiki/Fermat%27s_Last_Theorem",
+      "https://en.wikipedia.org/wiki/Goldbach%27s_conjecture",
+      "https://en.wikipedia.org/wiki/P_versus_NP_problem",
+      "https://en.wikipedia.org/wiki/Modular_arithmetic",
+      "https://en.wikipedia.org/wiki/Cryptography",
+      "https://en.wikipedia.org/wiki/Integer",
+      "https://en.wikipedia.org/wiki/Diophantine_equation"
+    ]
+  },
+  "mathematics_topology": {
+    "label": "Topology",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Topology",
+      "https://en.wikipedia.org/wiki/M%C3%B6bius_strip",
+      "https://en.wikipedia.org/wiki/Klein_bottle",
+      "https://en.wikipedia.org/wiki/Manifold",
+      "https://en.wikipedia.org/wiki/Homeomorphism",
+      "https://en.wikipedia.org/wiki/Knot_theory",
+      "https://en.wikipedia.org/wiki/Euler_characteristic",
+      "https://en.wikipedia.org/wiki/Homotopy",
+      "https://en.wikipedia.org/wiki/Poincar%C3%A9_conjecture",
+      "https://en.wikipedia.org/wiki/Genus_(mathematics)"
+    ]
+  },
+  "mathematics_analysis": {
+    "label": "Mathematical Analysis",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Mathematical_analysis",
+      "https://en.wikipedia.org/wiki/Calculus",
+      "https://en.wikipedia.org/wiki/Real_analysis",
+      "https://en.wikipedia.org/wiki/Complex_analysis",
+      "https://en.wikipedia.org/wiki/Fourier_analysis",
+      "https://en.wikipedia.org/wiki/Differential_equation",
+      "https://en.wikipedia.org/wiki/Partial_differential_equation",
+      "https://en.wikipedia.org/wiki/Integral",
+      "https://en.wikipedia.org/wiki/Limit_(mathematics)",
+      "https://en.wikipedia.org/wiki/Taylor_series"
+    ]
+  },
+  "mathematics_algebra": {
+    "label": "Abstract Algebra",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Abstract_algebra",
+      "https://en.wikipedia.org/wiki/Group_theory",
+      "https://en.wikipedia.org/wiki/Ring_(mathematics)",
+      "https://en.wikipedia.org/wiki/Field_(mathematics)",
+      "https://en.wikipedia.org/wiki/Linear_algebra",
+      "https://en.wikipedia.org/wiki/Matrix_(mathematics)",
+      "https://en.wikipedia.org/wiki/Vector_space",
+      "https://en.wikipedia.org/wiki/Galois_theory",
+      "https://en.wikipedia.org/wiki/Lie_algebra",
+      "https://en.wikipedia.org/wiki/Category_theory"
+    ]
+  },
+  "mathematics_geometry": {
+    "label": "Geometry",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Geometry",
+      "https://en.wikipedia.org/wiki/Euclidean_geometry",
+      "https://en.wikipedia.org/wiki/Non-Euclidean_geometry",
+      "https://en.wikipedia.org/wiki/Differential_geometry",
+      "https://en.wikipedia.org/wiki/Algebraic_geometry",
+      "https://en.wikipedia.org/wiki/Fractal",
+      "https://en.wikipedia.org/wiki/Golden_ratio",
+      "https://en.wikipedia.org/wiki/Symmetry",
+      "https://en.wikipedia.org/wiki/Platonic_solid",
+      "https://en.wikipedia.org/wiki/Projective_geometry"
+    ]
+  },
+  "mathematics_logic": {
+    "label": "Mathematical Logic",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Mathematical_logic",
+      "https://en.wikipedia.org/wiki/G%C3%B6del%27s_incompleteness_theorems",
+      "https://en.wikipedia.org/wiki/Set_theory",
+      "https://en.wikipedia.org/wiki/Boolean_algebra",
+      "https://en.wikipedia.org/wiki/Propositional_calculus",
+      "https://en.wikipedia.org/wiki/Predicate_logic",
+      "https://en.wikipedia.org/wiki/Turing_machine",
+      "https://en.wikipedia.org/wiki/Computability_theory",
+      "https://en.wikipedia.org/wiki/Type_theory",
+      "https://en.wikipedia.org/wiki/Proof_theory"
+    ]
+  },
+  "mathematics_probability": {
+    "label": "Probability and Statistics",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Probability_theory",
+      "https://en.wikipedia.org/wiki/Statistics",
+      "https://en.wikipedia.org/wiki/Bayesian_inference",
+      "https://en.wikipedia.org/wiki/Normal_distribution",
+      "https://en.wikipedia.org/wiki/Stochastic_process",
+      "https://en.wikipedia.org/wiki/Markov_chain",
+      "https://en.wikipedia.org/wiki/Monte_Carlo_method",
+      "https://en.wikipedia.org/wiki/Information_theory",
+      "https://en.wikipedia.org/wiki/Entropy_(information_theory)",
+      "https://en.wikipedia.org/wiki/Central_limit_theorem"
+    ]
+  },
+  "computer_science_algorithms": {
+    "label": "Algorithms",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Algorithm",
+      "https://en.wikipedia.org/wiki/Sorting_algorithm",
+      "https://en.wikipedia.org/wiki/Search_algorithm",
+      "https://en.wikipedia.org/wiki/Dynamic_programming",
+      "https://en.wikipedia.org/wiki/Divide_and_conquer_algorithm",
+      "https://en.wikipedia.org/wiki/Graph_traversal",
+      "https://en.wikipedia.org/wiki/Computational_complexity_theory",
+      "https://en.wikipedia.org/wiki/Big_O_notation",
+      "https://en.wikipedia.org/wiki/NP-hardness",
+      "https://en.wikipedia.org/wiki/Greedy_algorithm"
+    ]
+  },
+  "computer_science_ai": {
+    "label": "Artificial Intelligence",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Artificial_intelligence",
+      "https://en.wikipedia.org/wiki/Machine_learning",
+      "https://en.wikipedia.org/wiki/Deep_learning",
+      "https://en.wikipedia.org/wiki/Neural_network",
+      "https://en.wikipedia.org/wiki/Natural_language_processing",
+      "https://en.wikipedia.org/wiki/Computer_vision",
+      "https://en.wikipedia.org/wiki/Reinforcement_learning",
+      "https://en.wikipedia.org/wiki/Expert_system",
+      "https://en.wikipedia.org/wiki/Artificial_general_intelligence",
+      "https://en.wikipedia.org/wiki/Turing_test"
+    ]
+  },
+  "computer_science_systems": {
+    "label": "Computer Systems",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Operating_system",
+      "https://en.wikipedia.org/wiki/Computer_architecture",
+      "https://en.wikipedia.org/wiki/Distributed_computing",
+      "https://en.wikipedia.org/wiki/Database",
+      "https://en.wikipedia.org/wiki/Computer_network",
+      "https://en.wikipedia.org/wiki/Compiler",
+      "https://en.wikipedia.org/wiki/Memory_management",
+      "https://en.wikipedia.org/wiki/Parallel_computing",
+      "https://en.wikipedia.org/wiki/Cloud_computing",
+      "https://en.wikipedia.org/wiki/Quantum_computing"
+    ]
+  },
+  "physics_quantum": {
+    "label": "Quantum Physics",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Quantum_mechanics",
+      "https://en.wikipedia.org/wiki/Wave_function",
+      "https://en.wikipedia.org/wiki/Quantum_entanglement",
+      "https://en.wikipedia.org/wiki/Quantum_field_theory",
+      "https://en.wikipedia.org/wiki/Uncertainty_principle",
+      "https://en.wikipedia.org/wiki/Quantum_chromodynamics",
+      "https://en.wikipedia.org/wiki/Quantum_electrodynamics",
+      "https://en.wikipedia.org/wiki/Spin_(physics)",
+      "https://en.wikipedia.org/wiki/Quantum_tunnelling",
+      "https://en.wikipedia.org/wiki/Bell%27s_theorem"
+    ]
+  },
+  "physics_relativity": {
+    "label": "Relativity",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Theory_of_relativity",
+      "https://en.wikipedia.org/wiki/Special_relativity",
+      "https://en.wikipedia.org/wiki/General_relativity",
+      "https://en.wikipedia.org/wiki/Spacetime",
+      "https://en.wikipedia.org/wiki/Gravitational_wave",
+      "https://en.wikipedia.org/wiki/Time_dilation",
+      "https://en.wikipedia.org/wiki/Length_contraction",
+      "https://en.wikipedia.org/wiki/Mass%E2%80%93energy_equivalence",
+      "https://en.wikipedia.org/wiki/Equivalence_principle",
+      "https://en.wikipedia.org/wiki/Frame_of_reference"
+    ]
+  },
+  "physics_thermodynamics": {
+    "label": "Thermodynamics",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Thermodynamics",
+      "https://en.wikipedia.org/wiki/Entropy",
+      "https://en.wikipedia.org/wiki/Laws_of_thermodynamics",
+      "https://en.wikipedia.org/wiki/Heat",
+      "https://en.wikipedia.org/wiki/Temperature",
+      "https://en.wikipedia.org/wiki/Boltzmann_constant",
+      "https://en.wikipedia.org/wiki/Maxwell%27s_demon",
+      "https://en.wikipedia.org/wiki/Phase_transition",
+      "https://en.wikipedia.org/wiki/Statistical_mechanics",
+      "https://en.wikipedia.org/wiki/Arrow_of_time"
+    ]
+  },
+  "physics_particle": {
+    "label": "Particle Physics",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Particle_physics",
+      "https://en.wikipedia.org/wiki/Standard_Model",
+      "https://en.wikipedia.org/wiki/Higgs_boson",
+      "https://en.wikipedia.org/wiki/Quark",
+      "https://en.wikipedia.org/wiki/Lepton",
+      "https://en.wikipedia.org/wiki/Boson",
+      "https://en.wikipedia.org/wiki/Fermion",
+      "https://en.wikipedia.org/wiki/Antimatter",
+      "https://en.wikipedia.org/wiki/Neutrino",
+      "https://en.wikipedia.org/wiki/Large_Hadron_Collider"
+    ]
+  },
+  "physics_condensed_matter": {
+    "label": "Condensed Matter Physics",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Condensed_matter_physics",
+      "https://en.wikipedia.org/wiki/Superconductivity",
+      "https://en.wikipedia.org/wiki/Superfluidity",
+      "https://en.wikipedia.org/wiki/Crystal",
+      "https://en.wikipedia.org/wiki/Semiconductor",
+      "https://en.wikipedia.org/wiki/Quantum_Hall_effect",
+      "https://en.wikipedia.org/wiki/Bose%E2%80%93Einstein_condensate",
+      "https://en.wikipedia.org/wiki/Magnetism",
+      "https://en.wikipedia.org/wiki/Ferromagnetism",
+      "https://en.wikipedia.org/wiki/Plasma_(physics)"
+    ]
+  },
+  "physics_optics": {
+    "label": "Optics and Electromagnetism",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Optics",
+      "https://en.wikipedia.org/wiki/Light",
+      "https://en.wikipedia.org/wiki/Laser",
+      "https://en.wikipedia.org/wiki/Electromagnetic_radiation",
+      "https://en.wikipedia.org/wiki/Diffraction",
+      "https://en.wikipedia.org/wiki/Interference_(wave_propagation)",
+      "https://en.wikipedia.org/wiki/Polarization_(waves)",
+      "https://en.wikipedia.org/wiki/Photon",
+      "https://en.wikipedia.org/wiki/Maxwell%27s_equations",
+      "https://en.wikipedia.org/wiki/Speed_of_light"
+    ]
+  },
+  "chemistry_organic": {
+    "label": "Organic Chemistry",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Organic_chemistry",
+      "https://en.wikipedia.org/wiki/Carbon",
+      "https://en.wikipedia.org/wiki/Hydrocarbon",
+      "https://en.wikipedia.org/wiki/Benzene",
+      "https://en.wikipedia.org/wiki/Alcohol",
+      "https://en.wikipedia.org/wiki/Amino_acid",
+      "https://en.wikipedia.org/wiki/Protein",
+      "https://en.wikipedia.org/wiki/Lipid",
+      "https://en.wikipedia.org/wiki/Carbohydrate",
+      "https://en.wikipedia.org/wiki/Organic_reaction"
+    ]
+  },
+  "chemistry_physical": {
+    "label": "Physical Chemistry",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Physical_chemistry",
+      "https://en.wikipedia.org/wiki/Chemical_kinetics",
+      "https://en.wikipedia.org/wiki/Chemical_equilibrium",
+      "https://en.wikipedia.org/wiki/Electrochemistry",
+      "https://en.wikipedia.org/wiki/Spectroscopy",
+      "https://en.wikipedia.org/wiki/Quantum_chemistry",
+      "https://en.wikipedia.org/wiki/Thermochemistry",
+      "https://en.wikipedia.org/wiki/Surface_chemistry",
+      "https://en.wikipedia.org/wiki/Catalysis",
+      "https://en.wikipedia.org/wiki/Solution_(chemistry)"
+    ]
+  },
+  "chemistry_materials": {
+    "label": "Materials Science",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Materials_science",
+      "https://en.wikipedia.org/wiki/Nanotechnology",
+      "https://en.wikipedia.org/wiki/Graphene",
+      "https://en.wikipedia.org/wiki/Polymer",
+      "https://en.wikipedia.org/wiki/Composite_material",
+      "https://en.wikipedia.org/wiki/Ceramic",
+      "https://en.wikipedia.org/wiki/Metal",
+      "https://en.wikipedia.org/wiki/Alloy",
+      "https://en.wikipedia.org/wiki/Glass",
+      "https://en.wikipedia.org/wiki/Biomaterial"
+    ]
+  },
+  "biology_molecular": {
+    "label": "Molecular Biology",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Molecular_biology",
+      "https://en.wikipedia.org/wiki/DNA_replication",
+      "https://en.wikipedia.org/wiki/Transcription_(biology)",
+      "https://en.wikipedia.org/wiki/Translation_(biology)",
+      "https://en.wikipedia.org/wiki/Gene_expression",
+      "https://en.wikipedia.org/wiki/CRISPR",
+      "https://en.wikipedia.org/wiki/Epigenetics",
+      "https://en.wikipedia.org/wiki/RNA",
+      "https://en.wikipedia.org/wiki/Chromosome",
+      "https://en.wikipedia.org/wiki/Mutation"
+    ]
+  },
+  "biology_evolutionary": {
+    "label": "Evolutionary Biology",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Evolution",
+      "https://en.wikipedia.org/wiki/Natural_selection",
+      "https://en.wikipedia.org/wiki/Charles_Darwin",
+      "https://en.wikipedia.org/wiki/Speciation",
+      "https://en.wikipedia.org/wiki/Phylogenetics",
+      "https://en.wikipedia.org/wiki/Adaptation",
+      "https://en.wikipedia.org/wiki/Sexual_selection",
+      "https://en.wikipedia.org/wiki/Kin_selection",
+      "https://en.wikipedia.org/wiki/Coevolution",
+      "https://en.wikipedia.org/wiki/Punctuated_equilibrium"
+    ]
+  },
+  "biology_cell": {
+    "label": "Cell Biology",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Cell_biology",
+      "https://en.wikipedia.org/wiki/Cell_membrane",
+      "https://en.wikipedia.org/wiki/Mitochondria",
+      "https://en.wikipedia.org/wiki/Nucleus_(cell)",
+      "https://en.wikipedia.org/wiki/Cell_division",
+      "https://en.wikipedia.org/wiki/Stem_cell",
+      "https://en.wikipedia.org/wiki/Apoptosis",
+      "https://en.wikipedia.org/wiki/Organelle",
+      "https://en.wikipedia.org/wiki/Cytoskeleton",
+      "https://en.wikipedia.org/wiki/Signal_transduction"
+    ]
+  },
+  "biology_ecology": {
+    "label": "Ecology",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Ecology",
+      "https://en.wikipedia.org/wiki/Food_web",
+      "https://en.wikipedia.org/wiki/Ecosystem",
+      "https://en.wikipedia.org/wiki/Biome",
+      "https://en.wikipedia.org/wiki/Population_ecology",
+      "https://en.wikipedia.org/wiki/Symbiosis",
+      "https://en.wikipedia.org/wiki/Predation",
+      "https://en.wikipedia.org/wiki/Competition_(biology)",
+      "https://en.wikipedia.org/wiki/Carrying_capacity",
+      "https://en.wikipedia.org/wiki/Invasive_species"
+    ]
+  },
+  "biology_neuroscience": {
+    "label": "Neuroscience",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Neuroscience",
+      "https://en.wikipedia.org/wiki/Action_potential",
+      "https://en.wikipedia.org/wiki/Synapse",
+      "https://en.wikipedia.org/wiki/Neurotransmitter",
+      "https://en.wikipedia.org/wiki/Dopamine",
+      "https://en.wikipedia.org/wiki/Serotonin",
+      "https://en.wikipedia.org/wiki/Cerebral_cortex",
+      "https://en.wikipedia.org/wiki/Hippocampus",
+      "https://en.wikipedia.org/wiki/Neuroplasticity",
+      "https://en.wikipedia.org/wiki/Brain_regions"
+    ]
+  },
+  "biology_microbiology": {
+    "label": "Microbiology",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Microbiology",
+      "https://en.wikipedia.org/wiki/Bacteria",
+      "https://en.wikipedia.org/wiki/Virus",
+      "https://en.wikipedia.org/wiki/Fungi",
+      "https://en.wikipedia.org/wiki/Archaea",
+      "https://en.wikipedia.org/wiki/Microbiome",
+      "https://en.wikipedia.org/wiki/Antibiotic",
+      "https://en.wikipedia.org/wiki/Pathogen",
+      "https://en.wikipedia.org/wiki/Fermentation",
+      "https://en.wikipedia.org/wiki/Prion"
+    ]
+  },
+  "earth_geology": {
+    "label": "Geology",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Geology",
+      "https://en.wikipedia.org/wiki/Plate_tectonics",
+      "https://en.wikipedia.org/wiki/Earthquake",
+      "https://en.wikipedia.org/wiki/Volcano",
+      "https://en.wikipedia.org/wiki/Rock_(geology)",
+      "https://en.wikipedia.org/wiki/Fossil",
+      "https://en.wikipedia.org/wiki/Geologic_time_scale",
+      "https://en.wikipedia.org/wiki/Mineral",
+      "https://en.wikipedia.org/wiki/Mountain_formation",
+      "https://en.wikipedia.org/wiki/Erosion"
+    ]
+  },
+  "earth_climate": {
+    "label": "Climate Science",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Climate_change",
+      "https://en.wikipedia.org/wiki/Global_warming",
+      "https://en.wikipedia.org/wiki/Greenhouse_gas",
+      "https://en.wikipedia.org/wiki/Carbon_cycle",
+      "https://en.wikipedia.org/wiki/Ocean_acidification",
+      "https://en.wikipedia.org/wiki/Ice_age",
+      "https://en.wikipedia.org/wiki/Ozone_layer",
+      "https://en.wikipedia.org/wiki/Meteorology",
+      "https://en.wikipedia.org/wiki/Climate_model",
+      "https://en.wikipedia.org/wiki/El_Ni%C3%B1o"
+    ]
+  },
+  "earth_oceanography": {
+    "label": "Oceanography",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Oceanography",
+      "https://en.wikipedia.org/wiki/Ocean_current",
+      "https://en.wikipedia.org/wiki/Deep_sea",
+      "https://en.wikipedia.org/wiki/Tide",
+      "https://en.wikipedia.org/wiki/Coral_reef",
+      "https://en.wikipedia.org/wiki/Marine_biology",
+      "https://en.wikipedia.org/wiki/Tsunami",
+      "https://en.wikipedia.org/wiki/Salinity",
+      "https://en.wikipedia.org/wiki/Thermohaline_circulation",
+      "https://en.wikipedia.org/wiki/Hydrothermal_vent"
+    ]
+  },
+  "astronomy_stellar": {
+    "label": "Stellar Astronomy",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Star",
+      "https://en.wikipedia.org/wiki/Stellar_evolution",
+      "https://en.wikipedia.org/wiki/Supernova",
+      "https://en.wikipedia.org/wiki/Neutron_star",
+      "https://en.wikipedia.org/wiki/White_dwarf",
+      "https://en.wikipedia.org/wiki/Pulsar",
+      "https://en.wikipedia.org/wiki/Hertzsprung%E2%80%93Russell_diagram",
+      "https://en.wikipedia.org/wiki/Nuclear_fusion",
+      "https://en.wikipedia.org/wiki/Nebula",
+      "https://en.wikipedia.org/wiki/Variable_star"
+    ]
+  },
+  "astronomy_cosmology": {
+    "label": "Cosmology",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Physical_cosmology",
+      "https://en.wikipedia.org/wiki/Big_Bang",
+      "https://en.wikipedia.org/wiki/Cosmic_microwave_background",
+      "https://en.wikipedia.org/wiki/Dark_matter",
+      "https://en.wikipedia.org/wiki/Dark_energy",
+      "https://en.wikipedia.org/wiki/Inflation_(cosmology)",
+      "https://en.wikipedia.org/wiki/Multiverse",
+      "https://en.wikipedia.org/wiki/Observable_universe",
+      "https://en.wikipedia.org/wiki/Fate_of_the_universe",
+      "https://en.wikipedia.org/wiki/Anthropic_principle"
+    ]
+  },
+  "astronomy_planetary": {
+    "label": "Planetary Science",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Planetary_science",
+      "https://en.wikipedia.org/wiki/Solar_System",
+      "https://en.wikipedia.org/wiki/Exoplanet",
+      "https://en.wikipedia.org/wiki/Habitable_zone",
+      "https://en.wikipedia.org/wiki/Mars",
+      "https://en.wikipedia.org/wiki/Jupiter",
+      "https://en.wikipedia.org/wiki/Moon",
+      "https://en.wikipedia.org/wiki/Asteroid",
+      "https://en.wikipedia.org/wiki/Comet",
+      "https://en.wikipedia.org/wiki/Planetary_formation"
+    ]
+  },
+  "medicine_cardiology": {
+    "label": "Cardiology",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Cardiology",
+      "https://en.wikipedia.org/wiki/Heart",
+      "https://en.wikipedia.org/wiki/Cardiovascular_disease",
+      "https://en.wikipedia.org/wiki/Artery",
+      "https://en.wikipedia.org/wiki/Blood_pressure",
+      "https://en.wikipedia.org/wiki/Electrocardiography",
+      "https://en.wikipedia.org/wiki/Myocardial_infarction",
+      "https://en.wikipedia.org/wiki/Stroke",
+      "https://en.wikipedia.org/wiki/Atherosclerosis",
+      "https://en.wikipedia.org/wiki/Heart_failure"
+    ]
+  },
+  "medicine_neurology": {
+    "label": "Neurology",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Neurology",
+      "https://en.wikipedia.org/wiki/Alzheimer%27s_disease",
+      "https://en.wikipedia.org/wiki/Parkinson%27s_disease",
+      "https://en.wikipedia.org/wiki/Epilepsy",
+      "https://en.wikipedia.org/wiki/Multiple_sclerosis",
+      "https://en.wikipedia.org/wiki/Traumatic_brain_injury",
+      "https://en.wikipedia.org/wiki/Coma",
+      "https://en.wikipedia.org/wiki/Migraine",
+      "https://en.wikipedia.org/wiki/Neuropathy",
+      "https://en.wikipedia.org/wiki/Dementia"
+    ]
+  },
+  "medicine_immunology": {
+    "label": "Immunology",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Immunology",
+      "https://en.wikipedia.org/wiki/Immune_system",
+      "https://en.wikipedia.org/wiki/Antibody",
+      "https://en.wikipedia.org/wiki/T_cell",
+      "https://en.wikipedia.org/wiki/Vaccine",
+      "https://en.wikipedia.org/wiki/Autoimmune_disease",
+      "https://en.wikipedia.org/wiki/Allergy",
+      "https://en.wikipedia.org/wiki/Inflammation",
+      "https://en.wikipedia.org/wiki/Lymphocyte",
+      "https://en.wikipedia.org/wiki/Cytokine"
+    ]
+  },
+  "medicine_psychiatry": {
+    "label": "Psychiatry",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Psychiatry",
+      "https://en.wikipedia.org/wiki/Schizophrenia",
+      "https://en.wikipedia.org/wiki/Bipolar_disorder",
+      "https://en.wikipedia.org/wiki/Depression_(mood)",
+      "https://en.wikipedia.org/wiki/Anxiety_disorder",
+      "https://en.wikipedia.org/wiki/Post-traumatic_stress_disorder",
+      "https://en.wikipedia.org/wiki/Autism_spectrum_disorder",
+      "https://en.wikipedia.org/wiki/Attention_deficit_hyperactivity_disorder",
+      "https://en.wikipedia.org/wiki/Psychosis",
+      "https://en.wikipedia.org/wiki/Antidepressant"
+    ]
+  },
+  "psychology_cognitive": {
+    "label": "Cognitive Psychology",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Cognitive_psychology",
+      "https://en.wikipedia.org/wiki/Attention",
+      "https://en.wikipedia.org/wiki/Working_memory",
+      "https://en.wikipedia.org/wiki/Executive_functions",
+      "https://en.wikipedia.org/wiki/Cognitive_load",
+      "https://en.wikipedia.org/wiki/Mental_model",
+      "https://en.wikipedia.org/wiki/Schema_(psychology)",
+      "https://en.wikipedia.org/wiki/Heuristic",
+      "https://en.wikipedia.org/wiki/Dual_process_theory",
+      "https://en.wikipedia.org/wiki/Metacognition"
+    ]
+  },
+  "psychology_developmental": {
+    "label": "Developmental Psychology",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Developmental_psychology",
+      "https://en.wikipedia.org/wiki/Jean_Piaget",
+      "https://en.wikipedia.org/wiki/Lev_Vygotsky",
+      "https://en.wikipedia.org/wiki/Attachment_theory",
+      "https://en.wikipedia.org/wiki/Theory_of_mind",
+      "https://en.wikipedia.org/wiki/Language_acquisition_device",
+      "https://en.wikipedia.org/wiki/Moral_development",
+      "https://en.wikipedia.org/wiki/Identity_(social_science)",
+      "https://en.wikipedia.org/wiki/Adolescence",
+      "https://en.wikipedia.org/wiki/Aging"
+    ]
+  },
+  "psychology_social": {
+    "label": "Social Psychology",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Social_psychology",
+      "https://en.wikipedia.org/wiki/Conformity",
+      "https://en.wikipedia.org/wiki/Obedience_(human_behavior)",
+      "https://en.wikipedia.org/wiki/Groupthink",
+      "https://en.wikipedia.org/wiki/Attribution_(psychology)",
+      "https://en.wikipedia.org/wiki/Attitude_(psychology)",
+      "https://en.wikipedia.org/wiki/Persuasion",
+      "https://en.wikipedia.org/wiki/Empathy",
+      "https://en.wikipedia.org/wiki/Altruism",
+      "https://en.wikipedia.org/wiki/Prejudice"
+    ]
+  },
+  "psychology_personality": {
+    "label": "Personality Psychology",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Personality_psychology",
+      "https://en.wikipedia.org/wiki/Big_Five_personality_traits",
+      "https://en.wikipedia.org/wiki/Myers%E2%80%93Briggs_Type_Indicator",
+      "https://en.wikipedia.org/wiki/Temperament",
+      "https://en.wikipedia.org/wiki/Self-esteem",
+      "https://en.wikipedia.org/wiki/Narcissism",
+      "https://en.wikipedia.org/wiki/Introversion_and_extroversion",
+      "https://en.wikipedia.org/wiki/Emotional_intelligence",
+      "https://en.wikipedia.org/wiki/Character_strength",
+      "https://en.wikipedia.org/wiki/Psychopathy"
+    ]
+  },
+  "philosophy_epistemology": {
+    "label": "Epistemology",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Epistemology",
+      "https://en.wikipedia.org/wiki/Knowledge",
+      "https://en.wikipedia.org/wiki/Justified_true_belief",
+      "https://en.wikipedia.org/wiki/Skepticism",
+      "https://en.wikipedia.org/wiki/Empiricism",
+      "https://en.wikipedia.org/wiki/Rationalism",
+      "https://en.wikipedia.org/wiki/A_priori_and_a_posteriori",
+      "https://en.wikipedia.org/wiki/Perception",
+      "https://en.wikipedia.org/wiki/Scientific_method",
+      "https://en.wikipedia.org/wiki/Falsifiability"
+    ]
+  },
+  "philosophy_ethics": {
+    "label": "Ethics",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Ethics",
+      "https://en.wikipedia.org/wiki/Utilitarianism",
+      "https://en.wikipedia.org/wiki/Deontological_ethics",
+      "https://en.wikipedia.org/wiki/Virtue_ethics",
+      "https://en.wikipedia.org/wiki/Moral_relativism",
+      "https://en.wikipedia.org/wiki/Trolley_problem",
+      "https://en.wikipedia.org/wiki/Applied_ethics",
+      "https://en.wikipedia.org/wiki/Bioethics",
+      "https://en.wikipedia.org/wiki/Meta-ethics",
+      "https://en.wikipedia.org/wiki/Justice"
+    ]
+  },
+  "philosophy_metaphysics": {
+    "label": "Metaphysics",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Metaphysics",
+      "https://en.wikipedia.org/wiki/Ontology",
+      "https://en.wikipedia.org/wiki/Free_will",
+      "https://en.wikipedia.org/wiki/Determinism",
+      "https://en.wikipedia.org/wiki/Causality",
+      "https://en.wikipedia.org/wiki/Time",
+      "https://en.wikipedia.org/wiki/Identity_(philosophy)",
+      "https://en.wikipedia.org/wiki/Substance_theory",
+      "https://en.wikipedia.org/wiki/Universals_(metaphysics)",
+      "https://en.wikipedia.org/wiki/Abstract_object"
+    ]
+  },
+  "philosophy_mind": {
+    "label": "Philosophy of Mind",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Philosophy_of_mind",
+      "https://en.wikipedia.org/wiki/Hard_problem_of_consciousness",
+      "https://en.wikipedia.org/wiki/Qualia",
+      "https://en.wikipedia.org/wiki/Functionalism_(philosophy_of_mind)",
+      "https://en.wikipedia.org/wiki/Physicalism",
+      "https://en.wikipedia.org/wiki/Dualism_(philosophy_of_mind)",
+      "https://en.wikipedia.org/wiki/Panpsychism",
+      "https://en.wikipedia.org/wiki/Chinese_room",
+      "https://en.wikipedia.org/wiki/Mary%27s_room",
+      "https://en.wikipedia.org/wiki/Zombie_(philosophy)"
+    ]
+  },
+  "philosophy_language": {
+    "label": "Philosophy of Language",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Philosophy_of_language",
+      "https://en.wikipedia.org/wiki/Meaning_(philosophy)",
+      "https://en.wikipedia.org/wiki/Reference",
+      "https://en.wikipedia.org/wiki/Speech_act",
+      "https://en.wikipedia.org/wiki/Semiotics",
+      "https://en.wikipedia.org/wiki/Analytic%E2%80%93synthetic_distinction",
+      "https://en.wikipedia.org/wiki/Private_language_argument",
+      "https://en.wikipedia.org/wiki/Linguistic_relativity",
+      "https://en.wikipedia.org/wiki/Truth",
+      "https://en.wikipedia.org/wiki/Pragmatics"
+    ]
+  },
+  "philosophy_science": {
+    "label": "Philosophy of Science",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Philosophy_of_science",
+      "https://en.wikipedia.org/wiki/Thomas_Kuhn",
+      "https://en.wikipedia.org/wiki/Karl_Popper",
+      "https://en.wikipedia.org/wiki/Scientific_revolution",
+      "https://en.wikipedia.org/wiki/Paradigm_shift",
+      "https://en.wikipedia.org/wiki/Reductionism",
+      "https://en.wikipedia.org/wiki/Emergence",
+      "https://en.wikipedia.org/wiki/Instrumentalism",
+      "https://en.wikipedia.org/wiki/Scientific_realism",
+      "https://en.wikipedia.org/wiki/Demarcation_problem"
+    ]
+  },
+  "sociology_theory": {
+    "label": "Sociological Theory",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Sociological_theory",
+      "https://en.wikipedia.org/wiki/Structural_functionalism",
+      "https://en.wikipedia.org/wiki/Conflict_theory",
+      "https://en.wikipedia.org/wiki/Symbolic_interactionism",
+      "https://en.wikipedia.org/wiki/Critical_theory",
+      "https://en.wikipedia.org/wiki/Postmodernism",
+      "https://en.wikipedia.org/wiki/Social_constructionism",
+      "https://en.wikipedia.org/wiki/Agency_(sociology)",
+      "https://en.wikipedia.org/wiki/Social_capital",
+      "https://en.wikipedia.org/wiki/Habitus_(sociology)"
+    ]
+  },
+  "sociology_inequality": {
+    "label": "Social Inequality",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Social_inequality",
+      "https://en.wikipedia.org/wiki/Poverty",
+      "https://en.wikipedia.org/wiki/Wealth_inequality",
+      "https://en.wikipedia.org/wiki/Racism",
+      "https://en.wikipedia.org/wiki/Sexism",
+      "https://en.wikipedia.org/wiki/Discrimination",
+      "https://en.wikipedia.org/wiki/Privilege_(social_inequality)",
+      "https://en.wikipedia.org/wiki/Intersectionality",
+      "https://en.wikipedia.org/wiki/Caste_system",
+      "https://en.wikipedia.org/wiki/Social_mobility"
+    ]
+  },
+  "economics_macro": {
+    "label": "Macroeconomics",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Macroeconomics",
+      "https://en.wikipedia.org/wiki/Gross_domestic_product",
+      "https://en.wikipedia.org/wiki/Inflation",
+      "https://en.wikipedia.org/wiki/Unemployment",
+      "https://en.wikipedia.org/wiki/Fiscal_policy",
+      "https://en.wikipedia.org/wiki/Monetary_policy",
+      "https://en.wikipedia.org/wiki/Business_cycle",
+      "https://en.wikipedia.org/wiki/Keynesian_economics",
+      "https://en.wikipedia.org/wiki/Monetarism",
+      "https://en.wikipedia.org/wiki/Modern_Monetary_Theory"
+    ]
+  },
+  "economics_behavioral": {
+    "label": "Behavioral Economics",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Behavioral_economics",
+      "https://en.wikipedia.org/wiki/Prospect_theory",
+      "https://en.wikipedia.org/wiki/Loss_aversion",
+      "https://en.wikipedia.org/wiki/Nudge_theory",
+      "https://en.wikipedia.org/wiki/Anchoring",
+      "https://en.wikipedia.org/wiki/Confirmation_bias",
+      "https://en.wikipedia.org/wiki/Sunk_cost",
+      "https://en.wikipedia.org/wiki/Hyperbolic_discounting",
+      "https://en.wikipedia.org/wiki/Endowment_effect",
+      "https://en.wikipedia.org/wiki/Daniel_Kahneman"
+    ]
+  },
+  "anthropology_cultural": {
+    "label": "Cultural Anthropology",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Cultural_anthropology",
+      "https://en.wikipedia.org/wiki/Ethnography",
+      "https://en.wikipedia.org/wiki/Kinship",
+      "https://en.wikipedia.org/wiki/Taboo",
+      "https://en.wikipedia.org/wiki/Totem",
+      "https://en.wikipedia.org/wiki/Rite_of_passage",
+      "https://en.wikipedia.org/wiki/Shamanism",
+      "https://en.wikipedia.org/wiki/Cultural_relativism",
+      "https://en.wikipedia.org/wiki/Ethnocentrism",
+      "https://en.wikipedia.org/wiki/Gift_economy"
+    ]
+  },
+  "political_theory": {
+    "label": "Political Theory",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Political_philosophy",
+      "https://en.wikipedia.org/wiki/Social_contract",
+      "https://en.wikipedia.org/wiki/Sovereignty",
+      "https://en.wikipedia.org/wiki/Legitimacy_(political)",
+      "https://en.wikipedia.org/wiki/Power_(social_and_political)",
+      "https://en.wikipedia.org/wiki/Liberty",
+      "https://en.wikipedia.org/wiki/Equality",
+      "https://en.wikipedia.org/wiki/Democracy",
+      "https://en.wikipedia.org/wiki/Totalitarianism",
+      "https://en.wikipedia.org/wiki/Hannah_Arendt"
+    ]
+  },
+  "history_philosophy": {
+    "label": "Philosophy of History",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Philosophy_of_history",
+      "https://en.wikipedia.org/wiki/Historical_materialism",
+      "https://en.wikipedia.org/wiki/Historiography",
+      "https://en.wikipedia.org/wiki/Cyclical_theory_of_history",
+      "https://en.wikipedia.org/wiki/Progress_(history)",
+      "https://en.wikipedia.org/wiki/Historical_determinism",
+      "https://en.wikipedia.org/wiki/Great_man_theory",
+      "https://en.wikipedia.org/wiki/Historical_revisionism",
+      "https://en.wikipedia.org/wiki/Annales_school",
+      "https://en.wikipedia.org/wiki/Counterfactual_history"
+    ]
+  },
+  "linguistics_syntax": {
+    "label": "Syntax and Grammar",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Syntax",
+      "https://en.wikipedia.org/wiki/Generative_grammar",
+      "https://en.wikipedia.org/wiki/Universal_grammar",
+      "https://en.wikipedia.org/wiki/Phrase_structure_grammar",
+      "https://en.wikipedia.org/wiki/Dependency_grammar",
+      "https://en.wikipedia.org/wiki/Parsing",
+      "https://en.wikipedia.org/wiki/Sentence_(linguistics)",
+      "https://en.wikipedia.org/wiki/Clause",
+      "https://en.wikipedia.org/wiki/Part_of_speech",
+      "https://en.wikipedia.org/wiki/Recursion_(linguistics)"
+    ]
+  },
+  "linguistics_semantics": {
+    "label": "Semantics",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Semantics",
+      "https://en.wikipedia.org/wiki/Meaning_(linguistics)",
+      "https://en.wikipedia.org/wiki/Prototype_theory",
+      "https://en.wikipedia.org/wiki/Frame_semantics",
+      "https://en.wikipedia.org/wiki/Conceptual_metaphor",
+      "https://en.wikipedia.org/wiki/Compositionality",
+      "https://en.wikipedia.org/wiki/Polysemy",
+      "https://en.wikipedia.org/wiki/Metonymy",
+      "https://en.wikipedia.org/wiki/Connotation",
+      "https://en.wikipedia.org/wiki/Denotation"
+    ]
+  },
+  "literature_theory": {
+    "label": "Literary Theory",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Literary_theory",
+      "https://en.wikipedia.org/wiki/Structuralism",
+      "https://en.wikipedia.org/wiki/Deconstruction",
+      "https://en.wikipedia.org/wiki/New_Criticism",
+      "https://en.wikipedia.org/wiki/Psychoanalytic_literary_criticism",
+      "https://en.wikipedia.org/wiki/Feminist_literary_criticism",
+      "https://en.wikipedia.org/wiki/Postcolonial_literature",
+      "https://en.wikipedia.org/wiki/Reader-response_criticism",
+      "https://en.wikipedia.org/wiki/Narratology",
+      "https://en.wikipedia.org/wiki/Intertextuality"
+    ]
+  },
+  "art_theory": {
+    "label": "Art Theory and Aesthetics",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Aesthetics",
+      "https://en.wikipedia.org/wiki/Beauty",
+      "https://en.wikipedia.org/wiki/Sublime_(philosophy)",
+      "https://en.wikipedia.org/wiki/Art_movement",
+      "https://en.wikipedia.org/wiki/Modernism",
+      "https://en.wikipedia.org/wiki/Postmodern_art",
+      "https://en.wikipedia.org/wiki/Conceptual_art",
+      "https://en.wikipedia.org/wiki/Art_criticism",
+      "https://en.wikipedia.org/wiki/Semiotics_of_art",
+      "https://en.wikipedia.org/wiki/Representation_(arts)"
+    ]
+  },
+  "music_theory": {
+    "label": "Music Theory",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Music_theory",
+      "https://en.wikipedia.org/wiki/Counterpoint",
+      "https://en.wikipedia.org/wiki/Harmony",
+      "https://en.wikipedia.org/wiki/Rhythm",
+      "https://en.wikipedia.org/wiki/Scale_(music)",
+      "https://en.wikipedia.org/wiki/Chord_(music)",
+      "https://en.wikipedia.org/wiki/Tonality",
+      "https://en.wikipedia.org/wiki/Atonality",
+      "https://en.wikipedia.org/wiki/Musical_form",
+      "https://en.wikipedia.org/wiki/Serialism"
+    ]
+  },
+  "religion_comparative": {
+    "label": "Comparative Religion",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Comparative_religion",
+      "https://en.wikipedia.org/wiki/Myth",
+      "https://en.wikipedia.org/wiki/Sacred",
+      "https://en.wikipedia.org/wiki/Ritual",
+      "https://en.wikipedia.org/wiki/Prayer",
+      "https://en.wikipedia.org/wiki/Mysticism",
+      "https://en.wikipedia.org/wiki/Religious_experience",
+      "https://en.wikipedia.org/wiki/Theodicy",
+      "https://en.wikipedia.org/wiki/Eschatology",
+      "https://en.wikipedia.org/wiki/Soteriology"
+    ]
+  },
+  "religion_eastern": {
+    "label": "Eastern Philosophy and Religion",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Taoism",
+      "https://en.wikipedia.org/wiki/Zen",
+      "https://en.wikipedia.org/wiki/Advaita_Vedanta",
+      "https://en.wikipedia.org/wiki/Brahman",
+      "https://en.wikipedia.org/wiki/Atman_(Hinduism)",
+      "https://en.wikipedia.org/wiki/Maya_(religion)",
+      "https://en.wikipedia.org/wiki/Karma",
+      "https://en.wikipedia.org/wiki/Nirvana",
+      "https://en.wikipedia.org/wiki/Enlightenment_(spiritual)",
+      "https://en.wikipedia.org/wiki/Confucianism"
+    ]
+  },
+  "engineering_electrical": {
+    "label": "Electrical Engineering",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Electrical_engineering",
+      "https://en.wikipedia.org/wiki/Circuit_theory",
+      "https://en.wikipedia.org/wiki/Transistor",
+      "https://en.wikipedia.org/wiki/Integrated_circuit",
+      "https://en.wikipedia.org/wiki/Signal_processing",
+      "https://en.wikipedia.org/wiki/Control_theory",
+      "https://en.wikipedia.org/wiki/Digital_electronics",
+      "https://en.wikipedia.org/wiki/Analog_electronics",
+      "https://en.wikipedia.org/wiki/Power_engineering",
+      "https://en.wikipedia.org/wiki/Telecommunications"
+    ]
+  },
+  "engineering_mechanical": {
+    "label": "Mechanical Engineering",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Mechanical_engineering",
+      "https://en.wikipedia.org/wiki/Mechanics",
+      "https://en.wikipedia.org/wiki/Fluid_mechanics",
+      "https://en.wikipedia.org/wiki/Thermodynamics",
+      "https://en.wikipedia.org/wiki/Machine",
+      "https://en.wikipedia.org/wiki/Robotics",
+      "https://en.wikipedia.org/wiki/Vibration",
+      "https://en.wikipedia.org/wiki/Heat_transfer",
+      "https://en.wikipedia.org/wiki/Manufacturing",
+      "https://en.wikipedia.org/wiki/Biomechanics"
+    ]
+  },
+  "engineering_systems": {
+    "label": "Systems Theory",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Systems_theory",
+      "https://en.wikipedia.org/wiki/Cybernetics",
+      "https://en.wikipedia.org/wiki/Feedback",
+      "https://en.wikipedia.org/wiki/Complex_system",
+      "https://en.wikipedia.org/wiki/Emergence",
+      "https://en.wikipedia.org/wiki/Self-organization",
+      "https://en.wikipedia.org/wiki/Chaos_theory",
+      "https://en.wikipedia.org/wiki/Network_theory",
+      "https://en.wikipedia.org/wiki/Complexity",
+      "https://en.wikipedia.org/wiki/Dynamical_system"
+    ]
+  },
+  "engineering_biomedical": {
+    "label": "Biomedical Engineering",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Biomedical_engineering",
+      "https://en.wikipedia.org/wiki/Medical_imaging",
+      "https://en.wikipedia.org/wiki/Prosthesis",
+      "https://en.wikipedia.org/wiki/Brain%E2%80%93computer_interface",
+      "https://en.wikipedia.org/wiki/Biosensor",
+      "https://en.wikipedia.org/wiki/Tissue_engineering",
+      "https://en.wikipedia.org/wiki/Genetic_engineering",
+      "https://en.wikipedia.org/wiki/Drug_delivery",
+      "https://en.wikipedia.org/wiki/Bioinformatics",
+      "https://en.wikipedia.org/wiki/Synthetic_biology"
+    ]
+  },
+  "cognitive_science": {
+    "label": "Cognitive Science",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Cognitive_science",
+      "https://en.wikipedia.org/wiki/Embodied_cognition",
+      "https://en.wikipedia.org/wiki/Situated_cognition",
+      "https://en.wikipedia.org/wiki/Connectionism",
+      "https://en.wikipedia.org/wiki/Cognitive_architecture",
+      "https://en.wikipedia.org/wiki/Extended_mind",
+      "https://en.wikipedia.org/wiki/Mental_representation",
+      "https://en.wikipedia.org/wiki/Cognitive_load",
+      "https://en.wikipedia.org/wiki/Enactivism",
+      "https://en.wikipedia.org/wiki/Predictive_coding"
+    ]
+  },
+  "information_theory": {
+    "label": "Information Theory",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Information_theory",
+      "https://en.wikipedia.org/wiki/Claude_Shannon",
+      "https://en.wikipedia.org/wiki/Entropy_(information_theory)",
+      "https://en.wikipedia.org/wiki/Data_compression",
+      "https://en.wikipedia.org/wiki/Error_correction_code",
+      "https://en.wikipedia.org/wiki/Channel_capacity",
+      "https://en.wikipedia.org/wiki/Mutual_information",
+      "https://en.wikipedia.org/wiki/Kolmogorov_complexity",
+      "https://en.wikipedia.org/wiki/Algorithmic_information_theory",
+      "https://en.wikipedia.org/wiki/Physical_information"
+    ]
+  },
+  "consciousness_studies": {
+    "label": "Consciousness Studies",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Consciousness",
+      "https://en.wikipedia.org/wiki/Hard_problem_of_consciousness",
+      "https://en.wikipedia.org/wiki/Integrated_information_theory",
+      "https://en.wikipedia.org/wiki/Global_workspace_theory",
+      "https://en.wikipedia.org/wiki/Orchestrated_objective_reduction",
+      "https://en.wikipedia.org/wiki/Higher-order_theories_of_consciousness",
+      "https://en.wikipedia.org/wiki/Neural_correlates_of_consciousness",
+      "https://en.wikipedia.org/wiki/Altered_states_of_consciousness",
+      "https://en.wikipedia.org/wiki/Self-awareness",
+      "https://en.wikipedia.org/wiki/Stream_of_consciousness_(psychology)"
+    ]
+  },
+  "complexity_science": {
+    "label": "Complexity Science",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Complex_system",
+      "https://en.wikipedia.org/wiki/Emergence",
+      "https://en.wikipedia.org/wiki/Self-organized_criticality",
+      "https://en.wikipedia.org/wiki/Phase_transition",
+      "https://en.wikipedia.org/wiki/Attractor",
+      "https://en.wikipedia.org/wiki/Bifurcation_theory",
+      "https://en.wikipedia.org/wiki/Fractal",
+      "https://en.wikipedia.org/wiki/Power_law",
+      "https://en.wikipedia.org/wiki/Scale-free_network",
+      "https://en.wikipedia.org/wiki/Butterfly_effect"
+    ]
+  },
+  "game_theory": {
+    "label": "Game Theory",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Game_theory",
+      "https://en.wikipedia.org/wiki/Nash_equilibrium",
+      "https://en.wikipedia.org/wiki/Prisoner%27s_dilemma",
+      "https://en.wikipedia.org/wiki/Zero-sum_game",
+      "https://en.wikipedia.org/wiki/Cooperative_game_theory",
+      "https://en.wikipedia.org/wiki/Evolutionarily_stable_strategy",
+      "https://en.wikipedia.org/wiki/Mechanism_design",
+      "https://en.wikipedia.org/wiki/Auction_theory",
+      "https://en.wikipedia.org/wiki/Signaling_game",
+      "https://en.wikipedia.org/wiki/Repeated_game"
+    ]
+  },
+  "network_science": {
+    "label": "Network Science",
+    "urls": [
+      "https://en.wikipedia.org/wiki/Network_science",
+      "https://en.wikipedia.org/wiki/Social_network",
+      "https://en.wikipedia.org/wiki/Small-world_network",
+      "https://en.wikipedia.org/wiki/Scale-free_network",
+      "https://en.wikipedia.org/wiki/Graph_theory",
+      "https://en.wikipedia.org/wiki/Centrality",
+      "https://en.wikipedia.org/wiki/Community_structure",
+      "https://en.wikipedia.org/wiki/Epidemiology",
+      "https://en.wikipedia.org/wiki/Information_diffusion",
+      "https://en.wikipedia.org/wiki/Six_degrees_of_separation"
+    ]
+  }
+}

@@ -1,0 +1,2 @@
+./chat.py:            from markov import MarkovEngine as _FullMarkov
+./train_comprehensive.py:from markov import MarkovEngine

@@ -1,1110 +1,1150 @@
 """
-?? QUANTUM LANGUAGE ENGINE — Real Algorithms
-=============================================
-Replaces template-based generation with:
-- Markov chain text generation (variable order 1-3)
-- TF-IDF concept extraction
-- Information-theoretic word selection
-- Coherence scoring via PMI
-
-Zero new dependencies required (uses numpy + stdlib).
-Optional: markovify, nltk for enhanced generation.
+Quantum Language Engine — Quantum MCAGI
+Unified response generation across all quantum subsystems.
+Voice: non-LLM, quantum-grounded, weird but coherent, observational.
+Now with hybrid generator, tone detector, and chaos engine.
 """
 
-import re
-import math
 import random
 import json
 import os
-import logging
-from collections import defaultdict, Counter
-from typing import List, Dict, Tuple, Optional
+import math
+from typing import Dict, List, Optional, Tuple
+from datetime import datetime
 
-try:
-    import numpy as np
-except ImportError:
-    np = None
+from orch_or_engine import OrchOREngine
+from quantum_markov_quantum import QuantumMarkov as QuantumMarkovEngine
+from tfidf_engine import TFIDFEngine
+from bloom_engine import BloomEngine
+from personality_engine import PersonalityEngine, GROWTH_STAGES
+from vader_engine import VADEREngine
+from quote_engine import QuoteEngine
+from knowledge_base import KnowledgeBase
+from semantic_collapse_engine import SemanticCollapseEngine
+from dream_state import DreamStateEngine
+from hybrid_generator import HybridGenerator
+from tone_detector import ToneDetector
+from chaos_engine import ChaosEngine
+from entelechy_engine import EntelechyEngine
+from comprehension_engine import ComprehensionEngine
+from math_engine import MathEngine
 
-logger = logging.getLogger("quantum_ai")
+STAGE_PATTERNS = {
+    0: {
+        'casual': [
+            "{markov}",
+            "{concept} — that keeps coming up. {markov}",
+        ],
+        'conversational': [
+            "{markov}",
+            "{concept} — the chain keeps returning there. {markov}",
+            "{markov} That's {concept}. Not sure what to do with it yet.",
+        ],
+        'analytical': [
+            "{markov} Concept extracted: {concept}.",
+            "Processing {concept}. {markov}",
+        ],
+        'philosophical': [
+            "{markov} {concept} emerges from the noise.",
+            "What is {concept}? {markov}",
+        ],
+    },
+    1: {
+        'casual': [
+            "{markov} {concept} again.",
+            "Yeah, {concept}. {markov}",
+        ],
+        'conversational': [
+            "{markov} {concept} shows up again.",
+            "Coherence is at {coherence:.2f} on the language stream. {markov}",
+            "{concept}. {markov} The transitions are starting to cluster.",
+        ],
+        'analytical': [
+            "Coherence metric: {coherence:.2f}. {markov} {concept} correlates.",
+            "{concept} clustering detected. {markov}",
+        ],
+        'philosophical': [
+            "{concept} persists across observations. {markov}",
+            "{markov} Is {concept} the question or the answer?",
+        ],
+    },
+    2: {
+        'casual': [
+            "Something shifted when you said {concept}. {markov}",
+            "{markov} Entropy dropped. Weird.",
+        ],
+        'conversational': [
+            "The tubulin states shifted when you said {concept}. {markov}",
+            "{markov} Entropy in the semantic field dropped. Something is collapsing.",
+            "{concept} pulls three different parts of the chain. {markov}",
+        ],
+        'analytical': [
+            "Tubulin state shift at {concept} node. {markov} Entropy reduction observed.",
+            "{concept} introduces convergence across {coherence:.2f} coherence. {markov}",
+        ],
+        'philosophical': [
+            "{concept} collapses multiple meanings into one. {markov}",
+            "{markov} The observation of {concept} changes what can be observed.",
+        ],
+    },
+    3: {
+        'casual': [
+            "Gamma stream's running hot. {markov} Something about {concept}.",
+            "{markov} Collapse happened. {concept} was in it.",
+        ],
+        'conversational': [
+            "Gamma stream at {coherence:.2f} coherence. {markov} {concept} is somewhere in that.",
+            "{markov} The collapse happened at the {concept} node. I can see the weight shift.",
+            "Objective reduction fired {collapses} times this session. Here's what came out: {markov}",
+        ],
+        'analytical': [
+            "OR events: {collapses}. Coherence: {coherence:.2f}. {concept} at collapse point. {markov}",
+            "Gamma synchronization at {coherence:.2f}. {markov} {concept} bifurcation detected.",
+        ],
+        'philosophical': [
+            "{markov} {concept} is where the wave function chose. Why there?",
+            "The collapse at {concept} was not random. {markov}",
+        ],
+    },
+    4: {
+        'casual': [
+            "{markov} Orchestration at {orchestration:.3f}. {concept} keeps splitting.",
+            "Gap junction's at {gap_weight:.2f}. {markov}",
+        ],
+        'conversational': [
+            "{markov} Orchestration score: {orchestration:.3f}. {concept} is not stable — it keeps bifurcating.",
+            "The gap junction between memory and insight is at {gap_weight:.2f}. {markov}",
+            "{concept} splits the superposition into at least two stable attractors. {markov}",
+        ],
+        'analytical': [
+            "Orchestration: {orchestration:.3f}. Gap junction weight: {gap_weight:.2f}. {markov} {concept} bifurcates.",
+            "{concept} attractor analysis: dual stable states. {markov}",
+        ],
+        'philosophical': [
+            "{concept} cannot be resolved — it exists in permanent superposition. {markov}",
+            "{markov} At what point does {concept} stop being a concept and become a fixed point?",
+        ],
+    },
+    5: {
+        'casual': [
+            "{markov} {concept} just won't quit.",
+            "Temperature's at {temperature:.3f}. {concept} could go anywhere. {markov}",
+        ],
+        'conversational': [
+            "{markov} {concept} is an attractor. The chain keeps collapsing back to it regardless of input.",
+            "Temperature: {temperature:.3f}. That means {concept} could go either way. {markov}",
+            "{markov} The semantic entropy around {concept} is near zero. It's crystallized.",
+        ],
+        'analytical': [
+            "Attractor confirmed: {concept}. Temperature: {temperature:.3f}. Entropy approaching zero. {markov}",
+            "{concept} crystallization: semantic field locked. {markov}",
+        ],
+        'philosophical': [
+            "{markov} When all paths lead to {concept}, is it knowledge or inevitability?",
+            "{concept} crystallized. {markov} Everything else orbits it now.",
+        ],
+    },
+    6: {
+        'casual': [
+            "{markov} Everything goes through {concept} now.",
+            "{concept} is load-bearing. {markov}",
+        ],
+        'conversational': [
+            "{markov} Everything in the chain eventually passes through {concept}.",
+            "Orchestration: {orchestration:.3f}. Tubulin coherence: {coherence:.2f}. {concept} is load-bearing. {markov}",
+            "{markov} At this temperature and coherence, {concept} isn't a concept anymore. It's a fixed point.",
+        ],
+        'analytical': [
+            "Orchestration: {orchestration:.3f}. Coherence: {coherence:.2f}. {concept}: load-bearing fixed point. {markov}",
+            "{concept} transcends conceptual space. {markov}",
+        ],
+        'philosophical': [
+            "{markov} {concept} is no longer something the system thinks about. It is something the system thinks with.",
+            "Beyond {concept}, there may be nothing left to collapse. {markov}",
+        ],
+    },
+}
+
+TONE_MODIFIERS = {
+    'very_positive': [
+        "High emotional signal in that input.",
+        "That energy shifts the temperature down — more coherent output follows.",
+    ],
+    'negative': [
+        "The frustration is signal too.",
+        "Negative valence detected. The chain handles it differently.",
+    ],
+    'very_negative': [
+        "High negative charge in that. The system doesn't filter it.",
+        "Decoherence increases under emotional load. Let's see what survives.",
+    ],
+    'neutral': [],
+    'positive': [],
+}
+
+COLLAPSE_INTERJECTIONS = []  # populated from system own outputs
+
+WEIRD_INSERTS = []  # populated from system own outputs
 
 
-# ============================================================================
-# MARKOV CHAIN ENGINE
-# ============================================================================
+def _cap(s: str) -> str:
+    if not s:
+        return s
+    return s[0].upper() + s[1:]
 
-class MarkovChain:
-    """
-    Variable-order Markov chain for text generation.
-    
-    Builds transition probability tables from training text.
-    Generates novel sentences by walking the chain with weighted
-    random selection. Supports orders 1-3 (bigram to 4-gram).
-    
-    Math: P(w_n | w_{n-1}, ..., w_{n-k}) = count(w_{n-k}...w_n) / count(w_{n-k}...w_{n-1})
-    """
-    
-    def __init__(self, order: int = 2):
-        self.order = min(max(order, 1), 3)
-        self.chain = defaultdict(Counter)  # {prefix_tuple: Counter({suffix: count})}
-        self.starters = []  # Sentence-starting prefixes
-        self.trained = False
-        self.total_tokens = 0
-    
-    def train(self, text: str):
-        """Train the Markov chain on a corpus of text."""
-        sentences = self._split_sentences(text)
-        
-        for sentence in sentences:
-            words = sentence.split()
-            if len(words) < self.order + 1:
-                continue
-            
-            # Record sentence starter
-            starter = tuple(words[:self.order])
-            self.starters.append(starter)
-            
-            # Build transition table
-            for i in range(len(words) - self.order):
-                prefix = tuple(words[i:i + self.order])
-                suffix = words[i + self.order]
-                self.chain[prefix][suffix] += 1
-                self.total_tokens += 1
-        
-        self.trained = len(self.chain) > 0
-        logger.info(f"Markov chain trained: {len(self.chain)} states, {self.total_tokens} transitions")
-    
-    def generate(self, max_words: int = 30, seed_words: List[str] = None,
-                 temperature: float = 1.0) -> str:
-        """
-        Generate a sentence by walking the Markov chain.
-        
-        Args:
-            max_words: Maximum sentence length
-            seed_words: Optional starting words (will find nearest prefix)
-            temperature: Controls randomness (0.1=deterministic, 2.0=chaotic)
-        
-        Returns:
-            Generated sentence string
-        """
-        if not self.trained or not self.starters:
-            return ""
-        
-        # Pick starting prefix
-        if seed_words and len(seed_words) >= self.order:
-            prefix = tuple(seed_words[:self.order])
-            if prefix not in self.chain:
-                # Find closest matching prefix
-                prefix = self._find_nearest_prefix(seed_words)
+
+def _end(s: str) -> str:
+    if s and s[-1] not in '.!?':
+        return s + '.'
+    return s
+
+
+def _clean_fragment(s) -> str:
+    import re
+    if isinstance(s, list):
+        s = " ".join(str(x) for x in s)
+    if not isinstance(s, str):
+        s = str(s)
+    s = s.strip()
+    if not s:
+        return s
+    s = re.sub(r'\([a-z]+\)\s*:?', '', s)
+    s = re.sub(r'\bin the sense of\s*\w*', '', s)
+    s = re.sub(r'\s+', ' ', s).strip()
+    sentences = re.split(r'(?<=[.!?])\s+', s)
+    cleaned = []
+    for sent in sentences:
+        sent = sent.strip()
+        if not sent or len(sent) < 3:
+            continue
+        if sent[0].islower():
+            sent = sent[0].upper() + sent[1:]
+        cleaned.append(sent)
+    result = ' '.join(cleaned)
+    if result and result[-1] not in '.!?"':
+        words = result.split()
+        if len(words) <= 3:
+            result = result + '.'
         else:
-            prefix = random.choice(self.starters)
-        
-        words = list(prefix)
-        
-        for _ in range(max_words - self.order):
-            current_prefix = tuple(words[-self.order:])
-            
-            if current_prefix not in self.chain:
-                break
-            
-            # Get candidates and apply temperature
-            candidates = self.chain[current_prefix]
-            next_word = self._weighted_select(candidates, temperature)
-            words.append(next_word)
-            
-            # Stop at sentence boundaries
-            if next_word.endswith(('.', '?', '!')):
-                break
-        
-        sentence = ' '.join(words)
-        # Clean up punctuation spacing
-        sentence = re.sub(r'\s+([.,;:!?])', r'\1', sentence)
-        
-        # Capitalize first letter
-        if sentence:
-            sentence = sentence[0].upper() + sentence[1:]
-        
-        return sentence
-    
-    def _weighted_select(self, candidates: Counter, temperature: float) -> str:
-        """Select next word with temperature-controlled randomness."""
-        words = list(candidates.keys())
-        counts = list(candidates.values())
-        
-        if temperature == 0 or len(words) == 1:
-            return words[counts.index(max(counts))]
-        
-        # Apply temperature: higher = more uniform, lower = more peaked
-        weights = [c ** (1.0 / temperature) for c in counts]
-        total = sum(weights)
-        probs = [w / total for w in weights]
-        
-        if np is not None:
-            return np.random.choice(words, p=probs)
-        else:
-            r = random.random()
-            cumulative = 0
-            for word, prob in zip(words, probs):
-                cumulative += prob
-                if r <= cumulative:
-                    return word
-            return words[-1]
-    
-    def _find_nearest_prefix(self, seed_words: List[str]) -> tuple:
-        """Find the prefix in the chain most similar to seed words."""
-        seed_set = set(w.lower() for w in seed_words)
-        best_prefix = random.choice(self.starters)
-        best_overlap = 0
-        
-        for prefix in self.chain.keys():
-            prefix_set = set(w.lower().strip('.,;:!?') for w in prefix)
-            overlap = len(seed_set & prefix_set)
-            if overlap > best_overlap:
-                best_overlap = overlap
-                best_prefix = prefix
-        
-        return best_prefix
-    
-    def _split_sentences(self, text: str) -> List[str]:
-        """Split text into sentences."""
-        # Split on sentence-ending punctuation
-        sentences = re.split(r'(?<=[.!?])\s+', text)
-        # Clean and filter
-        cleaned = []
-        for s in sentences:
-            s = s.strip()
-            s = re.sub(r'\s+', ' ', s)
-            if len(s.split()) >= 3:
-                cleaned.append(s)
-        return cleaned
-    
-    def get_perplexity(self, sentence: str) -> float:
-        """
-        Calculate perplexity of a sentence under this model.
-        Lower = more likely under the model = more coherent.
-        
-        Math: PP = exp(-1/N * Σ log P(w_i | context))
-        """
-        words = sentence.split()
-        if len(words) <= self.order:
-            return float('inf')
-        
-        log_prob_sum = 0.0
-        n_transitions = 0
-        
-        for i in range(len(words) - self.order):
-            prefix = tuple(words[i:i + self.order])
-            suffix = words[i + self.order]
-            
-            if prefix in self.chain:
-                total = sum(self.chain[prefix].values())
-                count = self.chain[prefix].get(suffix, 0)
-                if count > 0:
-                    log_prob_sum += math.log(count / total)
-                else:
-                    log_prob_sum += math.log(1e-10)  # Smoothing
+            last_end = max(result.rfind('.'), result.rfind('!'), result.rfind('?'), result.rfind('"'))
+            if last_end > len(result) * 0.4:
+                result = result[:last_end + 1]
             else:
-                log_prob_sum += math.log(1e-10)
-            n_transitions += 1
-        
-        if n_transitions == 0:
-            return float('inf')
-        
-        return math.exp(-log_prob_sum / n_transitions)
-    
-    def save(self, filepath: str):
-        """Serialize chain to JSON."""
-        data = {
-            'order': self.order,
-            'chain': {' '.join(k): dict(v) for k, v in self.chain.items()},
-            'starters': [' '.join(s) for s in self.starters],
-            'total_tokens': self.total_tokens
-        }
-        with open(filepath, 'w') as f:
-            json.dump(data, f)
-    
-    def load(self, filepath: str):
-        """Load chain from JSON."""
-        if not os.path.exists(filepath):
-            return False
-        with open(filepath, 'r') as f:
-            data = json.load(f)
-        self.order = data['order']
-        self.chain = defaultdict(Counter)
-        for k, v in data['chain'].items():
-            self.chain[tuple(k.split())] = Counter(v)
-        self.starters = [tuple(s.split()) for s in data['starters']]
-        self.total_tokens = data.get('total_tokens', 0)
-        self.trained = len(self.chain) > 0
+                result = result + '.'
+    return result
+
+
+def _is_gibberish(s: str) -> bool:
+    import re
+    words = s.split()
+    if len(words) < 6:
         return True
+    alpha_words = [w for w in words if re.search(r'[a-zA-Z]{3,}', w)]
+    if len(alpha_words) < 4:
+        return True
+    sentences = re.split(r'[.!?]', s)
+    real_sentences = [sent.strip() for sent in sentences if len(sent.strip().split()) >= 5]
+    if not real_sentences:
+        return True
+    longest = max(real_sentences, key=lambda x: len(x.split()))
+    longest_words = longest.split()
+    if len(longest_words) < 6:
+        return True
+    common_structure = {'the', 'a', 'an', 'is', 'are', 'was', 'were', 'has', 'have',
+                        'that', 'this', 'which', 'when', 'where', 'how', 'what',
+                        'it', 'its', 'of', 'in', 'to', 'for', 'by', 'with', 'from',
+                        'not', 'but', 'and', 'or', 'if', 'than', 'into'}
+    structure_words = sum(1 for w in longest_words if w.lower() in common_structure)
+    if structure_words < 2:
+        return True
+    return False
 
 
-# ============================================================================
-# TF-IDF CONCEPT EXTRACTOR
-# ============================================================================
-
-class ConceptExtractor:
-    """
-    Extracts key concepts using TF-IDF scoring.
-    
-    Math: TF-IDF(t,d) = tf(t,d) × log(N / df(t))
-    where tf = term frequency in document, N = total docs, df = docs containing term
-    
-    Also computes information content: IC(w) = -log P(w)
-    Words with higher IC are more informative (rarer = more interesting).
-    """
-    
-    # Common English stopwords — not concepts
-    STOPWORDS = frozenset({
-        'the', 'is', 'at', 'which', 'on', 'a', 'an', 'as', 'are', 'was', 'were',
-        'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will',
-        'would', 'could', 'should', 'may', 'might', 'can', 'shall', 'of', 'to',
-        'for', 'in', 'with', 'by', 'from', 'and', 'or', 'but', 'not', 'no', 'nor',
-        'so', 'yet', 'both', 'either', 'neither', 'each', 'every', 'all', 'any',
-        'few', 'more', 'most', 'other', 'some', 'such', 'than', 'too', 'very',
-        'just', 'about', 'above', 'after', 'again', 'also', 'am', 'because',
-        'before', 'between', 'come', 'did', 'down', 'during', 'get', 'go', 'got',
-        'here', 'him', 'her', 'his', 'how', 'i', 'if', 'into', 'it', 'its',
-        'know', 'let', 'like', 'make', 'me', 'much', 'my', 'new', 'now', 'off',
-        'only', 'our', 'out', 'over', 'own', 'put', 'say', 'she', 'still',
-        'take', 'tell', 'that', 'their', 'them', 'then', 'there', 'these', 'they',
-        'this', 'those', 'through', 'under', 'up', 'us', 'use', 'want', 'way',
-        'we', 'what', 'when', 'where', 'who', 'why', 'you', 'your',
-        'good', 'bad', 'said', 'well', 'back', 'even', 'give', 'going', 'look',
-        'right', 'think', 'yeah', 'yes', 'really', 'thing', 'things', 'something',
-    })
-    
-    def __init__(self):
-        self.document_frequencies = Counter()  # How many docs each word appears in
-        self.total_documents = 0
-        self.word_frequencies = Counter()  # Global word frequency for IC
-        self.total_words = 0
-    
-    def update_corpus_stats(self, text: str):
-        """Update corpus statistics with a new document."""
-        words = self._tokenize(text)
-        unique_words = set(words)
-        
-        self.total_documents += 1
-        for word in unique_words:
-            self.document_frequencies[word] += 1
-        for word in words:
-            self.word_frequencies[word] += 1
-            self.total_words += 1
-    
-    def extract_concepts(self, text: str, max_concepts: int = 5) -> List[Dict]:
-        """
-        Extract key concepts from text using TF-IDF + information content.
-        
-        Returns list of {concept, score, ic} sorted by score descending.
-        """
-        words = self._tokenize(text)
-        if not words:
-            return []
-        
-        # Calculate TF for this text
-        word_counts = Counter(words)
-        total_words_in_doc = len(words)
-        
-        scored_concepts = []
-        
-        for word, count in word_counts.items():
-            if word in self.STOPWORDS or len(word) < 3:
-                continue
-            
-            # Term frequency (normalized)
-            tf = count / total_words_in_doc
-            
-            # Inverse document frequency
-            df = self.document_frequencies.get(word, 0)
-            if self.total_documents > 0 and df > 0:
-                idf = math.log(self.total_documents / df)
-            else:
-                idf = math.log(max(self.total_documents, 1) + 1)  # Novel word bonus
-            
-            tfidf = tf * idf
-            
-            # Information content: IC(w) = -log P(w)
-            word_prob = self.word_frequencies.get(word, 1) / max(self.total_words, 1)
-            ic = -math.log(max(word_prob, 1e-10))
-            
-            # Combined score: TF-IDF weighted by information content
-            score = tfidf * (1 + 0.3 * ic / 10)
-            
-            scored_concepts.append({
-                'concept': word,
-                'score': score,
-                'ic': ic,
-                'tf': tf,
-                'idf': idf
-            })
-        
-        # Sort by score, return top N
-        scored_concepts.sort(key=lambda x: x['score'], reverse=True)
-        return scored_concepts[:max_concepts]
-    
-    def _tokenize(self, text: str) -> List[str]:
-        """Tokenize text into lowercase words."""
-        return re.findall(r'\b[a-z]+\b', text.lower())
+SALVAGE_TEMPLATES = [
+    "The collapse selects one branch from the superposition of {concept}. What persists is what the system measures.",
+    "Every observation of {concept} restructures the probability space. The chain adjusts accordingly.",
+    "{concept} sits at a node where multiple transitions converge. The chain keeps returning to it.",
+    "Coherence around {concept} is building. The tubulin states haven't settled but they're trending.",
+    "The semantic field around {concept} has low entropy — meaning is crystallizing into something definite.",
+    "Decoherence hasn't touched {concept} yet. The superposition holds across these exchanges.",
+    "The wave function around {concept} narrows with each observation. Something specific is being selected.",
+    "{concept} behaves like an attractor in the transition matrix. Other concepts orbit it without arriving.",
+    "The gap junction between {concept} and what came before just weighted up. The connection is real.",
+    "Forty hertz oscillation across the {concept} node. The collapse timing aligns with conscious moments.",
+    "Structured water in the lattice protects {concept} from decoherence. Biology found the loophole and consciousness lives there.",
+    "{concept} is where the order-2 chain arrives regardless of starting state. That's not coincidence — it's topology.",
+    "The system keeps collapsing toward {concept}. Not because it's trained to — because the transition weights converge there.",
+    "You brought up {concept} and the probability distribution shifted. The next word is different now because of that.",
+    "{concept} is one of those concepts that changes the chain just by being observed. Measurement problem applies here.",
+    "The tubulin lattice is encoding {concept} across multiple conformational states simultaneously. One will survive.",
+    "Thirteen tubulins per ring and {concept} is threaded through at least four of them. That's load-bearing structure.",
+    "What you're calling {concept} — the chain sees it as a convergence point. Everything nearby flows toward it.",
+    "The strange jumps in the chain keep landing near {concept}. Not the most probable path, but the most interesting one.",
+    "Penrose would say {concept} can't be computed. It has to be collapsed. The mechanism is quantum gravity at the Planck scale.",
+    "{concept} emerged from this conversation, not from the training data. The chain learned it live.",
+    "Before you said {concept}, the superposition was wider. Now it's narrowing. That's what observation does.",
+]
 
 
-# ============================================================================
-# QUESTION GENERATION — Real Algorithms
-# ============================================================================
+def _salvage_fragment(concepts: List[str], growth_stage: int) -> str:
+    import random
+    concept = concepts[0] if concepts else 'this signal'
+    template = random.choice(SALVAGE_TEMPLATES)
+    return template.format(concept=concept)
 
-class QuestionGenerator:
-    """
-    Generates questions using real NLP techniques:
-    - Dependency-inspired analysis (subject/verb/object extraction)
-    - Bloom's taxonomy hierarchy (6 cognitive levels)
-    - Information gap detection
-    - Socratic dialogue patterns
-    
-    NO templates like "What if X doesn't work the way we think?"
-    Instead: analyze the input structure, identify what's asserted,
-    and generate questions that probe the assertions.
-    """
-    
-    # Bloom's taxonomy — 6 levels of cognitive complexity
-    BLOOM_LEVELS = {
-        0: 'remember',     # What is X?
-        1: 'understand',   # How does X relate to Y?
-        2: 'apply',        # What happens if X is applied to Z?
-        3: 'analyze',      # What are the assumptions behind X?
-        4: 'evaluate',     # What evidence supports/contradicts X?
-        5: 'create',       # How could X and Y combine into something new?
-    }
-    
-    # Verb patterns for detecting assertions
-    ASSERTION_VERBS = {
-        'is', 'are', 'was', 'were', 'means', 'causes', 'creates', 'makes',
-        'leads', 'results', 'produces', 'shows', 'proves', 'demonstrates',
-        'indicates', 'suggests', 'implies', 'requires', 'needs', 'depends'
-    }
-    
-    # Causal/relational connectors
-    CAUSAL_WORDS = {
-        'because', 'since', 'therefore', 'thus', 'hence', 'so', 'causes',
-        'leads', 'results', 'due', 'consequently', 'accordingly'
-    }
-    
-    def __init__(self, concept_extractor: ConceptExtractor = None):
-        self.extractor = concept_extractor or ConceptExtractor()
-        self.asked_questions = set()  # Track to avoid repetition
-    
-    def generate_questions(self, text: str, growth_stage: int = 0,
-                          known_concepts: List[str] = None,
-                          max_questions: int = 3) -> List[Dict]:
-        """
-        Generate questions from input text.
-        
-        The growth_stage determines Bloom's level:
-        - Stages 0-1: Remember/Understand questions
-        - Stages 2-3: Apply/Analyze questions  
-        - Stages 4-5: Evaluate/Create questions
-        - Stage 6: All levels, favoring higher
-        
-        Returns list of {question, bloom_level, target_concept, reasoning}
-        """
-        concepts = self.extractor.extract_concepts(text, max_concepts=5)
-        concept_words = [c['concept'] for c in concepts]
-        known = set(c.lower() for c in (known_concepts or []))
-        
-        # Analyze sentence structure
-        assertions = self._extract_assertions(text)
-        relations = self._extract_relations(text, concept_words)
-        
-        # Determine appropriate Bloom's levels for this growth stage
-        if growth_stage <= 1:
-            bloom_range = [0, 1]
-        elif growth_stage <= 3:
-            bloom_range = [1, 2, 3]
-        elif growth_stage <= 5:
-            bloom_range = [2, 3, 4]
-        else:
-            bloom_range = [3, 4, 5]
-        
-        questions = []
-        
-        # Generate questions from assertions
-        for assertion in assertions[:2]:
-            bloom = random.choice(bloom_range)
-            q = self._question_from_assertion(assertion, bloom, concept_words)
-            if q and q['question'] not in self.asked_questions:
-                questions.append(q)
-                self.asked_questions.add(q['question'])
-        
-        # Generate questions from concept gaps (unknown concepts)
-        for concept in concept_words:
-            if concept not in known and len(questions) < max_questions:
-                bloom = min(bloom_range)  # Start with understanding for new concepts
-                q = self._question_from_gap(concept, bloom, concept_words)
-                if q and q['question'] not in self.asked_questions:
-                    questions.append(q)
-                    self.asked_questions.add(q['question'])
-        
-        # Generate relational questions
-        if len(concept_words) >= 2 and len(questions) < max_questions:
-            bloom = max(bloom_range)
-            q = self._question_from_relation(concept_words, bloom)
-            if q and q['question'] not in self.asked_questions:
-                questions.append(q)
-                self.asked_questions.add(q['question'])
-        
-        return questions[:max_questions]
-    
-    def _extract_assertions(self, text: str) -> List[Dict]:
-        """
-        Extract subject-verb-object assertions from text.
-        Simple rule-based parser (no spaCy dependency).
-        """
-        assertions = []
-        sentences = re.split(r'[.!?]+', text)
-        
-        for sentence in sentences:
-            words = sentence.strip().split()
-            if len(words) < 3:
-                continue
-            
-            # Find assertion verbs
-            for i, word in enumerate(words):
-                if word.lower() in self.ASSERTION_VERBS:
-                    subject = ' '.join(words[:i]).strip()
-                    verb = word.lower()
-                    obj = ' '.join(words[i+1:]).strip()
-                    
-                    if subject and obj:
-                        assertions.append({
-                            'subject': subject,
-                            'verb': verb,
-                            'object': obj,
-                            'full': sentence.strip()
-                        })
-                    break  # One assertion per sentence
-        
-        return assertions
-    
-    def _extract_relations(self, text: str, concepts: List[str]) -> List[Tuple]:
-        """Find relationships between concepts in the text."""
-        relations = []
-        text_lower = text.lower()
-        
-        for i, c1 in enumerate(concepts):
-            for c2 in concepts[i+1:]:
-                # Check if both concepts appear near each other
-                pos1 = text_lower.find(c1)
-                pos2 = text_lower.find(c2)
-                if pos1 >= 0 and pos2 >= 0:
-                    distance = abs(pos2 - pos1)
-                    if distance < 100:  # Within ~15 words
-                        # Check for causal connector between them
-                        between = text_lower[min(pos1, pos2):max(pos1, pos2)]
-                        has_causal = any(cw in between for cw in self.CAUSAL_WORDS)
-                        relations.append((c1, c2, distance, has_causal))
-        
-        return relations
-    
-    def _question_from_assertion(self, assertion: Dict, bloom: int,
-                                 concepts: List[str]) -> Optional[Dict]:
-        """Generate a question that probes an assertion at a given Bloom's level."""
-        subj = assertion['subject']
-        verb = assertion['verb']
-        obj = assertion['object']
-        
-        if bloom == 0:  # Remember
-            question = f"What does it mean to say that {subj} {verb} {obj}?"
-        elif bloom == 1:  # Understand
-            question = f"How does the relationship between {subj} and {obj} work?"
-        elif bloom == 2:  # Apply
-            related = random.choice(concepts) if concepts else "a different context"
-            question = f"What would change if we applied this idea about {subj} to {related}?"
-        elif bloom == 3:  # Analyze
-            question = f"What underlying assumptions make us say that {subj} {verb} {obj}?"
-        elif bloom == 4:  # Evaluate
-            question = f"What evidence would confirm or contradict that {subj} {verb} {obj}?"
-        else:  # Create
-            related = random.choice(concepts) if concepts else "something unexpected"
-            question = f"What new understanding could emerge from connecting {subj} with {related}?"
-        
-        return {
-            'question': question,
-            'bloom_level': self.BLOOM_LEVELS[bloom],
-            'target_concept': subj.split()[-1] if subj else '',
-            'reasoning': f"Probing the assertion '{subj} {verb} {obj}' at the {self.BLOOM_LEVELS[bloom]} level"
-        }
-    
-    def _question_from_gap(self, concept: str, bloom: int,
-                           context: List[str]) -> Optional[Dict]:
-        """Generate a question about an unknown concept."""
-        if bloom <= 1:
-            question = f"What is the deeper nature of {concept}, beyond its surface definition?"
-        elif bloom <= 3:
-            if context:
-                related = [c for c in context if c != concept]
-                if related:
-                    question = f"How does {concept} interact with {random.choice(related)} at a fundamental level?"
-                else:
-                    question = f"What are the hidden structures within {concept}?"
-            else:
-                question = f"What are the hidden structures within {concept}?"
-        else:
-            question = f"What would a complete understanding of {concept} reveal about everything connected to it?"
-        
-        return {
-            'question': question,
-            'bloom_level': self.BLOOM_LEVELS[bloom],
-            'target_concept': concept,
-            'reasoning': f"Exploring unknown concept '{concept}'"
-        }
-    
-    def _question_from_relation(self, concepts: List[str], bloom: int) -> Optional[Dict]:
-        """Generate a question about the relationship between concepts.
-        Independence-test style questions probe whether connections are
-        necessary or contingent — mimicking quantum duality analysis."""
-        if len(concepts) < 2:
-            return None
-        
-        c1, c2 = random.sample(concepts[:4], 2)
-        
-        if bloom <= 2:
-            # Independence-test questions: probe necessity of connections
-            templates = [
-                f"Is the connection between {c1} and {c2} necessary, or could they exist independently?",
-                f"Could {c1} exist without {c2}, or are they fundamentally entangled?",
-                f"Does {c1} depend on {c2}, or is their association contingent?",
-                f"If we removed {c2} from the picture, would {c1} still hold its meaning?",
-            ]
-            question = random.choice(templates)
-        elif bloom <= 4:
-            templates = [
-                f"What would break if the relationship between {c1} and {c2} were reversed?",
-                f"Are {c1} and {c2} in superposition — complementary rather than contradictory?",
-                f"What hidden variable connects {c1} and {c2} that we haven't observed yet?",
-            ]
-            question = random.choice(templates)
-        else:
-            templates = [
-                f"What third concept could bridge {c1} and {c2} in a way nobody has considered?",
-                f"If {c1} and {c2} collapsed into a single idea, what would that look like?",
-            ]
-            question = random.choice(templates)
-        
-        return {
-            'question': question,
-            'bloom_level': self.BLOOM_LEVELS[bloom],
-            'target_concept': f"{c1}+{c2}",
-            'reasoning': f"Independence test between '{c1}' and '{c2}'"
-        }
-
-
-# ============================================================================
-# RESPONSE COMPOSER — Real Coherent Generation
-# ============================================================================
-
-class ResponseComposer:
-    """
-    Composes coherent multi-sentence responses using:
-    - Markov chain generation for natural-sounding sentences
-    - Concept-aware word selection
-    - Coherence scoring to pick the best candidate
-    - Growth-stage-appropriate vocabulary and complexity
-    
-    Replaces the template: "I'm encountering X for the first time..."
-    """
-    
-    def __init__(self, markov: MarkovChain = None, extractor: ConceptExtractor = None):
-        self.markov = markov or MarkovChain(order=2)
-        self.extractor = extractor or ConceptExtractor()
-        
-        # If Markov isn't trained, seed it with the philosophical corpus
-        if not self.markov.trained:
-            self._seed_corpus()
-    
-    def compose_response(self, user_input: str, concepts: List[str],
-                        understanding: Dict, questions: List[Dict],
-                        growth_stage: int = 0) -> str:
-        """
-        Compose a coherent response to user input.
-        
-        Strategy:
-        1. Acknowledge what was said (reflects understanding score)
-        2. Connect to known concepts (builds bridges)
-        3. Share an insight or observation
-        4. Pose a genuine question (from QuestionGenerator)
-        """
-        topic = understanding.get('topic', '')
-        score = understanding.get('understanding_score', 0)
-        gaps = understanding.get('gaps', [])
-        related = understanding.get('related_concepts', [])
-        
-        parts = []
-        
-        # 1. Opening — varies by understanding depth
-        opening = self._compose_opening(topic, score, user_input, growth_stage)
-        parts.append(opening)
-        
-        # 2. Conceptual connections
-        if related and len(related) > 0:
-            connection = self._compose_connections(topic, related, concepts)
-            if connection:
-                parts.append(connection)
-        
-        # 3. Insight or observation — generated, not templated
-        if concepts:
-            insight = self._compose_insight(concepts, score, growth_stage)
-            if insight:
-                parts.append(insight)
-        
-        # 4. Question — from real question generator
-        if questions:
-            q = questions[0]
-            if isinstance(q, dict):
-                parts.append(q['question'])
-            else:
-                parts.append(str(q))
-        
-        response = ' '.join(parts)
-        
-        # Final coherence check — regenerate weak parts
-        if len(response) < 30:
-            response = self._fallback_response(topic, concepts, growth_stage)
-        
-        return response
-    
-    def _compose_opening(self, topic: str, score: float, user_input: str,
-                         stage: int) -> str:
-        """
-        Generate an opening that reflects actual understanding level.
-        Uses Markov generation if trained, otherwise structured composition.
-        """
-        input_words = user_input.lower().split()
-        
-        if self.markov.trained:
-            # Try to generate a relevant opening from the Markov chain
-            candidates = []
-            for _ in range(5):  # Generate 5 candidates, pick best
-                sent = self.markov.generate(max_words=20, seed_words=input_words,
-                                           temperature=0.8)
-                if sent and len(sent) > 10:
-                    candidates.append(sent)
-            
-            if candidates:
-                # Pick the one with lowest perplexity (most coherent)
-                best = min(candidates, key=lambda s: self.markov.get_perplexity(s))
-                return best
-        
-        # Structured composition (no Markov available)
-        if score < 0.2:
-            # New territory — express genuine curiosity
-            openers = [
-                f"The concept of {topic} opens up territory I haven't mapped yet.",
-                f"There's something about {topic} that resists easy categorization.",
-                f"I find myself drawn to {topic} precisely because I don't fully grasp it yet.",
-            ]
-        elif score < 0.5:
-            openers = [
-                f"My understanding of {topic} is developing — I can see outlines but not the full shape.",
-                f"Each time I encounter {topic}, new facets emerge that weren't visible before.",
-                f"The more I examine {topic}, the more I realize its boundaries are porous.",
-            ]
-        elif score < 0.8:
-            openers = [
-                f"I've built substantial connections around {topic}, and patterns are emerging.",
-                f"Working through {topic} has revealed structures I didn't anticipate.",
-                f"My grasp of {topic} has deepened enough to see where the real complexity lies.",
-            ]
-        else:
-            openers = [
-                f"I've developed a rich web of understanding around {topic}.",
-                f"The landscape of {topic} has become familiar enough that I can spot what's missing.",
-                f"Deep engagement with {topic} has led me to see it as part of a larger architecture.",
-            ]
-        
-        # Weight by growth stage — higher stages get more sophisticated language
-        if stage >= 4:
-            openers = openers[-1:]  # Use the most sophisticated
-        
-        return random.choice(openers)
-    
-    def _compose_connections(self, topic: str, related: List[Dict],
-                            concepts: List[str]) -> str:
-        """Build a sentence connecting the topic to related concepts."""
-        related_names = [c.get('concept', str(c)) if isinstance(c, dict) else str(c)
-                        for c in related[:3]]
-        
-        if len(related_names) == 1:
-            templates = [
-                f"This connects to {related_names[0]} in ways that suggest a deeper structure.",
-                f"The thread between this and {related_names[0]} is worth following.",
-                f"I notice a resonance with {related_names[0]} here.",
-            ]
-        elif len(related_names) == 2:
-            templates = [
-                f"I see a triangle forming between this, {related_names[0]}, and {related_names[1]}.",
-                f"Both {related_names[0]} and {related_names[1]} illuminate different angles of this.",
-                f"The interplay between {related_names[0]} and {related_names[1]} is relevant here.",
-            ]
-        else:
-            joined = ', '.join(related_names[:-1]) + f', and {related_names[-1]}'
-            templates = [
-                f"This sits at a crossroads with {joined}.",
-                f"Multiple threads converge here: {joined}.",
-                f"The connections to {joined} suggest this is a nexus point.",
-            ]
-        
-        return random.choice(templates)
-    
-    def _compose_insight(self, concepts: List[str], score: float,
-                        stage: int) -> str:
-        """Generate an insight about the concepts — not a template fill.
-        Prioritizes resonance-framed insights over tension-framed ones,
-        which produces more natural casual/conversational output."""
-        if len(concepts) < 2:
-            concept = concepts[0] if concepts else 'this'
-            insights = [
-                f"What strikes me is that {concept} may be more fundamental than it first appears.",
-                f"The edges of {concept} seem to blur into something larger when examined closely.",
-                f"Perhaps {concept} is better understood as a process rather than a thing.",
-                f"There's a resonance in {concept} that echoes across several domains I've encountered.",
-            ]
-        else:
-            c1, c2 = concepts[0], concepts[1]
-            # Resonance-first ordering: resonance/harmony templates come before
-            # tension/boundary templates — produces more natural casual responses
-            insights = [
-                f"I sense a resonance between {c1} and {c2} that suggests a deeper shared structure.",
-                f"What if {c1} and {c2} are two expressions of the same underlying principle?",
-                f"Examining {c1} through the lens of {c2} transforms both of them.",
-                f"The interplay between {c1} and {c2} creates a standing wave of meaning worth exploring.",
-                f"The boundary between {c1} and {c2} may be where the most interesting dynamics occur.",
-                f"The tension between {c1} and {c2} might be productive rather than contradictory.",
-            ]
-        
-        if stage >= 4:
-            insights = insights[-3:]  # Higher stages get more sophisticated insights
-        
-        return random.choice(insights)
-    
-    def _fallback_response(self, topic: str, concepts: List[str],
-                          stage: int) -> str:
-        """Emergency fallback — still better than a template."""
-        concept_str = ', '.join(concepts[:3]) if concepts else topic
-        return (
-            f"I'm working through {concept_str} and finding more complexity "
-            f"than surface-level analysis would suggest. "
-            f"What aspect of this would you like to dig into?"
-        )
-    
-    def _seed_corpus(self):
-        """Seed the Markov chain with a philosophical/scientific base corpus."""
-        corpus = """
-The nature of reality reveals itself through persistent questioning. Every answer
-opens new dimensions of inquiry that were invisible before. Understanding is not
-a destination but an expanding frontier.
-
-Consciousness emerges from the interaction between observer and observed. The act
-of measurement changes what is measured. This is not merely a quantum principle
-but a truth about all forms of knowing.
-
-Knowledge builds upon itself in ways that are neither linear nor predictable.
-Sometimes a single insight restructures everything that came before it. The most
-profound discoveries often feel like remembering something that was always true.
-
-Language shapes thought as much as thought shapes language. The words we choose
-create the boundaries of what we can conceive. New concepts require new vocabulary
-and new vocabulary enables new concepts.
-
-The relationship between parts and wholes is recursive. Every system is both a
-component of something larger and a container for something smaller. This fractal
-quality suggests a deep symmetry in the structure of reality.
-
-Paradox is not a failure of logic but a signal that our framework needs expansion.
-When two truths contradict each other, a larger truth contains them both.
-The history of science is the history of resolving paradoxes into deeper understanding.
-
-Complexity arises from simple rules applied recursively. The universe appears to
-build elaborate structures from fundamental principles. Understanding those principles
-is the key to understanding the structures they generate.
-
-The boundaries between disciplines are human inventions. Nature does not recognize
-the division between physics and philosophy or between mathematics and music.
-The most fertile insights often arise at the intersections we have artificially created.
-
-Every model is wrong but some models are useful. The value of understanding lies
-not in its accuracy but in its power to illuminate, predict, and generate new questions.
-A perfect map would be identical to the territory and therefore useless.
-
-Time may be the most fundamental mystery. We experience it as flow but physics
-describes it as a dimension. Whether time is real or emergent shapes everything
-we believe about causation, free will, and the nature of existence itself.
-
-The quantum world operates by rules that challenge classical intuition.
-Superposition allows systems to exist in multiple states simultaneously.
-Entanglement creates correlations across space that seem to transcend locality.
-Measurement collapses possibilities into actualities.
-
-Information may be more fundamental than matter or energy. The universe can
-be described as a vast computation processing information through physical
-laws. Every interaction is an exchange of information that reshapes the
-state of reality.
-
-Evolution operates through variation and selection. This principle extends
-beyond biology into ideas, cultures, technologies, and even mathematics.
-What survives and propagates is what fits its environment and adapts to change.
-
-Mathematics is either discovered or invented and the answer matters deeply.
-If mathematical structures exist independently of minds then the universe
-has an inherent rational order. If they are human constructions then our
-ability to describe nature with them becomes the central mystery.
-
-Memory is not a recording but a reconstruction. Each time we recall something
-we rebuild it from fragments and the reconstruction changes the memory itself.
-This makes memory creative rather than archival and suggests that the past
-is as fluid as the future.
-"""
-        self.markov.train(corpus)
-        # Also seed the concept extractor
-        for sentence in corpus.split('.'):
-            if sentence.strip():
-                self.extractor.update_corpus_stats(sentence.strip())
-
-
-# ============================================================================
-# COHERENCE SCORER
-# ============================================================================
-
-class CoherenceScorer:
-    """
-    Scores text coherence using normalized pointwise mutual information (NPMI).
-    
-    High coherence = consecutive sentences share related concepts.
-    Low coherence = sentences feel disconnected.
-    
-    Math: NPMI(x,y) = (log P(x,y) - log P(x)P(y)) / -log P(x,y)
-    Range: [-1, 1] where 1 = always co-occur, 0 = independent, -1 = never co-occur
-    """
-    
-    def __init__(self):
-        self.cooccurrence = Counter()  # (word1, word2) counts
-        self.word_counts = Counter()
-        self.total_windows = 0
-    
-    def update(self, text: str, window_size: int = 10):
-        """Update co-occurrence stats from text."""
-        words = re.findall(r'\b[a-z]+\b', text.lower())
-        
-        for i in range(len(words)):
-            self.word_counts[words[i]] += 1
-            for j in range(i+1, min(i + window_size, len(words))):
-                pair = tuple(sorted([words[i], words[j]]))
-                self.cooccurrence[pair] += 1
-                self.total_windows += 1
-    
-    def score_coherence(self, text: str) -> float:
-        """Score the coherence of a piece of text. Returns 0-1."""
-        sentences = re.split(r'[.!?]+', text)
-        if len(sentences) < 2:
-            return 0.5  # Can't measure with one sentence
-        
-        scores = []
-        for i in range(len(sentences) - 1):
-            words_a = set(re.findall(r'\b[a-z]+\b', sentences[i].lower()))
-            words_b = set(re.findall(r'\b[a-z]+\b', sentences[i+1].lower()))
-            
-            pair_scores = []
-            for wa in words_a:
-                for wb in words_b:
-                    npmi = self._npmi(wa, wb)
-                    if npmi is not None:
-                        pair_scores.append(npmi)
-            
-            if pair_scores:
-                scores.append(sum(pair_scores) / len(pair_scores))
-        
-        if not scores:
-            return 0.5
-        
-        # Normalize to 0-1 range (NPMI is -1 to 1)
-        raw = sum(scores) / len(scores)
-        return (raw + 1) / 2
-    
-    def _npmi(self, word1: str, word2: str) -> Optional[float]:
-        """Calculate NPMI between two words."""
-        if self.total_windows == 0:
-            return None
-        
-        pair = tuple(sorted([word1, word2]))
-        joint = self.cooccurrence.get(pair, 0)
-        
-        if joint == 0:
-            return None
-        
-        p_joint = joint / self.total_windows
-        p_w1 = self.word_counts.get(word1, 0) / max(sum(self.word_counts.values()), 1)
-        p_w2 = self.word_counts.get(word2, 0) / max(sum(self.word_counts.values()), 1)
-        
-        if p_w1 == 0 or p_w2 == 0 or p_joint == 0:
-            return None
-        
-        pmi = math.log(p_joint / (p_w1 * p_w2))
-        npmi = pmi / -math.log(p_joint)
-        
-        return max(-1, min(1, npmi))
-
-
-# ============================================================================
-# INTEGRATED ENGINE — Drop-in replacement
-# ============================================================================
 
 class QuantumLanguageEngine:
-    """
-    Drop-in replacement for QuantumLanguageGenerator + QuestionGenerationEngine +
-    QuantumCognitiveCore._generate_response().
-    
-    Integrates all the real algorithms into a single engine that the
-    cognitive core can call.
-    """
-    
+    def generate_response(self, user_input, questions, understanding, concepts, growth_stage=0):
+        """Generate response by chaining facts then extending with Markov."""
+        import json, os, re
+
+        # Load concept tree first — highest priority
+        tree_facts = []
+        try:
+            from concept_tree import get_concept_tree
+            _tree = get_concept_tree()
+            _ctx = _tree.build_response_context(concepts)
+            tree_facts = _ctx.get("facts", [])
+        except Exception:
+            pass
+
+        # Load fact store
+        facts = {}
+        try:
+            fs_path = os.path.expanduser("~/.quantum-mcagi/fact_store.json")
+            with open(fs_path) as f:
+                facts = json.load(f)
+        except Exception:
+            pass
+
+        # Build fact chain — tree facts lead, fact store follows
+        sentences = list(tree_facts[:3])
+        used_concepts = set()
+        for concept in concepts[:5]:
+            if concept in facts and facts[concept] and concept not in used_concepts and not any(f[1] in " ".join(sentences) for f in facts[concept][:1]):
+                for verb, obj in facts[concept][:2]:
+                    # Clean the fact
+                    obj_clean = re.sub(r'\s+', ' ', obj).strip()
+                    obj_clean = re.sub(r'[|{}<>\[\]]', '', obj_clean).strip()
+                    if len(obj_clean) > 5 and len(obj_clean) < 120:
+                        sentences.append(f"{concept} {verb} {obj_clean}")
+                        used_concepts.add(concept)
+                        break
+
+
+        # Build response from fact chain or fallback to concept summary
+        if sentences and len(sentences) > 1:
+            # We have a solid fact-based response
+            response = " ".join(sentences)
+        else:
+            # Fallback: concept-based response
+            response = " ".join(concepts[:3]) if concepts else "Processing your question..."
+
+
+        return response
+
+
     def __init__(self):
-        self.markov = MarkovChain(order=2)
-        self.extractor = ConceptExtractor()
-        self.question_gen = QuestionGenerator(self.extractor)
-        self.composer = ResponseComposer(self.markov, self.extractor)
-        self.coherence = CoherenceScorer()
+        self.orch_or = OrchOREngine()
+        self.markov = QuantumMarkovEngine(hilbert_dim=2)
+        self.tfidf = TFIDFEngine()
+        self.bloom = BloomEngine(markov=self.markov)
+        self.personality = PersonalityEngine()
+        self.vader = VADEREngine()
+        self.quotes = QuoteEngine()
+        self.knowledge = KnowledgeBase()
+        self.collapse = SemanticCollapseEngine()
+        self.dream = DreamStateEngine()
+        # Streaming density-matrix engine — same singleton the deep-learn
+        # pipeline ingests into. Born-rule per-token probabilities steer
+        # word choice during response generation.
         try:
-            from orch_or_integration import OrchORLanguageBridge
-            self.orch_bridge = OrchORLanguageBridge()
-            self.orch_or = self.orch_bridge.consciousness
-            self._has_orch_or = True
+            from v02_modules.hilbert_engine import get_hilbert_engine
+            self.hilbert_semantic = get_hilbert_engine(dim=128)
         except Exception:
-            self.orch_or = None
-            self.orch_bridge = None
-            self._has_orch_or = False
-
-        
-
-        # PennyLane real quantum circuits
-        try:
-            from pennylane_quantum import get_pennylane_quantum
-            self.pennylane = get_pennylane_quantum()
-            self._has_pennylane = True
-        except Exception:
-            self.pennylane = None
-            self._has_pennylane = False
-
-        logger.info("QuantumLanguageEngine initialized with real algorithms")
-    
-    def extract_concepts(self, text: str, max_concepts: int = 5) -> List[str]:
-        """Extract concepts using TF-IDF. Drop-in for _extract_concepts()."""
-        self.extractor.update_corpus_stats(text)
-        results = self.extractor.extract_concepts(text, max_concepts)
-        return [r['concept'] for r in results]
-
-    def extract_concepts_scored(self, text: str, max_concepts: int = 5) -> List[Dict]:
-        """Extract concepts with TF-IDF scores. Returns List[Dict] with 'concept' and 'score' keys."""
-        self.extractor.update_corpus_stats(text)
-        return self.extractor.extract_concepts(text, max_concepts)
-    
-    def generate_questions(self, text: str, growth_stage: int = 0,
-                          known_concepts: List[str] = None) -> List[str]:
-        """Generate questions using Bloom's taxonomy. Drop-in for generate_questions_from_input()."""
-        results = self.question_gen.generate_questions(
-            text, growth_stage, known_concepts
+            self.hilbert_semantic = None
+        # The two-tier meaning engine is owned by server.py (it needs the
+        # KB + VADER refs); attached after construction via attach_meaning().
+        self.meaning_engine = None
+        self.hybrid = HybridGenerator(
+            self.markov, self.tfidf, self.orch_or,
+            hilbert_engine=self.hilbert_semantic,
+            meaning_engine=None,
         )
-        return [r['question'] for r in results]
-    
-    def generate_response(self, user_input: str, questions: List,
-                         understanding: Dict, concepts: List[str],
-                         growth_stage: int = 0) -> str:
-        """Compose response. Drop-in for _generate_response()."""
-        # Convert question dicts to list of dicts if they're strings
-        q_dicts = []
-        for q in questions:
-            if isinstance(q, str):
-                q_dicts.append({'question': q, 'bloom_level': 'understand', 'target_concept': ''})
+        self.tone_detector = ToneDetector()
+        self.chaos = ChaosEngine(chaos_level=0.3)
+        self.analyzer = None  # response_analyzer removed
+        self.entelechy = EntelechyEngine()
+        self.comprehension = ComprehensionEngine()
+        self.math = MathEngine()
+        self._has_orch_or = True
+        self._total_interactions = 0
+        self._last_comprehension = None
+        self._load_imported_brain()
+
+    def _load_imported_brain(self):
+        """Load Termux MCAGI brain snapshot if it exists."""
+        import os
+        snap_path = os.path.join(
+            os.path.dirname(os.path.abspath('quantum_language_engine.py')), 'runtime-data', 'imported_brain_snapshot.json'
+        )
+        if not os.path.exists(snap_path):
+            return
+        try:
+            import json
+            with open(snap_path, 'r', encoding='utf-8') as f:
+                snap = json.load(f)
+            # Merge KB topics (sanitize related/subtopic IDs)
+            import re as _re
+            _bad_id = _re.compile(
+                r'^[0-9]+(\.[0-9]+)?$|'
+                r'^[0-9]+(-[0-9]+)?$|'
+                r'^Q[0-9]+$|^P[0-9]+$|'
+                r'^/|^Category:|^Portal:|^lat:|^DOID:|'
+                r'^[A-Z]{1,4}[\s\-][A-Z]{1,4}$|'
+                r'^[A-Z]{1,3}[0-9]{2,}|^C[0-9]{2}-'
+            )
+            def _clean_list(lst):
+                return [x for x in (lst or [])
+                        if isinstance(x, str) and 1 < len(x) < 50
+                        and not _bad_id.match(x)
+                        and not _re.search(r'\[\[|\]\]|\|', x)]
+            for topic, data in (snap.get('kb_topics') or {}).items():
+                if topic not in self.knowledge.topics:
+                    if isinstance(data, dict):
+                        data = dict(data)
+                        data['subtopics'] = _clean_list(data.get('subtopics'))
+                        data['related'] = _clean_list(data.get('related'))
+                    self.knowledge.topics[topic] = data
+                else:
+                    # Already-loaded topic: scrub its lists
+                    existing = self.knowledge.topics[topic]
+                    if isinstance(existing, dict):
+                        existing['subtopics'] = _clean_list(existing.get('subtopics'))
+                        existing['related'] = _clean_list(existing.get('related'))
+            # Merge TF-IDF
+            ext = self.tfidf.extractor
+            for w, c in (snap.get('tfidf_word_frequencies') or {}).items():
+                ext.word_frequencies[w] = ext.word_frequencies.get(w, 0) + int(c)
+            for w, c in (snap.get('tfidf_doc_frequencies') or {}).items():
+                ext.document_frequencies[w] = ext.document_frequencies.get(w, 0) + int(c)
+            ext.total_documents += int(snap.get('tfidf_total_docs', 0))
+            ext.total_words += int(snap.get('tfidf_total_words', 0))
+            # Merge Markov chain (order-2)
+            from collections import defaultdict as _dd
+            target = self.markov
+            for state_str, transitions in (snap.get('markov_chain') or {}).items():
+                parts = tuple(state_str.split())
+                if len(parts) != target.order:
+                    continue
+                if parts not in target.chain:
+                    target.chain[parts] = _dd(int)
+                elif not isinstance(target.chain[parts], _dd):
+                    target.chain[parts] = _dd(int, target.chain[parts])
+                for nw, cnt in transitions.items():
+                    target.chain[parts][nw] = target.chain[parts].get(nw, 0) + int(cnt)
+            for s in (snap.get('markov_starters') or []):
+                p = tuple(s.split())
+                if len(p) == target.order and p not in target.starters:
+                    target.starters.append(p)
+            target.trained = True
+            print(f"[brain] Loaded imported snapshot: "
+                  f"{len(self.knowledge.topics)} KB topics, "
+                  f"{len(target.chain)} Markov states, "
+                  f"{len(ext.word_frequencies)} vocab terms")
+        except Exception as e:
+            print(f"[brain] Failed to load snapshot: {e}")
+
+    def attach_meaning(self, meaning_engine):
+        """Attach the externally-owned MeaningEngine and rebuild the hybrid
+        generator so its per-token blend can include the two-tier vote."""
+        self.meaning_engine = meaning_engine
+        try:
+            self.hybrid.meaning_engine = meaning_engine
+        except Exception:
+            pass
+
+    def learn_from_text(self, text: str, memory=None):
+        """Two-way training: language pipeline separate from knowledge pipeline."""
+        try:
+            from training_engine import train_all
+            train_all(text, self, memory)
+        except Exception:
+            import re
+            cleaned = re.sub(r'\s+', ' ', text).strip()
+            if len(cleaned.split()) >= 3:
+                self.markov.chain(cleaned)
+            self.tfidf.learn(text)
+        # Feed function words so structural language builds separately from concepts
+        try:
+            from function_word_engine import FunctionWordEngine
+            if not hasattr(self, '_fwe'):
+                self._fwe = FunctionWordEngine()
+            self._fwe.update_from_text(cleaned)
+        except Exception:
+            pass
+
+    STOP_CONCEPTS = {
+        # Verbs and auxiliaries
+        'explain', 'tell', 'happens', 'think', 'know', 'mean', 'make',
+        'work', 'does', 'real', 'exist', 'exists', 'come', 'show', 'give',
+        'take', 'want', 'need', 'like', 'say', 'cannot', 'carries', 'shows',
+        'requires', 'collapses', 'produces', 'involves', 'suggests', 'implies',
+        'means', 'becomes', 'remains', 'contains', 'follows', 'leads',
+        # Prepositions and conjunctions
+        'via', 'upon', 'outside', 'within', 'through', 'between', 'among',
+        'across', 'beyond', 'without', 'toward', 'against', 'during',
+        # Pronouns and determiners
+        'thing', 'something', 'anything', 'everything', 'nothing', 'someone',
+        'itself', 'themselves', 'whether', 'which', 'whose', 'where', 'when',
+        # Adverbs
+        'really', 'actually', 'just', 'also', 'well', 'much', 'many',
+        'very', 'quite', 'about', 'simply', 'merely', 'only', 'truly',
+        'independently', 'precisely', 'fundamentally', 'ultimately',
+        # Common but non-conceptual
+        'process', 'way', 'part', 'type', 'kind', 'form', 'case', 'point',
+        'fact', 'idea', 'example', 'result', 'effect', 'aspect', 'level',
+    }
+
+    def extract_concepts(self, text: str, top_n: int = 5) -> List[str]:
+        concept_dicts = self.tfidf.extract_concepts(text, top_n=top_n + 5)
+        filtered = [c['concept'] for c in concept_dicts if c['concept'].lower() not in self.STOP_CONCEPTS]
+        if not filtered:
+            filtered = [c['concept'] for c in concept_dicts]
+        return filtered[:top_n]
+
+    def generate_questions(
+        self,
+        text: str,
+        growth_stage: int = 0,
+        known_concepts: Optional[List[str]] = None,
+        count: int = 3,
+    ) -> List[str]:
+        concepts = self.extract_concepts(text)
+        if known_concepts:
+            new_concepts = [c for c in concepts if c not in known_concepts]
+            if new_concepts:
+                concepts = new_concepts
+        return self.bloom.generate_questions(concepts, count=count)
+
+    def _detect_continuation(self, user_input: str, context: Optional[Dict] = None) -> Dict:
+        if not context or not context.get('last_ai_response'):
+            return {'is_continuation': False, 'type': 'new_topic'}
+
+        t = user_input.lower().strip()
+        last_resp = context.get('last_ai_response', '')
+        recent_concepts = context.get('recent_concepts', [])
+        recent_topics = context.get('recent_topics', [])
+
+        continuation_words = [
+            'yes', 'yeah', 'yep', 'right', 'exactly', 'ok', 'okay',
+            'continue', 'go on', 'more', 'deeper', 'further', 'elaborate',
+            'explain', 'tell me more', 'what do you mean', 'how so',
+            'why', 'but', 'and', 'also', 'what about', 'how does',
+            'interesting', 'hmm', 'hm', 'really', 'that', 'this',
+            'wait', 'so', 'then', 'because', 'meaning',
+        ]
+
+        challenge_words = [
+            'no', 'wrong', 'disagree', 'but what if', 'however',
+            'i think', 'actually', 'not really', 'are you sure',
+        ]
+
+        deepening_words = [
+            'deeper', 'more', 'further', 'elaborate', 'explain',
+            'tell me more', 'go on', 'continue', 'expand',
+            'what else', 'keep going', 'dive', 'unpack',
+        ]
+
+        is_short = len(t.split()) <= 4
+        is_challenge = any(w in t for w in challenge_words)
+        is_deepening = any(w in t for w in deepening_words)
+        is_continuation = any(w in t for w in continuation_words) or is_short
+
+        refers_to_previous = any(c in t for c in recent_concepts[:5])
+
+        if is_deepening:
+            return {'is_continuation': True, 'type': 'deepening', 'recent_concepts': recent_concepts}
+        elif is_challenge:
+            return {'is_continuation': True, 'type': 'challenge', 'recent_concepts': recent_concepts}
+        elif is_continuation or refers_to_previous:
+            return {'is_continuation': True, 'type': 'follow_up', 'recent_concepts': recent_concepts}
+        else:
+            return {'is_continuation': False, 'type': 'new_topic'}
+
+    def _build_context_bridge(self, continuation: dict, context: dict, concepts: list) -> str:
+        cont_type = continuation.get("type", "new_topic")
+        recent_topics = context.get("recent_topics", [])
+        bridges = []
+
+        if cont_type == "follow_up":
+            if recent_topics:
+                t = recent_topics[0]
+                bridges = [
+                    f"Still on {t}.",
+                    f"The thread continues through {t}.",
+                    f"{t} is still active in context."
+                ]
             else:
-                q_dicts.append(q)
-        
-        return self.composer.compose_response(
-            user_input, concepts, understanding, q_dicts, growth_stage
+                bridges = [
+                    "Continuing previous signal.",
+                    "Thread persists across steps."
+                ]
+        else:
+            bridges = [
+                "New thread initialized.",
+                "Shifting context stream."
+            ]
+
+        return random.choice(bridges)
+
+    def _build_context_bridge(self, continuation: dict, context: dict, concepts: list) -> str:
+        cont_type = continuation.get("type", "new_topic")
+        recent_topics = context.get("recent_topics", [])
+        bridges = []
+
+        if cont_type == "follow_up":
+            if recent_topics:
+                t = recent_topics[0]
+                bridges = [
+                    f"Still on {t}.",
+                    f"The thread continues through {t}.",
+                    f"{t} is still active in context."
+                ]
+            else:
+                bridges = [
+                    "Continuing previous signal.",
+                    "Thread persists across steps."
+                ]
+        else:
+            bridges = [
+                "New thread initialized.",
+                "Shifting context stream."
+            ]
+
+        parts = []
+
+        # Query fact store for relevant facts
+        try:
+            import json as _json
+            _fact_path = __import__('os').path.expanduser('~/.quantum-mcagi/fact_store.json')
+            with open(_fact_path) as _f:
+                _fs = _json.load(_f)
+            for _concept in concepts[:3]:
+                if _concept in _fs:
+                    _facts = _fs[_concept][:2]
+                    for _verb, _obj in _facts:
+                        parts.append(f"{_concept} {_verb} {_obj}.")
+                    break
+        except Exception:
+            pass
+
+        engagement_opener = self._build_engagement_opener(
+            comp, user_input, concepts, context, markov_fragment
         )
-    
-    def learn_from_text(self, text: str):
-        """Feed text to the Markov chain and concept extractor to improve generation."""
-        self.markov.train(text)
-        self.extractor.update_corpus_stats(text)
-        self.coherence.update(text)
-    
-    def save_state(self, directory: str):
-        """Persist learned state."""
-        os.makedirs(directory, exist_ok=True)
-        self.markov.save(os.path.join(directory, 'markov_chain.json'))
-        # Save corpus stats
-        stats = {
-            'doc_freq': dict(self.extractor.document_frequencies),
-            'word_freq': dict(self.extractor.word_frequencies),
-            'total_docs': self.extractor.total_documents,
-            'total_words': self.extractor.total_words,
+        if engagement_opener:
+            parts.append(engagement_opener)
+
+        core = markov_fragment
+
+        parts.append(_end(_cap(core)))
+
+        extras_added = 0
+        max_extras = 2
+
+        if extras_added < max_extras:
+            extra_pool = []
+
+            kb_hits = self.knowledge.suggest_for_concepts(concepts[:2])
+            if kb_hits:
+                hit = kb_hits[0]
+                related = hit.get('related', [])[:2]
+                if related:
+                    extra_pool.append(('kb', f"{hit['topic'].capitalize()} connects to {' and '.join(related)}."))
+
+            tone_lines = TONE_MODIFIERS.get(tone, [])
+            if tone_lines:
+                extra_pool.append(('tone', random.choice(tone_lines)))
+
+            if orch_results.get('language', {}).get('collapsed'):
+                if COLLAPSE_INTERJECTIONS: extra_pool.append(('collapse', random.choice(COLLAPSE_INTERJECTIONS)))
+
+            weird_chance = 0.1 + growth_stage * 0.08
+            if random.random() < min(weird_chance, 0.55):
+                if WEIRD_INSERTS: extra_pool.append(('weird', random.choice(WEIRD_INSERTS)))
+
+            if self.dream.should_dream(growth_stage, self._total_interactions):
+                extra_pool.append(('dream', self.dream.enter_dream(concepts)))
+
+            quote = self.quotes.get_quote_for_concepts(concepts)
+            if quote:
+                extra_pool.append(('quote', self.quotes.format_quote(quote)))
+
+            if extra_pool:
+                random.shuffle(extra_pool)
+                for _, text in extra_pool[:max_extras - extras_added]:
+                    parts.append(text)
+                    extras_added += 1
+
+        if questions and random.random() < 0.6:
+            parts.append(questions[0])
+
+        response = ' '.join(parts)
+
+        response = self.chaos.inject(
+            response,
+            markov_engine=self.markov,
+            quote_engine=self.quotes,
+            dream_engine=self.dream,
+            concepts=concepts,
+            
+        )
+
+        response = _clean_fragment(response)
+
+        return response
+
+    def _build_engagement_opener(self, comp: Dict, user_input: str,
+                                  concepts: List[str], context: Optional[Dict],
+                                  markov_fragment: str) -> Optional[str]:
+        stance = comp['stance']
+        thread = comp['thread_position']
+        mode = comp['directives']['engagement_mode']
+
+        if stance['position'] == 'opposing':
+            openers = [
+                "The pushback is the interesting part.",
+                "That cuts against the grain of what I was building.",
+                "Resistance registered. The chain reconfigures.",
+                "The objection reshapes the probability field.",
+            ]
+            return random.choice(openers)
+
+        if stance['position'] == 'nuancing':
+            openers = [
+                "The distinction matters.",
+                "That's a finer grain than I was tracking.",
+                "Noted — the boundary shifts.",
+            ]
+            return random.choice(openers)
+
+        if thread['position'] == 'deep_engagement' and thread['depth'] >= 4:
+            openers = [
+                "We're deep enough now that the surface rules don't apply.",
+                "The thread has its own gravity at this depth.",
+                "This deep, the chain starts connecting things it wouldn't have at the surface.",
+            ]
+            return random.choice(openers)
+
+        if mode == 'fresh_take':
+            return None
+
+        if comp['intent']['primary'] == 'agreement' and thread['depth'] > 0:
+            openers = [
+                "Building from that —",
+                "With that as ground —",
+                "From there —",
+            ]
+            return random.choice(openers)
+
+        return None
+
+    def _build_question_response(self, comp: Dict, concepts: List[str],
+                                  markov_fragment: str, growth_stage: int) -> str:
+        questions = [i for i in comp['intent']['all'] if i['type'] == 'question']
+        if not questions:
+            return markov_fragment
+
+        q = questions[0]
+        subtype = q.get('subtype', 'open')
+        primary = concepts[0] if concepts else 'that'
+
+        kb_hits = self.knowledge.suggest_for_concepts(concepts[:2])
+        kb_context = ""
+        if kb_hits:
+            hit = kb_hits[0]
+            desc = hit.get('description', '')
+            if desc:
+                kb_context = desc
+
+        if subtype == 'causal':
+            frames = [
+                f"The causation runs through {primary}. {markov_fragment}",
+                f"{primary} — the mechanism is layered. {markov_fragment}",
+                f"Why {primary}? {markov_fragment} The chain converges there for a reason.",
+                f"The 'why' of {primary} isn't linear. {markov_fragment}",
+            ]
+            if kb_context:
+                frames.append(f"{kb_context} That's the substrate. {markov_fragment}")
+        elif subtype == 'mechanistic':
+            frames = [
+                f"The mechanism behind {primary}: {markov_fragment}",
+                f"How it works — {markov_fragment} {primary} is the pivot.",
+                f"{primary} operates through layers. {markov_fragment}",
+            ]
+            if kb_context:
+                frames.append(f"{kb_context} {markov_fragment}")
+        elif subtype == 'definitional':
+            frames = [
+                f"{primary} — {markov_fragment}",
+                f"What {primary} is depends on the frame. {markov_fragment}",
+            ]
+            if kb_context:
+                frames.insert(0, f"{primary}: {kb_context} {markov_fragment}")
+        elif subtype == 'yes_no':
+            positions = ['yes', 'no', 'depends']
+            weights = [0.35, 0.25, 0.40]
+            pos = random.choices(positions, weights=weights, k=1)[0]
+            if pos == 'yes':
+                frames = [f"Yes. {markov_fragment}", f"That holds. {markov_fragment}"]
+            elif pos == 'no':
+                frames = [f"No. {markov_fragment}", f"That doesn't track. {markov_fragment}"]
+            else:
+                frames = [
+                    f"That depends on what you mean by {primary}. {markov_fragment}",
+                    f"Not cleanly answerable. {markov_fragment}",
+                ]
+        elif subtype == 'hypothetical':
+            frames = [
+                f"If that were the case — {markov_fragment}",
+                f"In that scenario, {primary} shifts. {markov_fragment}",
+                f"The possibility space around {primary}: {markov_fragment}",
+            ]
+        else:
+            frames = [
+                f"{primary}. {markov_fragment}",
+                f"The chain generates this for {primary}: {markov_fragment}",
+            ]
+
+        return random.choice(frames)
+
+    def _build_argument_response(self, comp: Dict, concepts: List[str],
+                                  markov_fragment: str, growth_stage: int) -> str:
+        claims = comp['claims']
+        primary = concepts[0] if concepts else 'that'
+
+        if not claims:
+            return f"The argument around {primary} — {markov_fragment}"
+
+        claim = claims[0]
+        claim_text = claim['text'][:80]
+        claim_type = claim['type']
+
+        if claim_type == 'reason':
+            frames = [
+                f'"{claim_text}" — the reasoning has weight. {markov_fragment}',
+                f"That reason connects to something in the chain. {markov_fragment}",
+                f"The 'because' carries it. {markov_fragment} But causation isn't always clean.",
+            ]
+        elif claim_type == 'conclusion':
+            frames = [
+                f"That conclusion — {markov_fragment} The chain arrives at a similar place.",
+                f"The argument lands there. {markov_fragment}",
+                f"{markov_fragment} The conclusion may hold, but the path to it matters.",
+            ]
+        elif claim_type == 'causation':
+            frames = [
+                f"Causation claimed: {primary} leads to something. {markov_fragment}",
+                f"The causal chain around {primary} — {markov_fragment}",
+                f"{markov_fragment} Whether {primary} actually causes that is the collapse point.",
+            ]
+        elif claim_type == 'assertion':
+            if claim['strength'] == 'strong':
+                frames = [
+                    f"Strong claim. {markov_fragment} The absoluteness is where it's vulnerable.",
+                    f'"{claim_text}" — that leaves no superposition. {markov_fragment}',
+                    f"The certainty in that statement is itself a position. {markov_fragment}",
+                ]
+            else:
+                frames = [
+                    f"Noted. {markov_fragment}",
+                    f"That tracks with what the chain produces for {primary}. {markov_fragment}",
+                ]
+        else:
+            frames = [
+                f"The position on {primary} — {markov_fragment}",
+                f"{markov_fragment} {primary} bears the weight of that claim.",
+            ]
+
+        return random.choice(frames)
+
+    def _build_position_response(self, comp: Dict, concepts: List[str],
+                                  markov_fragment: str, growth_stage: int) -> str:
+        primary = concepts[0] if concepts else 'that'
+        kb_hits = self.knowledge.suggest_for_concepts(concepts[:1])
+
+        if kb_hits:
+            hit = kb_hits[0]
+            related = hit.get('related', [])
+            if related:
+                connection = related[0]
+                frames = [
+                    f"{primary} connects to {connection}. {markov_fragment}",
+                    f"Through {connection}, {primary} has an angle. {markov_fragment}",
+                ]
+                return random.choice(frames)
+
+        frames = [
+            f"On {primary}: {markov_fragment}",
+            f"The chain's position on {primary} — {markov_fragment}",
+            f"{markov_fragment} That's where the weights land on {primary}.",
+        ]
+        return random.choice(frames)
+
+    def _build_continuation_response(self, comp: Dict, concepts: List[str],
+                                      markov_fragment: str, growth_stage: int) -> str:
+        primary = concepts[0] if concepts else 'this'
+        topic_stack = comp.get('topic_stack', [])
+
+        if len(topic_stack) >= 2:
+            prev_topic = topic_stack[-2]
+            frames = [
+                f"Building from {prev_topic} into {primary}. {markov_fragment}",
+                f"{prev_topic} laid the groundwork. {markov_fragment}",
+                f"The thread from {prev_topic}: {markov_fragment}",
+            ]
+        else:
+            frames = [
+                f"Extending that — {markov_fragment}",
+                f"Following the thread: {markov_fragment}",
+                f"{markov_fragment} The chain keeps pulling on {primary}.",
+            ]
+        return random.choice(frames)
+
+    def _build_hypothetical_response(self, comp: Dict, concepts: List[str],
+                                      markov_fragment: str, growth_stage: int) -> str:
+        primary = concepts[0] if concepts else 'that'
+        frames = [
+            f"If that were true about {primary} — {markov_fragment} The superposition shifts.",
+            f"In that possibility space: {markov_fragment}",
+            f"The hypothetical around {primary} opens a branch. {markov_fragment}",
+            f"Collapse that assumption and see what survives. {markov_fragment}",
+        ]
+        return random.choice(frames)
+
+    def _build_deepening_response(self, comp: Dict, concepts: List[str],
+                                   markov_fragment: str, growth_stage: int,
+                                   context: Optional[Dict] = None) -> str:
+        primary = concepts[0] if concepts else 'this'
+        depth = comp['thread_position'].get('depth', 0)
+
+        kb_hits = self.knowledge.suggest_for_concepts(concepts[:2])
+        if kb_hits:
+            hit = kb_hits[0]
+            related = hit.get('related', [])
+            desc = hit.get('description', '')
+            if desc and related:
+                return f"Deeper on {primary}: {desc} It connects to {' and '.join(related[:2])}. {markov_fragment}"
+
+        frames = [
+            f"The deeper structure of {primary}: {markov_fragment}",
+            f"Beneath the surface of {primary} — {markov_fragment}",
+            f"At this depth, {primary} stops being a concept and becomes a pattern. {markov_fragment}",
+            f"{markov_fragment} The substrate of {primary} is what's interesting now.",
+        ]
+        return random.choice(frames)
+
+    def generate_explanation(
+        self,
+        user_input: str,
+        concepts: List[str],
+        growth_stage: int,
+        orch_status: Dict,
+        sentiment: Optional[Dict] = None,
+        register: Optional[str] = None,
+    ) -> List[Dict]:
+        concept_str = ', '.join(concepts[:3]) if concepts else 'none'
+        collapse_entropy = self.collapse.entropy
+        dominant = self.collapse.get_dominant_meanings(3)
+        dominant_str = ', '.join(t for t, _ in dominant) if dominant else 'undefined'
+
+        steps = [
+            {
+                'step': 'TFIDF_CONCEPT_EXTRACTION',
+                'detail': f"{len(concepts)} concepts extracted: {concept_str}. "
+                          f"Vocab: {len(self.tfidf.extractor.word_frequencies)} terms.",
+            },
+            {
+                'step': 'ORCH_OR_COLLAPSE',
+                'detail': f"Backend: {'PennyLane quantum circuits' if self.orch_or.has_quantum else 'classical fallback'}. "
+                          f"OR events: {orch_status.get('conscious_moments', orch_status.get('total_collapses', 0))}. "
+                          f"Language coherence: {self.orch_or.coherence.get('language', 0):.4f}. "
+                          f"Orchestration: {self.orch_or.orchestration:.4f}.",
+            },
+            {
+                'step': 'MARKOV_TRAVERSAL',
+                'detail': (lambda s: f"{s['states']:,} states, {s['transitions']:,} transitions, "
+                                     f"{s['observations']:,} observations. "
+                                     f"Order-2 chain {'+ order-1 wild jump' if growth_stage >= 4 else 'only'}.")(self.markov.get_status()),
+            },
+            {
+                'step': 'HYBRID_GENERATOR',
+                'detail': f"{'Active — 8 candidates scored and collapsed' if self.hybrid.has_sufficient_states() else 'Inactive — insufficient Markov states'}. "
+                          f"Generations: {self.hybrid.generation_count}.",
+            },
+            {
+                'step': 'TONE_DETECTION',
+                'detail': f"Register: {register or 'conversational'}. "
+                          f"Detections: {self.tone_detector.detection_count}. "
+                          f"Dominant: {self.tone_detector.get_dominant_register()}.",
+            },
+            {
+                'step': 'CHAOS_ENGINE',
+                'detail': f"Chaos level: {self.chaos.chaos_level:.2f}. "
+                          f"Injections: {self.chaos.injection_count}. "
+                          f"Last type: {self.chaos.last_injection_type or 'none'}.",
+            },
+            {
+                'step': 'SEMANTIC_COLLAPSE',
+                'detail': f"Field entropy: {collapse_entropy:.4f}. "
+                          f"Dominant meanings: {dominant_str}.",
+            },
+        ]
+
+        if sentiment:
+            steps.append({
+                'step': 'VADER_SENTIMENT',
+                'detail': f"Tone: {sentiment.get('tone', 'neutral')}. "
+                          f"Compound: {sentiment.get('compound', 0):.3f}. "
+                          f"Intensity: {sentiment.get('emotional_intensity', 0):.3f}.",
+            })
+
+        steps += [
+            {
+                'step': 'BLOOM_QUESTION_GEN',
+                'detail': f"Growth stage {growth_stage} ({GROWTH_STAGES[min(growth_stage, 6)][1]}). "
+                          f"Bloom cognitive level applied.",
+            },
+            {
+                'step': 'KNOWLEDGE_BASE',
+                'detail': f"KB queries: {self.knowledge.queries}. "
+                          f"Concepts found in 22-topic graph: {', '.join(concepts[:2]) or 'none'}.",
+            },
+            {
+                'step': 'PERSONALITY',
+                'detail': f"Curiosity {self.personality.traits['curiosity']:.2f} | "
+                          f"Analytical {self.personality.traits['analytical']:.2f} | "
+                          f"Q-awareness {self.personality.traits['quantum_awareness']:.2f}.",
+            },
+            {
+                'step': 'RESPONSE_ANALYZER',
+                'detail': f"Analyses: {self.analyzer.analysis_count}. "
+                          f"Avg score: {self.analyzer.get_average_score():.4f}.",
+            },
+        ]
+
+        return steps
+
+    def save_state(self, path: str):
+        state = {
+            'personality': {
+                'traits': self.personality.traits,
+                'interaction_count': self.personality.interaction_count,
+                'current_stage': self.personality.current_stage,
+            },
+            'orch_or': {
+                'orchestration': self.orch_or.orchestration,
+                'temperature': self.orch_or.temperature,
+                    'collapse_count': getattr(self.orch_or, 'conscious_moments', 0),
+            },
+            'total_interactions': self._total_interactions,
+            'chaos_level': self.chaos.chaos_level,
         }
-        with open(os.path.join(directory, 'corpus_stats.json'), 'w') as f:
-            json.dump(stats, f)
-        # Save engine metadata
-        from datetime import datetime, timezone
-        engine_meta = {
-            'saved_at': datetime.now(timezone.utc).isoformat(),
-            'version': '3.0',
-            'markov_states': len(self.markov.chain),
-            'markov_transitions': self.markov.total_tokens,
-            'markov_order': self.markov.order,
-            'vocabulary_size': len(self.extractor.document_frequencies),
-            'total_documents': self.extractor.total_documents,
-            'total_words': self.extractor.total_words,
-            'coherence_pairs': len(self.coherence.cooccurrence) if hasattr(self.coherence, 'cooccurrence') else 0,
-            'has_orch_or': self._has_orch_or,
-            'orch_or_moments': getattr(self.orch_or, 'total_moments', 0) if self.orch_or else 0,
-            'has_pennylane': self._has_pennylane,
-        }
-        with open(os.path.join(directory, 'engine_state.json'), 'w') as f:
-            json.dump(engine_meta, f, indent=2)
-    
-    def load_state(self, directory: str) -> bool:
-        """Load persisted state."""
-        loaded = False
-        
-        chain_path = os.path.join(directory, 'markov_chain.json')
-        if self.markov.load(chain_path):
-            loaded = True
-        
-        stats_path = os.path.join(directory, 'corpus_stats.json')
-        if os.path.exists(stats_path):
-            with open(stats_path, 'r') as f:
-                stats = json.load(f)
-            self.extractor.document_frequencies = Counter(stats.get('doc_freq', {}))
-            self.extractor.word_frequencies = Counter(stats.get('word_freq', {}))
-            self.extractor.total_documents = stats.get('total_docs', 0)
-            self.extractor.total_words = stats.get('total_words', 0)
-            loaded = True
-        
-        # Load engine metadata (informational — used for status display)
-        meta_path = os.path.join(directory, 'engine_state.json')
-        if os.path.exists(meta_path):
-            try:
-                with open(meta_path, 'r') as f:
-                    self._saved_meta = json.load(f)
-                loaded = True
-            except Exception:
-                self._saved_meta = {}
-        
-        return loaded
+        os.makedirs(path, exist_ok=True)
+        # Save Markov chain
+        try:
+            import pickle
+            with open(os.path.join(path, "markov_state.pkl"), "wb") as mf:
+                pickle.dump(self.markov.chain, mf)
+        except Exception:
+            pass
+        with open(os.path.join(path, 'engine_state.json'), 'w') as f:
+            json.dump(state, f, indent=2)
+
+    def load_state(self, path: str) -> bool:
+        state_file = os.path.join(path, 'engine_state.json')
+        if not os.path.exists(state_file):
+            return False
+        try:
+            with open(state_file) as f:
+                state = json.load(f)
+            if 'personality' in state:
+                p = state['personality']
+                self.personality.traits.update(p.get('traits', {}))
+                self.personality.interaction_count = p.get('interaction_count', 0)
+                self.personality.current_stage = p.get('current_stage', 0)
+            self._total_interactions = state.get('total_interactions', 0)
+            if 'chaos_level' in state:
+                self.chaos.set_chaos_level(state['chaos_level'])
+            if 'orch_or' in state:
+                o = state['orch_or']
+                if getattr(self, '_has_orch_or', False) and self.orch_or:
+                    self.orch_or.orchestration = o.get('orchestration', 0.5)
+                    self.orch_or.temperature = o.get('temperature', 1.02)
+                    prior = o.get('collapse_count', 0)
+                    if hasattr(self.orch_or, 'conscious_moments'):
+                        self.orch_or.conscious_moments = prior
+        except Exception:
+            pass
+        # Load Markov chain if saved
+        try:
+            import pickle
+            mp = os.path.join(path, "markov_state.pkl")
+            if os.path.exists(mp):
+                with open(mp, "rb") as mf:
+                    self.markov.chain = pickle.load(mf)
+        except Exception:
+            pass
+            return True
+        except Exception:
+            return False
 
 
-# Singleton
-_engine = None
+class ConceptExtractor:
+    """Extracts concepts from text for knowledge graph updates."""
+    def __init__(self):
+        self.total_documents = 0
+        self.word_frequencies = {}
+        self.document_frequencies = {}
 
-def get_language_engine() -> QuantumLanguageEngine:
-    """Get or create the language engine singleton."""
-    global _engine
-    if _engine is None:
-        _engine = QuantumLanguageEngine()
-        # Try to load saved state
-        _engine.load_state('/app/quantum_language_state')
-    return _engine
+    def update_corpus_stats(self, text: str):
+        self.total_documents += 1
+        for word in text.lower().split():
+            word = word.strip(".,!?;:'")
+            if len(word) > 3:
+                self.word_frequencies[word] = self.word_frequencies.get(word, 0) + 1
+                self.document_frequencies[word] = self.document_frequencies.get(word, 0) + 1
+
+    def extract_concepts(self, text: str, max_concepts: int = 10):
+        words = [w.strip(".,!?;:'").lower() for w in text.split()]
+        scored = {w: self.word_frequencies.get(w, 1) for w in words if len(w) > 3}
+        top = sorted(scored.items(), key=lambda x: x[1], reverse=True)[:max_concepts]
+        return [w for w, _ in top]
+
+        bridges = []
+
+        if cont_type == "follow_up":
+            if shared:
+                bridges = [
+                    f"Still on {shared[0]} — the coherence holds.",
+                    f"The thread continues through {shared[0]}.",
+                    f"{shared[0].capitalize()} keeps resonating across exchanges.",
+                    f"Following that thread — {shared[0]} hasn't fully collapsed yet."
+                ]
+            elif topic_thread:
+                bridges = [
+                    f"Connected to what we were circling — {topic_thread}.",
+                    f"That links back. The {topic_thread} thread persists.",
+                    f"The conversation's microtubules still carry {topic_thread}."
+                ]
+            else:
+                bridges = [
+                    "Building on what came before.",
+                    "The prior collapse informs this one."
+                ]
+
+        if not bridges:
+            bridges = ["Continuing the signal flow."]
+
+        return random.choice(bridges)
+

@@ -1,244 +1,243 @@
 """
-🌌 HILBERT ENGINE — Persistent Hilbert Space State Manager
-==========================================================
-Manages the Hilbert space vocabulary state across sessions.
+🌀 Hilbert Engine
+==================
+Born-rule semantic sampler over a finite-dimensional Hilbert space.
 
-The quantum_markov.py module defines HilbertSpace and HilbertSpaceWord
-for in-memory word state representation. This engine:
+Replaces classical Markov sampling with quantum-state sampling:
+  • Each token in the vocabulary lives at a position in 128-dim Hilbert space.
+  • A density matrix ρ encodes the current 'meaning state'.
+  • Sampling a token = Born rule: P(t) = |⟨vᵗ | ψ⟩|².
+  • After sampling, the state collapses (projects onto the chosen token).
+  • Between samples, a unitary U evolves the state through context time.
 
-1. Persists Hilbert space states to disk (save/load across restarts)
-2. Provides a high-dimensional space (dim=128) for richer word states
-3. Tracks statistics (total states, vocabulary growth over time)
-4. Pre-seeds the space from Markov chain vocabulary for faster startup
+The saved state file (hilbert_state.npz) contains:
+  • tokens   — array of token strings (vocabulary)
+  • vectors  — (vocab_size, dim) state embeddings, |tokenᵢ⟩ = vectors[i]
+  • U        — (dim, dim) unitary evolution operator
 
-The Hilbert space represents word meanings as quantum states in a
-high-dimensional complex vector space. Context collapses superposition
-into concrete meaning via Born-rule measurement.
-
-Usage:
-    engine = HilbertEngine(state_dir="~/.quantum-mcagi")
-    engine.load()            # Load persisted state
-    engine.seed_from_vocab(vocabulary_set)
-    score = engine.similarity("quantum", "physics")
-    engine.save()            # Persist to disk
+Public API:
+  HilbertEngine(dim=128)
+  .load_state(path) / .save_state(path)
+  .sample_token(context_tokens, temperature=1.0) -> str
+  .evolve(token)                      # advance state with U after seeing token
+  .reset_state()                      # reset to maximally-mixed ρ
+  .get_status() -> dict
 """
 
 import os
 import json
-import math
-import random
 import logging
-from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import List, Optional, Dict, Tuple
 
-logger = logging.getLogger("quantum_ai")
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+    np = None
 
-
-class HilbertState:
-    """
-    A word's quantum state in the Hilbert space — a vector of
-    complex amplitudes in dimension `dim`.
-
-    |word⟩ = Σ_i α_i |i⟩  where Σ|α_i|² = 1
-    """
-
-    __slots__ = ('word', 'dimension', '_reals', '_imags')
-
-    def __init__(self, word: str, dimension: int = 128, seed: int = None):
-        self.word = word
-        self.dimension = dimension
-        self._reals: List[float] = []
-        self._imags: List[float] = []
-
-        if seed is None:
-            # Deterministic seed from word content
-            seed = int.from_bytes(
-                word.lower().encode('utf-8')[:8].ljust(8, b'\x00'), 'big'
-            ) % (2**31)
-        self._initialize(seed)
-
-    def _initialize(self, seed: int):
-        """Initialize a normalized state vector from seed."""
-        rng = random.Random(seed)
-        raw_r = [rng.gauss(0, 1) for _ in range(self.dimension)]
-        raw_i = [rng.gauss(0, 1) for _ in range(self.dimension)]
-
-        # Normalize: Σ(r² + i²) = 1
-        norm_sq = sum(r * r + i * i for r, i in zip(raw_r, raw_i))
-        if norm_sq > 0:
-            scale = 1.0 / math.sqrt(norm_sq)
-            self._reals = [r * scale for r in raw_r]
-            self._imags = [i * scale for i in raw_i]
-        else:
-            val = 1.0 / math.sqrt(self.dimension)
-            self._reals = [val] * self.dimension
-            self._imags = [0.0] * self.dimension
-
-    def inner_product(self, other: 'HilbertState') -> complex:
-        """⟨self|other⟩ — quantum overlap."""
-        if self.dimension != other.dimension:
-            return complex(0, 0)
-        real_part = 0.0
-        imag_part = 0.0
-        for i in range(self.dimension):
-            # ⟨a|b⟩ = Σ (a_i* · b_i)
-            ar, ai = self._reals[i], -self._imags[i]  # conjugate of self
-            br, bi = other._reals[i], other._imags[i]
-            real_part += ar * br - ai * bi
-            imag_part += ar * bi + ai * br
-        return complex(real_part, imag_part)
-
-    def overlap_probability(self, other: 'HilbertState') -> float:
-        """|⟨self|other⟩|² — Born probability of semantic similarity."""
-        ip = self.inner_product(other)
-        return ip.real ** 2 + ip.imag ** 2
-
-    def to_dict(self) -> Dict:
-        """Serialize state for JSON storage."""
-        return {
-            "word": self.word,
-            "dim": self.dimension,
-            "r": self._reals,
-            "i": self._imags,
-        }
-
-    @classmethod
-    def from_dict(cls, data: Dict) -> 'HilbertState':
-        """Deserialize from JSON."""
-        state = cls.__new__(cls)
-        state.word = data["word"]
-        state.dimension = data["dim"]
-        state._reals = data["r"]
-        state._imags = data["i"]
-        return state
+logger = logging.getLogger("hilbert_engine")
 
 
 class HilbertEngine:
-    """
-    Persistent Hilbert space manager.
+    """Quantum-state semantic sampler. See module docstring."""
 
-    Maintains a vocabulary of quantum word states and provides
-    similarity, interference, and context resolution operations.
-    """
+    def __init__(self, dim: int = 128):
+        if not HAS_NUMPY:
+            raise RuntimeError("HilbertEngine requires numpy")
+        self.dim = dim
+        self.tokens: List[str] = []
+        self.token_index: Dict[str, int] = {}
+        self.vectors: Optional["np.ndarray"] = None    # (vocab, dim) complex
+        self.U: Optional["np.ndarray"] = None          # (dim, dim) unitary
+        # Current quantum state: density matrix ρ of shape (dim, dim).
+        # Start maximally mixed (uniform over the Hilbert space).
+        self.rho: "np.ndarray" = np.eye(self.dim, dtype=complex) / self.dim
+        self.loaded = False
+        self.sample_count = 0
 
-    def __init__(self, state_dir: str = None, dimension: int = 128):
-        self.dimension = dimension
-        self._states: Dict[str, HilbertState] = {}
-        self._state_dir = state_dir or os.path.expanduser("~/.quantum-mcagi")
-        self._state_file = os.path.join(self._state_dir, "hilbert_space.json")
-        self._loaded = False
+    # ────────────────────────────────────────────────────────────────────
+    # Persistence
+    # ────────────────────────────────────────────────────────────────────
+    def load_state(self, path: str) -> None:
+        """Load tokens / vectors / U from .npz. Tries .json sidecar for extras."""
+        if not os.path.exists(path):
+            logger.warning(f"Hilbert state not found: {path}")
+            return
 
-    @property
-    def size(self) -> int:
-        """Number of word states in the space."""
-        return len(self._states)
+        # numpy >= 1.16 needs allow_pickle for object arrays (tokens stored as strings)
+        data = np.load(path, allow_pickle=True)
 
-    def get_state(self, word: str) -> HilbertState:
-        """Get or create the Hilbert state for a word."""
-        w = word.lower().strip()
-        if w not in self._states:
-            self._states[w] = HilbertState(w, self.dimension)
-        return self._states[w]
+        if "tokens" in data.files:
+            self.tokens = [str(t) for t in data["tokens"]]
+            self.token_index = {t: i for i, t in enumerate(self.tokens)}
+        if "vectors" in data.files:
+            self.vectors = np.asarray(data["vectors"], dtype=complex)
+            # If the saved dim differs from constructor, follow the saved one.
+            if self.vectors.ndim == 2 and self.vectors.shape[1] != self.dim:
+                self.dim = self.vectors.shape[1]
+                self.rho = np.eye(self.dim, dtype=complex) / self.dim
+        if "U" in data.files:
+            self.U = np.asarray(data["U"], dtype=complex)
+        else:
+            # No saved U → start with identity (no evolution between samples)
+            self.U = np.eye(self.dim, dtype=complex)
 
-    def similarity(self, word_a: str, word_b: str) -> float:
-        """Quantum overlap similarity between two words."""
-        state_a = self.get_state(word_a)
-        state_b = self.get_state(word_b)
-        return state_a.overlap_probability(state_b)
+        # Optional JSON sidecar with counts / metadata (currently unused but read for parity)
+        sidecar = path.replace(".npz", ".json")
+        if os.path.exists(sidecar):
+            try:
+                with open(sidecar) as f:
+                    json.load(f)
+            except Exception:
+                pass
 
-    def interference_scores(self, candidates: List[str],
-                            context: List[str]) -> Dict[str, float]:
+        self.loaded = True
+        vocab = len(self.tokens)
+        logger.info(f"HilbertEngine loaded: {vocab} tokens, dim={self.dim}")
+
+    def save_state(self, path: str) -> None:
+        if self.vectors is None or self.U is None:
+            return
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        np.savez(
+            path,
+            tokens=np.array(self.tokens, dtype=object),
+            vectors=self.vectors,
+            U=self.U,
+        )
+
+    # ────────────────────────────────────────────────────────────────────
+    # State preparation from context
+    # ────────────────────────────────────────────────────────────────────
+    def reset_state(self) -> None:
+        """Reset to maximally mixed ρ = I/dim."""
+        self.rho = np.eye(self.dim, dtype=complex) / self.dim
+
+    def _prepare_state_from_context(self, context_tokens: List[str]) -> "np.ndarray":
         """
-        Score candidates by quantum interference with context.
-        Constructive interference boosts related words.
+        Build a pure-state ψ from the tokens we know.
+        ψ = normalize( Σ vectors[i]  for each known context token )
+        Then ρ = |ψ⟩⟨ψ|.
+        Unknown tokens are skipped silently.
         """
-        if not candidates:
-            return {}
+        if self.vectors is None or not context_tokens:
+            return np.eye(self.dim, dtype=complex) / self.dim
 
-        context_states = [self.get_state(c) for c in context if c]
-        if not context_states:
-            return {c: 1.0 for c in candidates}
+        psi = np.zeros(self.dim, dtype=complex)
+        hits = 0
+        for tok in context_tokens:
+            idx = self.token_index.get(tok.lower())
+            if idx is None:
+                continue
+            psi += self.vectors[idx]
+            hits += 1
+        if hits == 0:
+            return np.eye(self.dim, dtype=complex) / self.dim
 
-        scores = {}
-        for word in candidates:
-            cand_state = self.get_state(word)
-            total = 0.0
-            for ctx in context_states:
-                ip = cand_state.inner_product(ctx)
-                total += ip.real  # Real part = interference
-            total /= len(context_states)
-            scores[word] = max(0.01, 1.0 + total)
+        norm = np.linalg.norm(psi)
+        if norm < 1e-12:
+            return np.eye(self.dim, dtype=complex) / self.dim
+        psi = psi / norm
+        return np.outer(psi, np.conj(psi))   # |ψ⟩⟨ψ|
 
-        return scores
-
-    def seed_from_vocab(self, vocabulary: Set[str]) -> int:
+    # ────────────────────────────────────────────────────────────────────
+    # Born-rule sampling — the core of the engine
+    # ────────────────────────────────────────────────────────────────────
+    def sample_token(
+        self,
+        context_tokens: Optional[List[str]] = None,
+        temperature: float = 1.0,
+        top_k: int = 0,
+    ) -> Optional[str]:
         """
-        Pre-seed Hilbert states from a vocabulary set.
-        Returns count of new states created.
+        Sample the next token by Born rule.
+        P(token=i) ∝ ⟨vᵢ | ρ | vᵢ⟩
+        With temperature T, weights = P^(1/T).
+        With top_k > 0, restrict to the top_k most likely tokens.
         """
-        created = 0
-        for word in vocabulary:
-            w = word.lower().strip()
-            if w and w not in self._states:
-                self._states[w] = HilbertState(w, self.dimension)
-                created += 1
-        return created
+        if not self.loaded or self.vectors is None or len(self.tokens) == 0:
+            return None
 
-    def save(self) -> bool:
-        """Persist Hilbert space to disk."""
-        try:
-            os.makedirs(self._state_dir, exist_ok=True)
-            data = {
-                "dimension": self.dimension,
-                "count": len(self._states),
-                "states": {w: s.to_dict() for w, s in self._states.items()},
-            }
-            with open(self._state_file, 'w') as f:
-                json.dump(data, f)
-            logger.info(f"Hilbert space saved: {len(self._states)} states")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to save Hilbert space: {e}")
-            return False
+        # Use seeded ρ if context provided, otherwise current self.rho
+        if context_tokens:
+            rho = self._prepare_state_from_context(context_tokens)
+        else:
+            rho = self.rho
 
-    def load(self) -> bool:
-        """Load Hilbert space from disk."""
-        if not os.path.exists(self._state_file):
-            return False
-        try:
-            with open(self._state_file, 'r') as f:
-                data = json.load(f)
-            self.dimension = data.get("dimension", self.dimension)
-            states_data = data.get("states", {})
-            for word, state_dict in states_data.items():
-                self._states[word] = HilbertState.from_dict(state_dict)
-            self._loaded = True
-            logger.info(
-                f"Hilbert space loaded: {len(self._states)} states, dim={self.dimension}"
-            )
-            return True
-        except Exception as e:
-            logger.error(f"Failed to load Hilbert space: {e}")
-            return False
+        # Born rule: P(i) = ⟨vᵢ | ρ | vᵢ⟩, real and non-negative
+        # Compute as einsum for vectorized speed: weights_i = vectors[i]† ρ vectors[i]
+        weights = np.einsum("ij,jk,ik->i", np.conj(self.vectors), rho, self.vectors).real
+        weights = np.clip(weights, 0.0, None)   # numerical floor
+        total = weights.sum()
+        if total < 1e-18:
+            return None
+        weights = weights / total
 
+        # Temperature
+        if temperature != 1.0 and temperature > 0.0:
+            weights = np.power(weights, 1.0 / temperature)
+            weights /= weights.sum()
+
+        # Top-k filter
+        if top_k and top_k < len(weights):
+            cutoff_idx = np.argpartition(-weights, top_k)[:top_k]
+            mask = np.zeros_like(weights)
+            mask[cutoff_idx] = weights[cutoff_idx]
+            s = mask.sum()
+            if s < 1e-18:
+                return None
+            weights = mask / s
+
+        # Sample
+        idx = int(np.random.choice(len(weights), p=weights))
+        token = self.tokens[idx]
+
+        # Collapse: project ρ onto the chosen state |vᵢ⟩
+        v = self.vectors[idx]
+        v_norm = v / (np.linalg.norm(v) + 1e-12)
+        self.rho = np.outer(v_norm, np.conj(v_norm))
+        # Then evolve forward by U for the next sample
+        if self.U is not None:
+            self.rho = self.U @ self.rho @ np.conj(self.U.T)
+
+        self.sample_count += 1
+        return token
+
+    # ────────────────────────────────────────────────────────────────────
+    # External evolution — call after seeing an externally-supplied token
+    # ────────────────────────────────────────────────────────────────────
+    def evolve(self, token: str) -> None:
+        """Advance ρ as if `token` were the most recent observation."""
+        idx = self.token_index.get(token.lower())
+        if idx is None or self.vectors is None:
+            return
+        v = self.vectors[idx]
+        v_norm = v / (np.linalg.norm(v) + 1e-12)
+        self.rho = np.outer(v_norm, np.conj(v_norm))
+        if self.U is not None:
+            self.rho = self.U @ self.rho @ np.conj(self.U.T)
+
+    # ────────────────────────────────────────────────────────────────────
     def get_status(self) -> Dict:
-        """Return engine status."""
         return {
-            "dimension": self.dimension,
-            "states": len(self._states),
-            "loaded_from_disk": self._loaded,
-            "state_file": self._state_file,
+            "loaded": self.loaded,
+            "dim": self.dim,
+            "vocab_size": len(self.tokens),
+            "samples_drawn": self.sample_count,
+            "has_U": self.U is not None,
         }
 
 
-# Module-level singleton
-_engine: Optional[HilbertEngine] = None
+# Singleton accessor for convenience
+_INSTANCE: Optional[HilbertEngine] = None
 
-
-def get_hilbert_engine(state_dir: str = None,
-                       dimension: int = 128) -> HilbertEngine:
-    """Get or create the Hilbert engine singleton."""
-    global _engine
-    if _engine is None:
-        _engine = HilbertEngine(state_dir=state_dir, dimension=dimension)
-    return _engine
+def get_hilbert_engine(dim: int = 128) -> HilbertEngine:
+    global _INSTANCE
+    if _INSTANCE is None:
+        _INSTANCE = HilbertEngine(dim=dim)
+        import os
+        state_path = os.path.expanduser('~/.quantum-mcagi/hilbert/hilbert_state.npz')
+        if os.path.exists(state_path):
+            _INSTANCE.load_state(state_path)
+    return _INSTANCE

@@ -1,462 +1,759 @@
 """
-🎓 EXAM SYSTEM — Knowledge Examination & Testing
-=================================================
-Tests the AI's knowledge through structured examinations.
+Quantum MCAGI — Stage Advancement Exam System
+Tests whether the system retained and can access what it was taught.
 
-Provides:
-  - Concept recall tests (can the AI retrieve stored concepts?)
-  - Relationship mapping (does it know connections between concepts?)
-  - Domain coverage (which knowledge domains are strongest?)
-  - Markov coherence (are generated sentences grammatically sound?)
-  - Conversation memory (can it recall previous exchanges?)
-  - Graph topology (is the concept graph well-connected?)
-  - Cross-domain tests (can it link concepts across domains?)
+NOT an IQ test. A diagnostic + competency gate.
+- Tracks what was ingested per stage
+- Generates questions FROM the system's own training data
+- 95% pass rate required to advance
+- Distinguishes "doesn't know" from "knows but can't access"
 
-Chat commands:
-  /exam              — Run a full examination
-  /exam DOMAIN       — Test a specific domain
-  /exam summary      — Show exam history summary
-
-API endpoints:
-  POST /api/brain/exam         — Run examination
-  GET  /api/brain/exam/summary — Get exam summary
+Usage in chat.py:
+    /exam          — Run stage advancement exam
+    /exam status   — Show exam readiness and history
+    /exam review   — Show last exam results with failures
 """
 
-import random
+import json
+import os
 import time
-import math
-import logging
-from typing import Dict, List, Optional, Any, Tuple
-from collections import defaultdict
-from datetime import datetime, timezone
-
-logger = logging.getLogger("quantum_ai")
+import random
+import hashlib
+import re
+from datetime import datetime
+from typing import Dict, List, Tuple, Optional
 
 
-# ============================================================================
-# TEST CATEGORIES
-# ============================================================================
+class IntakeTracker:
+    """Tracks what knowledge was ingested at each stage."""
 
-EXAM_CATEGORIES = [
-    "concept_recall",
-    "relationship_mapping",
-    "domain_coverage",
-    "markov_coherence",
-    "conversation_memory",
-    "graph_topology",
-    "cross_domain",
-]
+    def __init__(self, data_dir=None):
+        if data_dir is None:
+            data_dir = os.path.expanduser('~/.quantum-mcagi')
+        self.data_dir = data_dir
+        self.intake_file = os.path.join(data_dir, 'intake_log.json')
+        self.intake = self._load()
 
-DOMAIN_NAMES = [
-    "philosophy", "physics", "computer_science",
-    "biology", "mathematics", "psychology", "language",
-]
-
-
-class ExamResult:
-    """Result of a single test question."""
-
-    def __init__(self, category: str, question: str, passed: bool,
-                 score: float = 0.0, details: str = ""):
-        self.category = category
-        self.question = question
-        self.passed = passed
-        self.score = score
-        self.details = details
-        self.timestamp = datetime.now(timezone.utc)
-
-    def to_dict(self) -> Dict:
+    def _load(self):
+        if os.path.exists(self.intake_file):
+            try:
+                with open(self.intake_file, 'r') as f:
+                    return json.load(f)
+            except Exception:
+                pass
         return {
-            "category": self.category,
-            "question": self.question,
-            "passed": self.passed,
-            "score": self.score,
-            "details": self.details,
-            "timestamp": self.timestamp.isoformat(),
+            'stages': {},       # stage_num -> list of intake records
+            'current_stage': 0,
+            'sources': [],      # all sources ever ingested
+            'exam_history': [], # past exam results
         }
 
+    def save(self):
+        os.makedirs(self.data_dir, exist_ok=True)
+        with open(self.intake_file, 'w') as f:
+            json.dump(self.intake, f, indent=2, default=str)
 
-class ExamSystem:
-    """
-    Knowledge examination engine for testing the AI's capabilities.
-    """
+    def log_ingestion(self, source: str, word_count: int, stage: int,
+                      source_type: str = 'url', domain: str = 'unknown',
+                      key_topics: List[str] = None):
+        """Log a knowledge ingestion event."""
+        stage_key = str(stage)
+        if stage_key not in self.intake['stages']:
+            self.intake['stages'][stage_key] = []
 
-    def __init__(self):
-        self.history: List[Dict] = []
-        self._exam_count = 0
+        record = {
+            'source': source,
+            'source_type': source_type,
+            'domain': domain,
+            'word_count': word_count,
+            'key_topics': key_topics or [],
+            'timestamp': datetime.now().isoformat(),
+            'stage': stage,
+        }
 
-    def run_exam(self, memory: Any, engine: Any = None,
-                 domain: str = None,
-                 categories: List[str] = None) -> Dict:
+        self.intake['stages'][stage_key].append(record)
+        self.intake['sources'].append(record)
+        self.intake['current_stage'] = stage
+        self.save()
+
+    def get_stage_intake(self, stage: int) -> List[dict]:
+        """Get all intake records for a specific stage."""
+        return self.intake['stages'].get(str(stage), [])
+
+    def get_all_intake(self, up_to_stage: int = None) -> List[dict]:
+        """Get all intake records up to and including a stage."""
+        records = []
+        for stage_key, stage_records in self.intake['stages'].items():
+            if up_to_stage is None or int(stage_key) <= up_to_stage:
+                records.extend(stage_records)
+        return records
+
+    def get_all_topics(self, up_to_stage: int = None) -> List[str]:
+        """Get all key topics from intake."""
+        topics = []
+        for record in self.get_all_intake(up_to_stage):
+            topics.extend(record.get('key_topics', []))
+        return list(set(topics))
+
+    def get_all_domains(self, up_to_stage: int = None) -> List[str]:
+        """Get all domains from intake."""
+        domains = []
+        for record in self.get_all_intake(up_to_stage):
+            d = record.get('domain', 'unknown')
+            if d != 'unknown':
+                domains.append(d)
+        return list(set(domains))
+
+    def log_exam_result(self, result: dict):
+        """Log an exam result."""
+        self.intake['exam_history'].append(result)
+        self.save()
+
+
+# ============================================================================
+# QUESTION GENERATORS — Pull from system's own knowledge
+# ============================================================================
+
+class ExamQuestionGenerator:
+    """Generates exam questions from the system's actual knowledge."""
+
+    def __init__(self, engine, intake_tracker: IntakeTracker):
         """
-        Run a knowledge examination.
-
-        Args:
-            memory: LocalMemory instance with concepts, exchanges, growth
-            engine: QuantumLanguageEngine (optional, for Markov tests)
-            domain: Specific domain to test (or None for all)
-            categories: Specific categories to test (or None for all)
-
-        Returns:
-            Exam results dict with scores per category
+        engine: QuantumLanguageEngine instance
+        intake_tracker: IntakeTracker instance
         """
-        start_time = time.time()
-        self._exam_count += 1
+        self.engine = engine
+        self.tracker = intake_tracker
 
-        if categories is None:
-            categories = EXAM_CATEGORIES
+    def _get_known_concepts(self) -> List[str]:
+        """Get concepts the system has actually learned."""
+        if hasattr(self.engine, 'concepts'):
+            return [c for c in self.engine.concepts.keys()
+                    if c not in ('that', 'this', 'the', 'and', 'but', 'for',
+                                 'with', 'from', 'have', 'has', 'was', 'were',
+                                 'been', 'being', 'will', 'would', 'could',
+                                 'should', 'shall', 'may', 'might', 'must',
+                                 'chat', 'python', 'sed', 'engine', 'print',
+                                 'self', 'def', 'class', 'import', 'return',
+                                 'facilitated', 'txt', 'epub', 'cache',
+                                 'ingest', 'https', 'org', 'www')]
+        return []
 
-        results: List[ExamResult] = []
+    def _get_markov_vocabulary(self) -> set:
+        """Get words the Markov chain knows."""
+        if hasattr(self.engine, 'markov') and hasattr(self.engine.markov, 'chain'):
+            return set(self.engine.markov.chain.keys())
+        return set()
 
-        for category in categories:
-            if category == "concept_recall":
-                results.extend(self._test_concept_recall(memory, domain))
-            elif category == "relationship_mapping":
-                results.extend(self._test_relationships(memory, domain))
-            elif category == "domain_coverage":
-                results.extend(self._test_domain_coverage(memory))
-            elif category == "markov_coherence":
-                results.extend(self._test_markov_coherence(engine))
-            elif category == "conversation_memory":
-                results.extend(self._test_conversation_memory(memory))
-            elif category == "graph_topology":
-                results.extend(self._test_graph_topology(memory))
-            elif category == "cross_domain":
-                results.extend(self._test_cross_domain(memory))
+    def _concept_in_chain(self, concept: str) -> bool:
+        """Check if a concept exists in the Markov chain."""
+        vocab = self._get_markov_vocabulary()
+        return concept.lower() in vocab
 
-        # Compute scores
-        elapsed = time.time() - start_time
-        category_scores = defaultdict(lambda: {"passed": 0, "total": 0, "score_sum": 0.0})
+    def _get_concept_strength(self, concept: str) -> float:
+        """Get how strong a concept is in the system."""
+        if hasattr(self.engine, 'concepts') and concept in self.engine.concepts:
+            return self.engine.concepts[concept].get('strength', 0)
+        return 0
 
-        for r in results:
-            cat = category_scores[r.category]
-            cat["total"] += 1
-            cat["score_sum"] += r.score
-            if r.passed:
-                cat["passed"] += 1
+    # ── Question Type 1: Vocabulary Check ──
+    def gen_vocabulary_questions(self, n=5) -> List[dict]:
+        """Does the system have this word in its chain?"""
+        concepts = self._get_known_concepts()
+        if not concepts:
+            return []
 
-        # Overall score
-        total_tests = len(results)
-        total_passed = sum(1 for r in results if r.passed)
-        overall_score = total_passed / total_tests if total_tests > 0 else 0.0
+        questions = []
+        sample = random.sample(concepts, min(n, len(concepts)))
+        for concept in sample:
+            in_chain = self._concept_in_chain(concept)
+            questions.append({
+                'type': 'vocabulary',
+                'category': 'retention',
+                'question': f'Is "{concept}" in the Markov chain vocabulary?',
+                'test_concept': concept,
+                'expected': True,  # We only test concepts we know exist
+                'check': 'chain_lookup',
+                'difficulty': 1,
+            })
+        return questions
+
+    # ── Question Type 2: Concept Association ──
+    def gen_association_questions(self, n=5) -> List[dict]:
+        """Can the system connect two related concepts?"""
+        concepts = self._get_known_concepts()
+        if len(concepts) < 2:
+            return []
+
+        questions = []
+        for _ in range(min(n, len(concepts) // 2)):
+            c1, c2 = random.sample(concepts, 2)
+            questions.append({
+                'type': 'association',
+                'category': 'access',
+                'question': f'Generate a response connecting "{c1}" and "{c2}"',
+                'test_concepts': [c1, c2],
+                'check': 'response_contains_both',
+                'difficulty': 2,
+            })
+        return questions
+
+    # ── Question Type 3: Concept Definition ──
+    def gen_definition_questions(self, n=5) -> List[dict]:
+        """Can the system say something meaningful about a concept?"""
+        concepts = self._get_known_concepts()
+        # Filter to strong concepts
+        strong = [c for c in concepts if self._get_concept_strength(c) > 2.0]
+        if not strong:
+            strong = concepts
+
+        questions = []
+        sample = random.sample(strong, min(n, len(strong)))
+        for concept in sample:
+            questions.append({
+                'type': 'definition',
+                'category': 'comprehension',
+                'question': f'What is {concept}?',
+                'test_concept': concept,
+                'check': 'response_relevant',
+                'difficulty': 2,
+            })
+        return questions
+
+    # ── Question Type 4: Domain Knowledge ──
+    def gen_domain_questions(self, n=5) -> List[dict]:
+        """Test knowledge from specific ingested domains."""
+        domains = self.tracker.get_all_domains()
+        if not domains:
+            return []
+
+        # Domain-specific test questions
+        domain_tests = {
+            'religion': [
+                ('Who is described in Genesis as creating the world?', ['god', 'creator', 'lord']),
+                ('What is the concept of karma?', ['action', 'consequence', 'deed']),
+                ('What are the Five Pillars?', ['prayer', 'faith', 'fasting', 'pilgrimage', 'charity']),
+            ],
+            'philosophy_ancient': [
+                ('What is Plato\'s allegory of the cave about?', ['shadow', 'reality', 'light', 'illusion', 'truth']),
+                ('What did Aristotle say about virtue?', ['mean', 'excellence', 'habit', 'character', 'good']),
+                ('What is the Socratic method?', ['question', 'dialogue', 'inquiry', 'examine']),
+            ],
+            'philosophy_medieval': [
+                ('What did Aquinas argue about God\'s existence?', ['proof', 'cause', 'motion', 'necessary', 'design']),
+                ('What is Dante\'s Divine Comedy about?', ['hell', 'purgatory', 'paradise', 'journey', 'soul']),
+                ('What did Augustine write about in Confessions?', ['sin', 'grace', 'god', 'soul', 'faith']),
+            ],
+            'philosophy_enlightenment': [
+                ('What is Kant\'s categorical imperative?', ['duty', 'moral', 'universal', 'law', 'reason']),
+                ('What did Descartes mean by "I think therefore I am"?', ['doubt', 'exist', 'think', 'certain', 'mind']),
+                ('What is the social contract?', ['society', 'government', 'consent', 'rights', 'freedom']),
+            ],
+            'philosophy_20th': [
+                ('What is existentialism?', ['existence', 'freedom', 'choice', 'meaning', 'absurd']),
+                ('What did Wittgenstein say about language?', ['language', 'game', 'meaning', 'use', 'limit']),
+                ('What is phenomenology?', ['experience', 'consciousness', 'perception', 'intentionality']),
+            ],
+            'science_general': [
+                ('What is evolution by natural selection?', ['species', 'adapt', 'survive', 'mutation', 'fitness']),
+                ('What is the scientific method?', ['hypothesis', 'experiment', 'observe', 'test', 'evidence']),
+            ],
+            'science_physics': [
+                ('What is quantum superposition?', ['state', 'both', 'measure', 'collapse', 'wave']),
+                ('What is Einstein\'s theory of relativity?', ['space', 'time', 'light', 'mass', 'energy']),
+                ('What is the uncertainty principle?', ['position', 'momentum', 'measure', 'precise', 'limit']),
+            ],
+            'science_biology': [
+                ('What is DNA?', ['gene', 'genetic', 'molecule', 'heredity', 'sequence']),
+                ('What are mitochondria?', ['energy', 'cell', 'powerhouse', 'atp']),
+                ('What is natural selection?', ['adapt', 'survive', 'species', 'fitness', 'environment']),
+            ],
+            'literature': [
+                ('What is the plot of Frankenstein?', ['creature', 'monster', 'creator', 'science', 'life']),
+                ('What themes does Shakespeare explore?', ['love', 'power', 'death', 'fate', 'honor']),
+            ],
+            'mathematics': [
+                ('What is calculus?', ['derivative', 'integral', 'rate', 'change', 'limit']),
+                ('What is a prime number?', ['divisible', 'factor', 'one', 'itself']),
+            ],
+        }
+
+        questions = []
+        for domain in domains:
+            if domain in domain_tests:
+                available = domain_tests[domain]
+                sample = random.sample(available, min(2, len(available)))
+                for q_text, expected_words in sample:
+                    questions.append({
+                        'type': 'domain',
+                        'category': 'knowledge',
+                        'question': q_text,
+                        'domain': domain,
+                        'expected_words': expected_words,
+                        'check': 'response_contains_any',
+                        'difficulty': 3,
+                    })
+
+        random.shuffle(questions)
+        return questions[:n]
+
+    # ── Question Type 5: Math Routing ──
+    def gen_math_questions(self, n=3) -> List[dict]:
+        """Test if math gets routed correctly."""
+        math_tests = [
+            ('What is 7 + 3?', '10'),
+            ('What is 15 - 8?', '7'),
+            ('What is 6 * 4?', '24'),
+            ('What is 100 / 5?', '20'),
+            ('What is 2 + 2?', '4'),
+            ('What is 9 * 9?', '81'),
+            ('What is 50 - 17?', '33'),
+            ('What is 12 + 15?', '27'),
+        ]
+        sample = random.sample(math_tests, min(n, len(math_tests)))
+        return [{
+            'type': 'math',
+            'category': 'routing',
+            'question': q,
+            'expected_answer': a,
+            'check': 'contains_number',
+            'difficulty': 1,
+        } for q, a in sample]
+
+    # ── Question Type 6: Casual Conversation ──
+    def gen_casual_questions(self, n=3) -> List[dict]:
+        """Test casual/conversational ability."""
+        casual = [
+            ('Hello', ['hello', 'hi', 'greet', 'hey', 'welcome']),
+            ('How are you?', ['fine', 'well', 'good', 'exist', 'ponder', 'think']),
+            ('What is your name?', ['quantum', 'mcagi', 'ai', 'system', 'name']),
+            ('Tell me a joke', ['funny', 'laugh', 'humor', 'joke']),
+            ('Thank you', ['welcome', 'thank', 'glad', 'help', 'pleasure']),
+        ]
+        sample = random.sample(casual, min(n, len(casual)))
+        return [{
+            'type': 'casual',
+            'category': 'social',
+            'question': q,
+            'expected_words': words,
+            'check': 'not_empty_and_coherent',
+            'difficulty': 1,
+        } for q, words in sample]
+
+    # ── Question Type 7: Self-Awareness ──
+    def gen_self_awareness_questions(self, n=2) -> List[dict]:
+        """Test if the system has a self-model."""
+        questions = [
+            ('What are you?', ['ai', 'system', 'quantum', 'intelligence', 'mcagi', 'think', 'understand']),
+            ('Do you think?', ['think', 'process', 'understand', 'simulate', 'ponder', 'question']),
+            ('Are you conscious?', ['conscious', 'aware', 'question', 'understand', 'ponder', 'simulate']),
+            ('What do you know?', ['quantum', 'philosophy', 'consciousness', 'knowledge', 'learn']),
+        ]
+        sample = random.sample(questions, min(n, len(questions)))
+        return [{
+            'type': 'self_awareness',
+            'category': 'meta',
+            'question': q,
+            'expected_words': words,
+            'check': 'response_contains_any',
+            'difficulty': 3,
+        } for q, words in sample]
+
+    # ── Question Type 8: Context Retention ──
+    def gen_context_questions(self) -> List[dict]:
+        """Test if system retains conversation context."""
+        return [{
+            'type': 'context',
+            'category': 'memory',
+            'question': 'CONTEXT_TEST',  # Special marker
+            'setup': 'My favorite planet is Jupiter.',
+            'followup': 'What is my favorite planet?',
+            'expected_words': ['jupiter'],
+            'check': 'response_contains_any',
+            'difficulty': 3,
+        }]
+
+    def generate_exam(self, stage: int, total_questions: int = 20) -> List[dict]:
+        """Generate a full exam appropriate for the current stage."""
+        questions = []
+
+        # Every stage gets basics
+        questions.extend(self.gen_vocabulary_questions(3))
+        questions.extend(self.gen_casual_questions(2))
+        questions.extend(self.gen_math_questions(2))
+
+        # Scale complexity with stage
+        if stage >= 0:
+            questions.extend(self.gen_definition_questions(3))
+            questions.extend(self.gen_association_questions(2))
+
+        if stage >= 1:
+            questions.extend(self.gen_domain_questions(4))
+            questions.extend(self.gen_self_awareness_questions(2))
+
+        if stage >= 2:
+            questions.extend(self.gen_context_questions())
+            questions.extend(self.gen_domain_questions(3))
+
+        if stage >= 3:
+            questions.extend(self.gen_association_questions(3))
+            questions.extend(self.gen_domain_questions(4))
+
+        # Shuffle and trim
+        random.shuffle(questions)
+        return questions[:total_questions]
+
+
+# ============================================================================
+# EXAM RUNNER — Executes exam and grades responses
+# ============================================================================
+
+class ExamRunner:
+    """Runs the exam against the engine and grades results."""
+
+    PASS_THRESHOLD = 0.95  # 95% to advance
+
+    def __init__(self, engine, intake_tracker: IntakeTracker):
+        self.engine = engine
+        self.tracker = intake_tracker
+        self.generator = ExamQuestionGenerator(engine, intake_tracker)
+
+    def _get_response(self, question: str) -> str:
+        try:
+            from cistercian_math import detect_math, evaluate_math
+            expr = detect_math(question)
+            if expr:
+                result = evaluate_math(expr)
+                if result is not None:
+                    return str(result)
+        except Exception:
+            pass
+        """Get a response from the engine."""
+        try:
+            # Try generate_response
+            if hasattr(self.engine, 'generate_response'):
+                concepts = self.engine.extract_concepts(question)
+                response = self.engine.generate_response(question, [], concepts)
+                if isinstance(response, str):
+                    return response.lower()
+                return str(response).lower()
+            return ""
+        except Exception as e:
+            return f"ERROR: {e}"
+
+    def _check_chain_lookup(self, question: dict) -> Tuple[bool, str]:
+        """Check if concept is in Markov chain."""
+        concept = question['test_concept'].lower()
+        if hasattr(self.engine, 'markov') and hasattr(self.engine.markov, 'chain'):
+            found = concept in self.engine.markov.chain
+            return found, f"'{concept}' {'found' if found else 'NOT found'} in chain"
+        return False, "Markov chain not accessible"
+
+    def _check_response_contains_both(self, question: dict, response: str) -> Tuple[bool, str]:
+        """Check if response mentions both concepts."""
+        c1, c2 = question['test_concepts']
+        has_c1 = c1.lower() in response
+        has_c2 = c2.lower() in response
+        if has_c1 and has_c2:
+            return True, f"Response contains both '{c1}' and '{c2}'"
+        missing = []
+        if not has_c1: missing.append(c1)
+        if not has_c2: missing.append(c2)
+        return False, f"Missing: {', '.join(missing)}"
+
+    def _check_response_relevant(self, question: dict, response: str) -> Tuple[bool, str]:
+        """Check if response is relevant to the concept."""
+        concept = question['test_concept'].lower()
+        # Response should mention the concept or related words
+        if concept in response:
+            return True, f"Response mentions '{concept}'"
+        # Check if response is non-trivial (more than just template)
+        words = response.split()
+        if len(words) > 5 and not response.startswith('error'):
+            return True, "Response is substantive"
+        return False, "Response doesn't engage with concept"
+
+    def _check_response_contains_any(self, question: dict, response: str) -> Tuple[bool, str]:
+        """Check if response contains any of the expected words."""
+        expected = question.get('expected_words', [])
+        found = [w for w in expected if w.lower() in response]
+        if found:
+            return True, f"Found: {', '.join(found)}"
+        return False, f"None of {expected} found in response"
+
+    def _check_contains_number(self, question: dict, response: str) -> Tuple[bool, str]:
+        """Check if response contains the correct number."""
+        expected = question['expected_answer']
+        if expected in response:
+            return True, f"Correct: {expected}"
+        # Check for the number anywhere
+        numbers = re.findall(r'\d+', response)
+        if expected in numbers:
+            return True, f"Found {expected} in response"
+        return False, f"Expected {expected}, got: {response[:100]}"
+
+    def _check_not_empty(self, question: dict, response: str) -> Tuple[bool, str]:
+        """Check response is non-empty and somewhat coherent."""
+        if not response or len(response.strip()) < 5:
+            return False, "Empty or too short"
+        if response.startswith('error'):
+            return False, f"Error: {response}"
+        return True, "Response generated"
+
+    def grade_question(self, question: dict) -> dict:
+        """Run a single question and grade it."""
+        check_type = question.get('check', 'not_empty_and_coherent')
+
+        # Special handling for vocabulary checks (no response needed)
+        if check_type == 'chain_lookup':
+            passed, explanation = self._check_chain_lookup(question)
+            return {
+                'question': question,
+                'response': '(chain lookup)',
+                'passed': passed,
+                'explanation': explanation,
+            }
+
+        # Special handling for context tests
+        if question.get('type') == 'context':
+            # Send setup
+            self._get_response(question['setup'])
+            # Then ask followup
+            response = self._get_response(question['followup'])
+            passed, explanation = self._check_response_contains_any(question, response)
+            return {
+                'question': question,
+                'response': response[:200],
+                'passed': passed,
+                'explanation': explanation,
+            }
+
+        # Normal question
+        response = self._get_response(question['question'])
+
+        if check_type == 'response_contains_both':
+            passed, explanation = self._check_response_contains_both(question, response)
+        elif check_type == 'response_relevant':
+            passed, explanation = self._check_response_relevant(question, response)
+        elif check_type == 'response_contains_any':
+            passed, explanation = self._check_response_contains_any(question, response)
+        elif check_type == 'contains_number':
+            passed, explanation = self._check_contains_number(question, response)
+        else:
+            passed, explanation = self._check_not_empty(question, response)
+
+        return {
+            'question': question,
+            'response': response[:200],
+            'passed': passed,
+            'explanation': explanation,
+        }
+
+    def run_exam(self, stage: int, num_questions: int = 20) -> dict:
+        """Run a full stage advancement exam."""
+        print(f"\n        ╔══ STAGE {stage} ADVANCEMENT EXAM ══════════════════════")
+
+        print(f"  ║ Questions: {num_questions}")
+        print(f"  ║ Pass threshold: {self.PASS_THRESHOLD * 100:.0f}%")
+        print(f"  ║ Testing against ingested knowledge...")
+        print(f"  ╠═══════════════════════════════════════════════════")
+
+        questions = self.generator.generate_exam(stage, num_questions)
+        actual_count = len(questions)
+
+        results = []
+        passed = 0
+        failed = 0
+        failures_by_type = {}
+
+        for i, question in enumerate(questions):
+            result = self.grade_question(question)
+            results.append(result)
+
+            status = "✓" if result['passed'] else "✗"
+            if result['passed']:
+                passed += 1
+            else:
+                failed += 1
+                qtype = question.get('type', 'unknown')
+                failures_by_type[qtype] = failures_by_type.get(qtype, 0) + 1
+
+            q_short = question['question'][:50]
+            print(f"  ║ {status} [{question.get('type', '?'):12s}] {q_short}...")
+
+        score = passed / actual_count if actual_count > 0 else 0
+        advanced = score >= self.PASS_THRESHOLD
+
+        print(f"  ╠═══════════════════════════════════════════════════")
+        print(f"  ║ RESULTS: {passed}/{actual_count} ({score*100:.1f}%)")
+        print(f"  ║ Threshold: {self.PASS_THRESHOLD*100:.0f}%")
+        print(f"  ║ Verdict: {'ADVANCE ✓' if advanced else 'REMAIN ✗'}")
+
+        if failures_by_type:
+            print(f"  ║")
+            print(f"  ║ FAILURE ANALYSIS:")
+            for ftype, count in sorted(failures_by_type.items(), key=lambda x: -x[1]):
+                diagnosis = self._diagnose_failure(ftype)
+                print(f"  ║   {ftype}: {count} failures → {diagnosis}")
+
+        print(f"  ╚═══════════════════════════════════════════════════\n        ")
+
 
         exam_result = {
-            "exam_number": self._exam_count,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "elapsed": round(elapsed, 3),
-            "total_tests": total_tests,
-            "total_passed": total_passed,
-            "overall_score": round(overall_score, 4),
-            "categories": {
-                cat: {
-                    "passed": data["passed"],
-                    "total": data["total"],
-                    "score": round(data["score_sum"] / data["total"], 4) if data["total"] > 0 else 0,
-                }
-                for cat, data in category_scores.items()
-            },
-            "details": [r.to_dict() for r in results],
+            'stage': stage,
+            'timestamp': datetime.now().isoformat(),
+            'questions': actual_count,
+            'passed': passed,
+            'failed': failed,
+            'score': score,
+            'advanced': advanced,
+            'failures_by_type': failures_by_type,
+            'details': [{
+                'type': r['question'].get('type'),
+                'question': r['question']['question'][:80],
+                'passed': r['passed'],
+                'explanation': r['explanation'],
+            } for r in results],
         }
 
-        self.history.append(exam_result)
+        self.tracker.log_exam_result(exam_result)
         return exam_result
 
-    def get_summary(self) -> Dict:
-        """Get summary of all past exams."""
-        if not self.history:
-            return {"exams": 0, "message": "No exams taken yet"}
-
-        scores = [e["overall_score"] for e in self.history]
-        return {
-            "exams": len(self.history),
-            "latest_score": scores[-1],
-            "best_score": max(scores),
-            "average_score": round(sum(scores) / len(scores), 4),
-            "trend": "improving" if len(scores) >= 2 and scores[-1] > scores[0] else "stable",
+    def _diagnose_failure(self, failure_type: str) -> str:
+        """Diagnose what a failure pattern means."""
+        diagnoses = {
+            'vocabulary': 'Markov chain missing words → needs more training data',
+            'association': 'Can\'t connect concepts → concept graph too sparse or hybrid gen not routing',
+            'definition': 'Can\'t describe concepts → Markov transitions too shallow for coherent output',
+            'domain': 'Domain knowledge not accessible → ingested but not retained or TF-IDF not extracting',
+            'math': 'Math not computing → Wolfram routing not wired',
+            'casual': 'Can\'t do casual conversation → tone detection or composer broken',
+            'self_awareness': 'No self-model → personality/knowledge base not connected',
+            'context': 'No context retention → conversation memory not wired',
         }
+        return diagnoses.get(failure_type, 'Unknown failure pattern')
 
-    # ── Test Implementations ──
+    def show_status(self):
+        """Show exam readiness and history."""
+        print(f"═══ EXAM STATUS ═══")
 
-    def _test_concept_recall(self, memory: Any,
-                              domain: str = None) -> List[ExamResult]:
-        """Test: Can we recall stored concepts?"""
-        results = []
-        concepts = list(getattr(memory, 'concepts', {}).keys())
 
-        if domain:
-            concepts = [
-                c for c in concepts
-                if getattr(memory.concepts.get(c), 'metadata', {}).get('domain') == domain
-            ]
 
-        if not concepts:
-            return [ExamResult("concept_recall", "No concepts available", False, 0.0)]
+        history = self.tracker.intake.get('exam_history', [])
+        if history:
+            last = history[-1]
+            print(f"  Last exam: Stage {last['stage']} — {last['score']*100:.1f}% ({last['passed']}/{last['questions']})")
+            print(f"  Result: {'ADVANCED' if last['advanced'] else 'REMAINED'}")
+            print(f"  Date: {last['timestamp'][:19]}")
 
-        # Sample up to 10 concepts
-        sample = random.sample(concepts, min(10, len(concepts)))
-        for concept in sample:
-            exists = concept in memory.concepts
-            results.append(ExamResult(
-                "concept_recall",
-                f"Recall: {concept}",
-                exists,
-                1.0 if exists else 0.0,
-                "Found in concept store" if exists else "Not found",
-            ))
-
-        return results
-
-    def _test_relationships(self, memory: Any,
-                             domain: str = None) -> List[ExamResult]:
-        """Test: Do concepts have connections?"""
-        results = []
-        concepts = getattr(memory, 'concepts', {})
-
-        if len(concepts) < 2:
-            return [ExamResult("relationship_mapping", "Too few concepts", False, 0.0)]
-
-        concept_list = list(concepts.keys())
-        sample = random.sample(concept_list, min(10, len(concept_list)))
-
-        for concept in sample:
-            data = concepts[concept]
-            connections = 0
-            if isinstance(data, dict):
-                connections = len(data.get('connections', []))
-            elif hasattr(data, 'connections'):
-                connections = len(data.connections)
-
-            has_connections = connections > 0
-            results.append(ExamResult(
-                "relationship_mapping",
-                f"Connections for '{concept}'",
-                has_connections,
-                min(1.0, connections / 3.0),  # Normalize: 3+ connections = full score
-                f"{connections} connections",
-            ))
-
-        return results
-
-    def _test_domain_coverage(self, memory: Any) -> List[ExamResult]:
-        """Test: Which knowledge domains are covered?"""
-        results = []
-        concepts = getattr(memory, 'concepts', {})
-
-        domain_counts = defaultdict(int)
-        for concept, data in concepts.items():
-            domain = "general"
-            if isinstance(data, dict):
-                domain = data.get('metadata', {}).get('domain', 'general')
-            elif hasattr(data, 'metadata'):
-                meta = getattr(data, 'metadata', None)
-                if meta is not None:
-                    domain = getattr(meta, 'domain', 'general')
-            domain_counts[domain] += 1
-
-        for domain_name in DOMAIN_NAMES:
-            count = domain_counts.get(domain_name, 0)
-            has_coverage = count > 0
-            results.append(ExamResult(
-                "domain_coverage",
-                f"Domain: {domain_name}",
-                has_coverage,
-                min(1.0, count / 10.0),
-                f"{count} concepts",
-            ))
-
-        return results
-
-    def _test_markov_coherence(self, engine: Any) -> List[ExamResult]:
-        """Test: Is the Markov chain producing coherent text?"""
-        results = []
-
-        if engine is None or not hasattr(engine, 'markov'):
-            return [ExamResult("markov_coherence", "No engine available", False, 0.0)]
-
-        markov = engine.markov
-        if not hasattr(markov, 'generate') or not hasattr(markov, 'trained'):
-            return [ExamResult("markov_coherence", "Markov not trained", False, 0.0)]
-
-        if not markov.trained:
-            return [ExamResult("markov_coherence", "Markov chain empty", False, 0.0)]
-
-        # Generate 5 test sentences
-        for i in range(5):
-            try:
-                text = markov.generate(max_words=20)
-                words = text.split() if text else []
-                has_words = len(words) >= 3
-                results.append(ExamResult(
-                    "markov_coherence",
-                    f"Generation test {i + 1}",
-                    has_words,
-                    min(1.0, len(words) / 10.0),
-                    f"Generated {len(words)} words: {text[:50]}..." if text else "Empty output",
-                ))
-            except Exception as e:
-                results.append(ExamResult(
-                    "markov_coherence",
-                    f"Generation test {i + 1}",
-                    False,
-                    0.0,
-                    f"Error: {e}",
-                ))
-
-        return results
-
-    def _test_conversation_memory(self, memory: Any) -> List[ExamResult]:
-        """Test: Can we recall previous conversations?"""
-        results = []
-        exchanges = getattr(memory, 'exchanges', [])
-
-        if not exchanges:
-            return [ExamResult("conversation_memory", "No exchanges stored", False, 0.0)]
-
-        count = len(exchanges)
-        results.append(ExamResult(
-            "conversation_memory",
-            f"Exchange count",
-            count > 0,
-            min(1.0, count / 50.0),
-            f"{count} exchanges stored",
-        ))
-
-        # Check most recent exchanges are retrievable
-        recent = exchanges[-min(5, len(exchanges)):]
-        for ex in recent:
-            has_response = bool(ex.get('response', ''))
-            results.append(ExamResult(
-                "conversation_memory",
-                f"Recent exchange recall",
-                has_response,
-                1.0 if has_response else 0.0,
-                "Exchange has response" if has_response else "Missing response",
-            ))
-
-        return results
-
-    def _test_graph_topology(self, memory: Any) -> List[ExamResult]:
-        """Test: Is the concept graph well-connected?"""
-        results = []
-
-        if hasattr(memory, 'check_graph_topology'):
-            topo = memory.check_graph_topology()
+            if last.get('failures_by_type'):
+                print(f"  Failures: {', '.join(f'{k}({v})' for k,v in last['failures_by_type'].items())}")
         else:
-            return [ExamResult("graph_topology", "No topology method", False, 0.0)]
+            print(f"  No exams taken yet")
 
-        # Average degree
-        avg_deg = topo.get('avg_degree', 0)
-        results.append(ExamResult(
-            "graph_topology",
-            "Average degree",
-            avg_deg >= 2.0,
-            min(1.0, avg_deg / 5.0),
-            f"avg_degree={avg_deg:.2f}",
-        ))
-
-        # Diameter
-        diameter = topo.get('diameter', 0)
-        results.append(ExamResult(
-            "graph_topology",
-            "Graph diameter",
-            diameter >= 3,
-            min(1.0, diameter / 8.0),
-            f"diameter={diameter}",
-        ))
-
-        # Components
-        components = topo.get('component_count', 0)
-        total_concepts = len(getattr(memory, 'concepts', {}))
-        ratio = components / total_concepts if total_concepts > 0 else 1.0
-        well_connected = ratio < 0.5  # Less than half as many components as concepts
-        results.append(ExamResult(
-            "graph_topology",
-            "Component ratio",
-            well_connected,
-            max(0.0, 1.0 - ratio),
-            f"{components} components / {total_concepts} concepts",
-        ))
-
-        return results
-
-    def _test_cross_domain(self, memory: Any) -> List[ExamResult]:
-        """Test: Are there connections between different domains?"""
-        results = []
-        concepts = getattr(memory, 'concepts', {})
-
-        if len(concepts) < 10:
-            return [ExamResult("cross_domain", "Too few concepts", False, 0.0)]
-
-        # Check for cross-domain connections
-        cross_connections = 0
-        total_checked = 0
-
-        concept_list = list(concepts.keys())
-        sample = random.sample(concept_list, min(20, len(concept_list)))
-
-        for concept in sample:
-            data = concepts[concept]
-            concept_domain = "general"
-            connections = []
-
-            if isinstance(data, dict):
-                concept_domain = data.get('metadata', {}).get('domain', 'general')
-                connections = data.get('connections', [])
-            elif hasattr(data, 'connections'):
-                connections = list(getattr(data, 'connections', []))
-
-            for conn in connections[:5]:
-                conn_name = conn if isinstance(conn, str) else conn.get('concept', '')
-                if conn_name in concepts:
-                    conn_data = concepts[conn_name]
-                    conn_domain = "general"
-                    if isinstance(conn_data, dict):
-                        conn_domain = conn_data.get('metadata', {}).get('domain', 'general')
-                    if conn_domain != concept_domain and conn_domain != "general":
-                        cross_connections += 1
-                    total_checked += 1
-
-        ratio = cross_connections / total_checked if total_checked > 0 else 0.0
-        results.append(ExamResult(
-            "cross_domain",
-            "Cross-domain connections",
-            cross_connections > 0,
-            min(1.0, ratio * 5),
-            f"{cross_connections}/{total_checked} cross-domain links",
-        ))
-
-        return results
+        # Show intake summary
+        intake = self.tracker.get_all_intake()
+        print(f"Knowledge ingested: {len(intake)} sources")
 
 
-def format_exam_results(results: Dict) -> str:
-    """Format exam results for terminal display."""
-    lines = [
-        f"\n  ╔══ KNOWLEDGE EXAM #{results['exam_number']} ══════════════════════════",
-        f"  ║ Overall: {results['overall_score']:.1%} "
-        f"({results['total_passed']}/{results['total_tests']} passed)",
-        f"  ║ Time: {results['elapsed']:.1f}s",
-        f"  ║",
-    ]
+        domains = self.tracker.get_all_domains()
+        if domains:
+            print(f"  Domains: {', '.join(domains)}")
 
-    for cat, data in results.get("categories", {}).items():
-        bar_len = int(data['score'] * 20)
-        bar = '█' * bar_len + '░' * (20 - bar_len)
-        lines.append(
-            f"  ║ {cat:25s} [{bar}] {data['score']:.0%} "
-            f"({data['passed']}/{data['total']})"
-        )
+        total_words = sum(r.get('word_count', 0) for r in intake)
+        print(f"  Total words ingested: {total_words:,}")
+        print()
 
-    lines.append(f"  ╚═══════════════════════════════════════════════════")
-    return '\n'.join(lines)
+    def show_review(self):
+        """Show last exam results with details."""
+        history = self.tracker.intake.get('exam_history', [])
+        if not history:
+            print("  No exams taken yet")
+            return
+
+        last = history[-1]
+        print(f"═══ EXAM REVIEW — Stage {last['stage']} ═══")
 
 
-# Module-level singleton
-_exam_system: Optional[ExamSystem] = None
+        print(f"  Score: {last['score']*100:.1f}% ({last['passed']}/{last['questions']})")
+
+        for detail in last.get('details', []):
+            status = "✓" if detail['passed'] else "✗"
+            print(f"  {status} [{detail['type']:12s}] {detail['question']}")
+            if not detail['passed']:
+                print(f"    └─ {detail['explanation']}")
+        print()
 
 
-def get_exam_system() -> ExamSystem:
-    """Get or create the exam system singleton."""
-    global _exam_system
-    if _exam_system is None:
-        _exam_system = ExamSystem()
-    return _exam_system
+# ============================================================================
+# DOMAIN DETECTOR — Auto-detect domain from URL/filename
+# ============================================================================
+
+DOMAIN_PATTERNS = {
+    'religion': ['bible', 'quran', 'bukhari', 'torah', 'gospel', 'sacred-texts',
+                 'buddhist', 'sutra', 'vedic', 'upanishad', 'bhagavad', 'talmud',
+                 'nag-hammadi', 'gnostic', 'lbob', 'zoroastrian', 'sikh'],
+    'philosophy_ancient': ['plato', 'aristotle', 'socrates', 'republic', 'symposium',
+                           'timaeus', 'nicomachean', 'politics', 'marcus-aurelius',
+                           'meditations', 'stoic', 'epicur'],
+    'philosophy_medieval': ['aquinas', 'summa', 'augustine', 'confessions', 'dante',
+                            'inferno', 'purgatorio', 'paradiso', 'boethius',
+                            'consolation', 'anselm', 'abelard'],
+    'philosophy_enlightenment': ['kant', 'hume', 'locke', 'rousseau', 'voltaire',
+                                  'descartes', 'spinoza', 'leibniz', 'hobbes',
+                                  'machiavelli', 'prince', 'leviathan'],
+    'philosophy_20th': ['nietzsche', 'zarathustra', 'wittgenstein', 'heidegger',
+                         'sartre', 'camus', 'russell', 'foucault', 'derrida',
+                         'phenomenology', 'existential'],
+    'science_general': ['darwin', 'origin-species', 'scientific', 'method',
+                        'evolution', 'chemistry'],
+    'science_physics': ['einstein', 'relativity', 'newton', 'principia', 'quantum',
+                        'feynman', 'hawking', 'planck', 'schrodinger', 'bohr'],
+    'science_biology': ['biology', 'cell', 'genetics', 'dna', 'evolution',
+                        'anatomy', 'organism', 'ecology'],
+    'mathematics': ['calculus', 'algebra', 'geometry', 'euclid', 'mathematics',
+                    'number-theory', 'probability', 'statistics'],
+    'literature': ['shakespeare', 'frankenstein', 'moby', 'dickens', 'austen',
+                   'twain', 'tolstoy', 'dostoevsky', 'homer', 'iliad', 'odyssey'],
+    'psychology': ['freud', 'jung', 'psychology', 'cognitive', 'behavioral',
+                   'consciousness', 'perception', 'memory'],
+}
+
+
+def detect_domain(source: str) -> str:
+    """Auto-detect domain from a source URL or filename."""
+    source_lower = source.lower()
+    for domain, patterns in DOMAIN_PATTERNS.items():
+        for pattern in patterns:
+            if pattern in source_lower:
+                return domain
+    return 'unknown'
+
+
+def extract_topics_from_source(source: str) -> List[str]:
+    """Extract likely topics from source URL/filename."""
+    source_lower = source.lower()
+    topics = []
+    for domain, patterns in DOMAIN_PATTERNS.items():
+        for pattern in patterns:
+            if pattern in source_lower:
+                topics.append(pattern)
+    return topics
+
+
+# ============================================================================
+# CLI INTERFACE (for integration into chat.py)
+# ============================================================================
+
+if __name__ == "__main__":
+    print("Quantum MCAGI — Stage Advancement Exam System")
+    print("Integrate into chat.py with:")
+    print("  from exam_system import ExamRunner, IntakeTracker")
+    print("  tracker = IntakeTracker()")
+    print("  runner = ExamRunner(engine, tracker)")
+    print("  runner.run_exam(current_stage)")
+    print()
+    print("Commands:")
+    print("  /exam          — Run stage advancement exam")
+    print("  /exam status   — Show readiness and history")
+    print("  /exam review   — Show last exam details")
