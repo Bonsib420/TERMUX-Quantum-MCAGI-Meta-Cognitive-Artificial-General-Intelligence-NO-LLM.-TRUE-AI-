@@ -37,7 +37,8 @@ def explain_concepts(engine, user_input):
     lines.append(f"    Total vocabulary: {len(engine.extractor.word_frequencies)} words")
     lines.append(f"    Corpus size: {engine.extractor.total_documents} documents")
     
-    return "\n".join(lines)
+    return "".join(lines)
+
 
 
 def explain_orch_or(engine):
@@ -49,7 +50,7 @@ def explain_orch_or(engine):
     orch = getattr(engine, 'orch_or', None)
     
     if has_orch and orch:
-        status = orch.get_status()
+        status = orch.get_state()
         lines.append(f"    Status: ACTIVE")
         lines.append(f"    Conscious moments: {status.get('conscious_moments', 0)}")
         lines.append(f"    Temperature: {status.get('last_temperature', 0):.3f}")
@@ -70,7 +71,8 @@ def explain_orch_or(engine):
         lines.append("    Status: CLASSICAL FALLBACK")
         lines.append("    (Orch OR not loaded — using probabilistic selection)")
     
-    return "\n".join(lines)
+    return "".join(lines)
+
 
 
 def explain_tone(tone_result):
@@ -102,7 +104,8 @@ def explain_tone(tone_result):
         reason = "Heavy philosophical content -> full quantum generation"
     lines.append(f"    Decision: {reason}")
     
-    return "\n".join(lines)
+    return "".join(lines)
+
 
 
 def explain_bloom(questions, growth_stage):
@@ -124,7 +127,8 @@ def explain_bloom(questions, growth_stage):
         else:
             lines.append(f"    {q}")
     
-    return "\n".join(lines)
+    return "".join(lines)
+
 
 
 def explain_markov(engine, user_input):
@@ -151,7 +155,8 @@ def explain_markov(engine, user_input):
     if unknown:
         lines.append(f"    Unknown words: {', '.join(unknown[:10])}")
     
-    return "\n".join(lines)
+    return "".join(lines)
+
 
 
 def explain_generator(tone_result, has_hybrid):
@@ -180,7 +185,8 @@ def explain_generator(tone_result, has_hybrid):
         lines.append("      2. Concept threading into structured response")
         lines.append("      3. Bloom's question appended if appropriate")
     
-    return "\n".join(lines)
+    return "".join(lines)
+
 
 
 def explain_understanding(understanding, concepts, memory_concepts):
@@ -206,7 +212,8 @@ def explain_understanding(understanding, concepts, memory_concepts):
     if related:
         lines.append(f"    Related: {', '.join(r.get('concept', str(r)) for r in related)}")
     
-    return "\n".join(lines)
+    return "".join(lines)
+
 
 
 def explain_flavor(has_quotes, has_personality):
@@ -217,7 +224,8 @@ def explain_flavor(has_quotes, has_personality):
     lines.append(f"    Personality: {'ACTIVE (30% chance)' if has_personality else 'OFF'}")
     lines.append(f"    Philosophical asides: {'15% chance' if has_quotes else 'OFF'}")
     lines.append(f"    Dream fragments: {'10% chance' if has_quotes else 'OFF'}")
-    return "\n".join(lines)
+    return "".join(lines)
+
 
 
 def full_explanation(engine, user_input, concepts, questions, tone_result,
@@ -254,5 +262,6 @@ def full_explanation(engine, user_input, concepts, questions, tone_result,
     sections.append("  =============================================")
     sections.append("")
     
-    return "\n".join(sections)
+    return "".join(sections)
+
 

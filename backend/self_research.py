@@ -12,6 +12,18 @@ from datetime import datetime, timezone, timedelta
 
 import requests as _requests
 
+# Check if DuckDuckGo available
+try:
+    import duckduckgo
+    HAS_DUCKDUCKGO = True
+except ImportError:
+    HAS_DUCKDUCKGO = False
+    try:
+        from web_search import WebSearch
+        HAS_WEB_SEARCH = True
+    except ImportError:
+        HAS_WEB_SEARCH = False
+
 class DDGS:
     """Lightweight DuckDuckGo search using direct API calls."""
     def text(self, query, max_results=5):
@@ -338,6 +350,57 @@ class SelfResearchEngine:
             self.autonomous_running = False
             self.autonomous_progress['status'] = f'Error: {e}'
     
+
+    def lookup(self, concepts: list, query: str) -> dict:
+        """CASCADE: Check internal → Drive → Research → Save"""
+        result = {'found': False, 'source': None, 'data': None}
+        
+        # STEP 1: Check internal (engine.concepts)
+        if hasattr(self, 'engine') and self.engine and hasattr(self.engine, 'concepts'):
+            found = {c: True for c in concepts if c in self.engine.concepts}
+            if found:
+                result['found'] = True
+                result['source'] = 'internal'
+                result['data'] = found
+                return result
+        
+        # STEP 2: Check Google Drive (future - add rclone check here)
+        
+        # STEP 3: Initiate research in background (don't block)
+        result['source'] = 'research_initiated'
+        # Research runs synchronously — wait for it to finish
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(self._research_and_save(concepts, query))
+        except:
+            pass
+        
+        return result
+    
+    async def _research_and_save(self, concepts: list, query: str):
+        """Research and save to local + Google Drive"""
+        try:
+            result = await self.research(query)
+            
+            if result and result.get('results'):
+                # Save to local cache
+                import json
+                cache_file = f"/tmp/research_cache_{hash(query) % 10000}.json"
+                with open(cache_file, 'w') as f:
+                    json.dump(result, f)
+                
+                # Push to Google Drive
+                import subprocess
+                subprocess.run([
+                    'rclone', 'copy', cache_file,
+                    'gdrive 666:Quantum Cloud/MCAGI_BRAIN/',
+                    '-v'
+                ], timeout=30, capture_output=True)
+        except Exception as e:
+            print(f"[RESEARCH] Background failed: {e}")
+
+
     def stop_autonomous_research(self) -> Dict:
         """Stop autonomous research."""
         if not self.autonomous_running:
