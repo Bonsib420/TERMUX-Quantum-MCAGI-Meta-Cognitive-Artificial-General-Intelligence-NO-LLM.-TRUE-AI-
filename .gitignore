@@ -16,3 +16,9 @@ backend/test_render.png
 backend/quantum_language_engine.py.backup
 backend/quantum_language_engine.py.bak
 backend/quantum_language_engine.py.orchorfix.backup
+
+# Large runtime corpus / logs (regenerated or pulled from cloud, not source)
+backend/oxford_extracted.txt
+backend/response_log.jsonl
+*.jsonl
+backend/.quantum-mcagi/

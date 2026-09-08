@@ -168,7 +168,7 @@ class EvaluationEngine:
                     return 1
                 else:
                     return 0
-            except:
+            except Exception:
                 pass
         
         # Fallback: check sentence structure

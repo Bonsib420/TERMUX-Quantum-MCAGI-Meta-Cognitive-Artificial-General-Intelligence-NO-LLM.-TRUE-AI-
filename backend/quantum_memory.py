@@ -1,365 +1,333 @@
 """
-🧠 QUANTUM MEMORY — QRAM (Quantum Random Access Memory)
-========================================================
-Stores and retrieves concepts using quantum-inspired addressing.
+💾 Quantum Random Access Memory (QRAM) Integration
+===================================================
+Leverages PennyLane 0.44.0+ QRAM templates (BBQRAM, SelectOnlyQRAM,
+HybridQRAM) for quantum-enhanced concept retrieval from the knowledge graph.
 
-Uses PennyLane 0.44+ for real quantum circuits (BBQRAM, SelectOnlyQRAM,
-HybridQRAM) when available, with a deterministic ClassicalMemoryStore
-fallback that works everywhere.
+QRAM encodes bitstrings corresponding to concept data entries and can
+query them in superposition:
+    QRAM Σ cᵢ |i⟩|0⟩ = Σ cᵢ |i⟩|bᵢ⟩
 
-Architecture:
-  - Each concept is mapped to a unique bitstring address via SHA-256
-  - Values are stored as amplitude-encoded quantum states
-  - Queries use Grover-like search for O(√N) retrieval
-  - Superposition queries return multiple related concepts
+Three strategies are available depending on device constraints:
+ • BBQRAM          – Bucket Brigade: noise-resilient, moderate depth + width
+ • SelectOnlyQRAM  – Series of MultiControlledX: low width, higher depth
+ • HybridQRAM      – Combines both: tuneable depth/width tradeoff
 
-Chat commands:
-  /qram              — Show QRAM status
-  /qram load         — Load all concepts into QRAM
-  /qram query N      — Query address N
-  /qram search TERM  — Search for concepts matching TERM
-  /qram super N N    — Superposition query across multiple addresses
-  /qram strategy X   — Set strategy: bb, select, or hybrid
-
-API endpoints:
-  GET  /quantum/qram         — Status
-  POST /quantum/qram/load    — Load concepts
-  POST /quantum/qram/query   — Query by address
-  POST /quantum/qram/search  — Search by term
+When PennyLane ≥0.44.0 is unavailable the module provides a pure-Python
+classical fallback that mirrors the same API so the rest of the system
+works identically.
 """
 
-import hashlib
 import math
 import random
-import logging
-from typing import Dict, List, Optional, Tuple, Any
-from collections import defaultdict
-from datetime import datetime, timezone
+from typing import Dict, List, Optional, Tuple
 
-logger = logging.getLogger("quantum_ai")
-
-# ============================================================================
-# BITSTRING ADDRESS MAPPING
-# ============================================================================
-
-def concept_to_bitstring(concept: str, num_bits: int = 8) -> str:
-    """
-    Map a concept string to a deterministic bitstring address.
-
-    Uses SHA-256 for cross-session determinism (NOT hash()).
-    The first `num_bits` bits of the hash determine the address.
-    """
-    digest = hashlib.sha256(concept.lower().strip().encode('utf-8')).hexdigest()
-    # Convert hex to binary string, take first num_bits bits
-    full_binary = bin(int(digest, 16))[2:].zfill(256)
-    return full_binary[:num_bits]
-
-
-def bitstring_to_int(bitstring: str) -> int:
-    """Convert a bitstring to its integer address."""
-    return int(bitstring, 2)
-
-
-# ============================================================================
-# CLASSICAL MEMORY STORE (always available)
-# ============================================================================
-
-class ClassicalMemoryStore:
-    """
-    Classical QRAM fallback — stores concept→value mappings with
-    hash-based addressing that mirrors quantum QRAM structure.
-
-    This provides the same API as quantum QRAM implementations so
-    the rest of the system doesn't care which backend is active.
-    """
-
-    def __init__(self, num_address_bits: int = 8):
-        self.num_address_bits = num_address_bits
-        self.num_addresses = 2 ** num_address_bits
-        self.memory: Dict[str, Dict[str, Any]] = {}  # bitstring → data
-        self.concept_index: Dict[str, str] = {}  # concept → bitstring
-        self.loaded_count = 0
-        self.strategy = "classical"
-        self._created_at = datetime.now(timezone.utc)
-
-    def store(self, concept: str, value: Any = None) -> str:
-        """Store a concept and return its bitstring address."""
-        addr = concept_to_bitstring(concept, self.num_address_bits)
-        self.memory[addr] = {
-            "concept": concept,
-            "value": value or concept,
-            "stored_at": datetime.now(timezone.utc).isoformat(),
-            "access_count": 0,
-        }
-        self.concept_index[concept.lower()] = addr
-        self.loaded_count = len(self.memory)
-        return addr
-
-    def query(self, address: int) -> Optional[Dict]:
-        """Query by integer address."""
-        bitstring = bin(address)[2:].zfill(self.num_address_bits)
-        if bitstring in self.memory:
-            self.memory[bitstring]["access_count"] += 1
-            return self.memory[bitstring]
-        return None
-
-    def query_bitstring(self, bitstring: str) -> Optional[Dict]:
-        """Query by bitstring address."""
-        if bitstring in self.memory:
-            self.memory[bitstring]["access_count"] += 1
-            return self.memory[bitstring]
-        return None
-
-    def search(self, term: str) -> List[Dict]:
-        """Search for concepts matching a term."""
-        term_lower = term.lower()
-        results = []
-        for addr, data in self.memory.items():
-            concept = data.get("concept", "")
-            if term_lower in concept.lower():
-                results.append({
-                    "address": addr,
-                    "address_int": bitstring_to_int(addr),
-                    **data,
-                })
-        return results
-
-    def superposition_query(self, *addresses: int) -> List[Dict]:
-        """
-        Query multiple addresses simultaneously — classical simulation
-        of quantum superposition query returning all matching results.
-        """
-        results = []
-        for addr_int in addresses:
-            result = self.query(addr_int)
-            if result:
-                results.append({
-                    "address_int": addr_int,
-                    "address": bin(addr_int)[2:].zfill(self.num_address_bits),
-                    **result,
-                })
-        return results
-
-    def load_concepts(self, concepts: List[str]) -> int:
-        """Bulk load concepts. Returns count loaded."""
-        loaded = 0
-        for concept in concepts:
-            if concept and concept.strip():
-                self.store(concept.strip())
-                loaded += 1
-        self.loaded_count = len(self.memory)
-        return loaded
-
-    def get_status(self) -> Dict:
-        """Return QRAM status information."""
-        return {
-            "strategy": self.strategy,
-            "backend": "classical",
-            "num_address_bits": self.num_address_bits,
-            "capacity": self.num_addresses,
-            "stored": len(self.memory),
-            "loaded_count": self.loaded_count,
-            "utilization": len(self.memory) / self.num_addresses if self.num_addresses else 0,
-            "created_at": self._created_at.isoformat(),
-        }
-
-    def clear(self):
-        """Clear all stored data."""
-        self.memory.clear()
-        self.concept_index.clear()
-        self.loaded_count = 0
-
-
-# ============================================================================
-# PENNYLANE QRAM BACKENDS (optional)
-# ============================================================================
-
+# ---------- optional PennyLane import ----------
 try:
     import pennylane as qml
     from pennylane import numpy as pnp
 
+    # QRAM templates arrived in PennyLane 0.44.0
+    _has_bbqram = hasattr(qml, "BBQRAM")
+    _has_select = hasattr(qml, "SelectOnlyQRAM")
+    _has_hybrid = hasattr(qml, "HybridQRAM")
+    PENNYLANE_QRAM_AVAILABLE = _has_bbqram or _has_select or _has_hybrid
     PENNYLANE_AVAILABLE = True
-    _pennylane_version = tuple(int(x) for x in qml.__version__.split('.')[:2])
-    # QRAM templates available in PennyLane >= 0.44
-    QRAM_AVAILABLE = _pennylane_version >= (0, 44)
 except ImportError:
+    qml = None  # type: ignore[assignment]
+    pnp = None  # type: ignore[assignment]
     PENNYLANE_AVAILABLE = False
-    QRAM_AVAILABLE = False
+    PENNYLANE_QRAM_AVAILABLE = False
+    _has_bbqram = False
+    _has_select = False
+    _has_hybrid = False
 
 
-class BBQRAMStore(ClassicalMemoryStore):
+# ──────────────────────────────────────────────
+# Helpers
+# ──────────────────────────────────────────────
+
+def _concept_to_bitstring(concept: str, bit_width: int) -> str:
+    """Deterministic mapping: concept name → fixed-width bitstring.
+
+    Uses hashlib so the mapping is stable across Python sessions
+    (unaffected by PYTHONHASHSEED / hash randomization).
+    Truncated / zero-padded to *bit_width* bits.
     """
-    Bucket-Brigade QRAM using PennyLane's BBQRAM template.
+    import hashlib
+    h = int(hashlib.sha256(concept.encode("utf-8")).hexdigest(), 16)
+    h = h & ((1 << bit_width) - 1)
+    return format(h, f"0{bit_width}b")
 
-    The bucket-brigade architecture uses O(N) ancilla qubits to route
-    quantum queries to the correct memory cell in O(log N) time.
+
+def _bitstring_to_index(bs: str) -> int:
+    return int(bs, 2)
+
+
+# ──────────────────────────────────────────────
+# Classical fallback
+# ──────────────────────────────────────────────
+
+class ClassicalMemoryStore:
+    """Pure-Python QRAM stand-in used when PennyLane < 0.44 or missing."""
+
+    def __init__(self, bit_width: int = 8):
+        self.bit_width = bit_width
+        self.entries: Dict[int, str] = {}     # address → bitstring
+        self.concepts: Dict[int, str] = {}    # address → concept name
+        self._next_addr = 0
+
+    # -- public API (mirrors QuantumMemoryStore) --------------------
+
+    def load_concepts(self, concept_names: List[str]) -> int:
+        """Encode a batch of concept names.  Returns count loaded."""
+        for name in concept_names:
+            if self._next_addr >= (1 << self.bit_width):
+                break
+            bs = _concept_to_bitstring(name, self.bit_width)
+            self.entries[self._next_addr] = bs
+            self.concepts[self._next_addr] = name
+            self._next_addr += 1
+        return self._next_addr
+
+    def query(self, address: int) -> Optional[str]:
+        """Classical single-address lookup."""
+        return self.concepts.get(address)
+
+    def superposition_query(self, addresses: List[int]) -> List[Tuple[str, float]]:
+        """Simulate a superposition query classically (uniform probs)."""
+        results: List[Tuple[str, float]] = []
+        valid = [a for a in addresses if a in self.concepts]
+        if not valid:
+            return results
+        prob = 1.0 / len(valid)
+        for a in valid:
+            results.append((self.concepts[a], prob))
+        return results
+
+    def status(self) -> Dict:
+        return {
+            "backend": "classical_fallback",
+            "pennylane_available": PENNYLANE_AVAILABLE,
+            "qram_available": False,
+            "entries_loaded": self._next_addr,
+            "bit_width": self.bit_width,
+            "max_entries": 1 << self.bit_width,
+        }
+
+
+# ──────────────────────────────────────────────
+# Quantum QRAM store (PennyLane ≥ 0.44)
+# ──────────────────────────────────────────────
+
+class QuantumMemoryStore:
+    """Wraps PennyLane QRAM templates for concept storage / retrieval.
+
+    Parameters
+    ----------
+    bit_width : int
+        Number of target bits per entry (data register width).
+    strategy : str
+        ``"bb"`` for BBQRAM, ``"select"`` for SelectOnlyQRAM,
+        ``"hybrid"`` for HybridQRAM.  Falls back automatically if
+        the chosen template is unavailable.
     """
 
-    def __init__(self, num_address_bits: int = 4):
-        super().__init__(num_address_bits)
-        self.strategy = "bb"
-        if not QRAM_AVAILABLE:
-            logger.warning("PennyLane QRAM not available, BBQRAM using classical fallback")
+    STRATEGIES = ("bb", "select", "hybrid")
 
-    def quantum_query(self, address_bits: List[int]) -> Optional[Dict]:
+    def __init__(self, bit_width: int = 8, strategy: str = "select"):
+        if not PENNYLANE_QRAM_AVAILABLE:
+            raise RuntimeError(
+                "PennyLane QRAM templates not found. "
+                "Requires PennyLane >= 0.44.0 with BBQRAM / SelectOnlyQRAM."
+            )
+        if strategy not in self.STRATEGIES:
+            strategy = "select"
+
+        self.bit_width = bit_width
+        self.strategy = self._resolve_strategy(strategy)
+        self.bitstrings: List[str] = []
+        self.concepts: Dict[int, str] = {}
+        self._loaded = False
+
+    @staticmethod
+    def _resolve_strategy(requested: str) -> str:
+        """Pick the best available strategy."""
+        order = {
+            "bb":     [_has_bbqram, _has_select, _has_hybrid],
+            "select": [_has_select, _has_bbqram, _has_hybrid],
+            "hybrid": [_has_hybrid, _has_bbqram, _has_select],
+        }
+        names = ["bb", "select", "hybrid"]
+        prefs = order.get(requested, order["select"])
+        for avail, name in zip(prefs, [requested] + [n for n in names if n != requested]):
+            if avail:
+                return name
+        return "select"  # should not reach if PENNYLANE_QRAM_AVAILABLE is True
+
+    # -- public API ------------------------------------------------
+
+    def load_concepts(self, concept_names: List[str]) -> int:
+        """Encode concept names into QRAM bitstrings.
+
+        The number of entries is rounded up to the next power of two
+        (padded with zero-bitstrings) as required by QRAM templates.
         """
-        Execute a quantum query using BBQRAM circuit.
+        raw = [_concept_to_bitstring(n, self.bit_width) for n in concept_names]
+        # Pad to next power-of-two length
+        n = len(raw)
+        n_padded = 1 << math.ceil(math.log2(max(n, 2)))
+        while len(raw) < n_padded:
+            raw.append("0" * self.bit_width)
+        self.bitstrings = raw
+        self.concepts = {i: name for i, name in enumerate(concept_names)}
+        self._loaded = True
+        return len(concept_names)
 
-        BB is limited to 4 address bits because PennyLane's BBQRAM template
-        requires O(2^n) ancilla qubits, making n>4 impractical on simulators.
+    def query(self, address: int) -> Optional[str]:
+        """Single-address deterministic lookup."""
+        return self.concepts.get(address)
 
-        Args:
-            address_bits: List of 0/1 values representing the address
+    def superposition_query(self, addresses: List[int]) -> List[Tuple[str, float]]:
+        """Query multiple addresses in superposition using QRAM circuit.
 
-        Returns:
-            Query result or None
+        Returns list of (concept_name, probability) pairs.
         """
-        if not QRAM_AVAILABLE:
-            addr_str = ''.join(str(b) for b in address_bits)
-            return self.query_bitstring(addr_str)
+        if not self._loaded or not self.bitstrings:
+            return []
 
+        valid = [a for a in addresses if a in self.concepts]
+        if not valid:
+            return []
+
+        num_entries = len(self.bitstrings)
+        num_control = max(1, math.ceil(math.log2(num_entries)))
+        num_target = self.bit_width
+
+        # Build the QRAM circuit
         try:
-            # Build bitstrings and values for circuit
-            bitstrings = list(self.memory.keys())
-            if not bitstrings:
-                return None
+            probs = self._run_qram_circuit(valid, num_control, num_target)
+        except Exception:
+            # Fall back to uniform if circuit fails
+            prob = 1.0 / len(valid)
+            return [(self.concepts[a], prob) for a in valid]
 
-            addr_str = ''.join(str(b) for b in address_bits)
-            return self.query_bitstring(addr_str)
-        except Exception as e:
-            logger.warning(f"BBQRAM quantum query failed: {e}, falling back to classical")
-            addr_str = ''.join(str(b) for b in address_bits)
-            return self.query_bitstring(addr_str)
+        # Map probabilities back to concepts
+        results: List[Tuple[str, float]] = []
+        for a in valid:
+            p = probs[a] if a < len(probs) else 1.0 / len(valid)
+            results.append((self.concepts[a], float(p)))
+        return results
+
+    def _run_qram_circuit(
+        self,
+        addresses: List[int],
+        num_control: int,
+        num_target: int,
+    ) -> list:
+        """Build and execute QRAM circuit, return address-register probs."""
+        total_wires = num_control + num_target
+        # BBQRAM needs work wires
+        if self.strategy == "bb":
+            num_work = 1 + 3 * ((1 << num_control) - 1)
+            total_wires += num_work
+        else:
+            num_work = 0
+
+        dev = qml.device("default.qubit", wires=total_wires)
+
+        control_wires = list(range(num_control))
+        target_wires = list(range(num_control, num_control + num_target))
+        work_wires = list(range(num_control + num_target, total_wires)) if num_work else []
+
+        bitstrings = self.bitstrings
+        strategy = self.strategy
+
+        @qml.qnode(dev)
+        def circuit():
+            # Prepare superposition over requested addresses
+            if len(addresses) == 1:
+                qml.BasisEmbedding(addresses[0], wires=control_wires)
+            else:
+                # Equal superposition over requested addresses
+                # Use Hadamard on all control qubits then post-select
+                for w in control_wires:
+                    qml.Hadamard(wires=w)
+
+            # Apply the chosen QRAM template
+            if strategy == "bb":
+                qml.BBQRAM(
+                    bitstrings,
+                    control_wires=control_wires,
+                    target_wires=target_wires,
+                    work_wires=work_wires,
+                )
+            elif strategy == "hybrid" and _has_hybrid:
+                qml.HybridQRAM(
+                    bitstrings,
+                    control_wires=control_wires,
+                    target_wires=target_wires,
+                )
+            else:
+                qml.SelectOnlyQRAM(
+                    bitstrings,
+                    control_wires=control_wires,
+                    target_wires=target_wires,
+                )
+
+            return qml.probs(wires=control_wires)
+
+        raw_probs = circuit()
+        return list(raw_probs)
+
+    def status(self) -> Dict:
+        return {
+            "backend": f"pennylane_qram_{self.strategy}",
+            "pennylane_available": True,
+            "qram_available": True,
+            "qram_strategy": self.strategy,
+            "entries_loaded": len(self.concepts),
+            "bit_width": self.bit_width,
+            "max_entries": len(self.bitstrings) if self.bitstrings else 0,
+            "templates": {
+                "BBQRAM": _has_bbqram,
+                "SelectOnlyQRAM": _has_select,
+                "HybridQRAM": _has_hybrid,
+            },
+        }
 
 
-class SelectOnlyQRAMStore(ClassicalMemoryStore):
-    """
-    Select-only QRAM using PennyLane's SelectOnlyQRAM template.
+# ──────────────────────────────────────────────
+# Factory & singleton
+# ──────────────────────────────────────────────
 
-    Uses controlled operations to select the correct memory cell
-    based on the address register state. Simpler than bucket-brigade
-    but uses more gates.
-    """
-
-    def __init__(self, num_address_bits: int = 4):
-        super().__init__(num_address_bits)
-        self.strategy = "select"
-        if not QRAM_AVAILABLE:
-            logger.warning("PennyLane QRAM not available, SelectOnly using classical fallback")
+_qram_instance: Optional[object] = None
 
 
-class HybridQRAMStore(ClassicalMemoryStore):
-    """
-    Hybrid QRAM that tries quantum circuits first and falls back
-    to classical on failure.
+def get_quantum_memory(
+    bit_width: int = 8,
+    strategy: str = "select",
+) -> "ClassicalMemoryStore | QuantumMemoryStore":
+    """Return a QRAM-backed (or classical-fallback) memory store.
 
-    Strategy:
-    1. For small memories (< 16 items): use full quantum circuit
-    2. For medium (16-256): use quantum for frequent lookups, classical for rare
-    3. For large (> 256): classical with quantum-inspired hashing
-    """
-
-    def __init__(self, num_address_bits: int = 8):
-        super().__init__(num_address_bits)
-        self.strategy = "hybrid"
-        self._quantum_cache: Dict[str, Any] = {}
-
-    def query(self, address: int) -> Optional[Dict]:
-        """Hybrid query — tries quantum then classical."""
-        bitstring = bin(address)[2:].zfill(self.num_address_bits)
-
-        # Check quantum cache first
-        if bitstring in self._quantum_cache:
-            return self._quantum_cache[bitstring]
-
-        # Fall through to classical
-        result = super().query(address)
-
-        # Cache result for quantum-speed subsequent lookups
-        if result:
-            self._quantum_cache[bitstring] = result
-
-        return result
-
-
-# ============================================================================
-# FACTORY & MODULE-LEVEL API
-# ============================================================================
-
-# Module-level QRAM instance (singleton)
-_qram_instance: Optional[ClassicalMemoryStore] = None
-
-
-def get_qram(strategy: str = "hybrid", num_bits: int = 8) -> ClassicalMemoryStore:
-    """
-    Get or create the QRAM instance.
-
-    Args:
-        strategy: 'bb' (bucket-brigade), 'select', 'hybrid', or 'classical'
-        num_bits: Number of address bits (capacity = 2^num_bits)
-
-    Returns:
-        QRAM store instance
+    Safe to call repeatedly — returns the same singleton.
     """
     global _qram_instance
-
     if _qram_instance is not None:
-        return _qram_instance
+        return _qram_instance  # type: ignore[return-value]
 
-    if strategy == "bb" and QRAM_AVAILABLE:
-        _qram_instance = BBQRAMStore(min(num_bits, 4))  # BB limited to 4 bits
-    elif strategy == "select" and QRAM_AVAILABLE:
-        _qram_instance = SelectOnlyQRAMStore(min(num_bits, 4))
-    elif strategy == "hybrid":
-        _qram_instance = HybridQRAMStore(num_bits)
-    else:
-        _qram_instance = ClassicalMemoryStore(num_bits)
+    if PENNYLANE_QRAM_AVAILABLE:
+        try:
+            _qram_instance = QuantumMemoryStore(bit_width=bit_width, strategy=strategy)
+            return _qram_instance  # type: ignore[return-value]
+        except Exception:
+            pass
 
-    return _qram_instance
+    _qram_instance = ClassicalMemoryStore(bit_width=bit_width)
+    return _qram_instance  # type: ignore[return-value]
 
 
-def reset_quantum_memory():
-    """Reset the QRAM singleton (for testing)."""
+def reset_quantum_memory() -> None:
+    """Reset the singleton (useful for testing)."""
     global _qram_instance
     _qram_instance = None
-
-
-def load_concepts_into_qram(concepts: List[str],
-                            strategy: str = "hybrid") -> Dict:
-    """
-    Load a list of concepts into QRAM.
-
-    Returns status dict with load count and strategy.
-    """
-    qram = get_qram(strategy)
-    count = qram.load_concepts(concepts)
-    return {
-        "loaded": count,
-        "total": qram.loaded_count,
-        "strategy": qram.strategy,
-        "backend": "pennylane" if QRAM_AVAILABLE else "classical",
-    }
-
-
-def query_qram(address: int) -> Optional[Dict]:
-    """Query QRAM by integer address."""
-    qram = get_qram()
-    return qram.query(address)
-
-
-def search_qram(term: str) -> List[Dict]:
-    """Search QRAM for concepts matching a term."""
-    qram = get_qram()
-    return qram.search(term)
-
-
-def superposition_query(*addresses: int) -> List[Dict]:
-    """Execute a superposition query across multiple addresses."""
-    qram = get_qram()
-    return qram.superposition_query(*addresses)
-
-
-def get_qram_status() -> Dict:
-    """Get current QRAM status."""
-    qram = get_qram()
-    return qram.get_status()

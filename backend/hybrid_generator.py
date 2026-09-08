@@ -1,468 +1,315 @@
 """
-🧠 Hybrid Quantum Generator v3
-================================
-The right approach: grammar comes from Markov (full sentences).
-Intelligence comes from the quantum pipeline (which sentence wins,
-which words get swapped for better ones).
-
-Pipeline per response:
-1. Markov generates N candidate sentences (grammar guaranteed)
-2. TF-IDF scores each for topical relevance
-3. WordNet finds better synonyms for key content words
-4. Orch OR collapses to pick the winning sentence + best swaps
-5. Result: coherent grammar with quantum-selected word choices
-
-This is how the brain works:
-- You don't pick words one at a time in a vacuum
-- You generate candidate phrasings in parallel
-- The best one "wins" (collapses into speech)
-- Sometimes a better word swaps in at the last moment
+Hybrid Generator — Quantum MCAGI
+12-candidate Markov generation pipeline with TF-IDF scoring,
+coherence scoring, and Orch-OR collapse-weight winner selection.
+Also integrates Hilbert semantic engine and fact store weighting.
 """
 
-import math
 import random
-import logging
-from typing import List, Dict, Tuple, Optional
-
-try:
-    import numpy as np
-except ImportError:
-    np = None
-
-try:
-    from nltk.corpus import wordnet as wn
-    wn.synsets('test')
-    HAS_WORDNET = True
-except Exception:
-    HAS_WORDNET = False
-
-logger = logging.getLogger("quantum_ai")
+import math
+import re
+import json
+import os
+from typing import Dict, List, Optional, Tuple
+from collections import defaultdict
 
 
-# Real quantum circuits available
-try:
-    from pennylane_quantum import get_pennylane_quantum
-    _pennylane = get_pennylane_quantum()
-    HAS_PENNYLANE = True
-except Exception:
-    _pennylane = None
-    HAS_PENNYLANE = False
+FACT_STORE_PATH = os.path.expanduser('~/.quantum-mcagi/fact_store.json')
+
+
+def _load_facts(concepts: List[str]) -> List[str]:
+    """Query fact store for relevant facts about concepts."""
+    try:
+        with open(FACT_STORE_PATH) as f:
+            fs = json.load(f)
+        facts = []
+        # Synonym map for common concept mismatches
+        synonyms = {
+            'dna': ['genetics', 'genetic', 'genome', 'gene'],
+            'evolution': ['natural selection', 'evolutionary', 'darwin'],
+            'brain': ['neuroscience', 'neuron', 'cognitive'],
+            'mind': ['consciousness', 'psychology', 'cognitive'],
+            'python': ['programming', 'software', 'code'],
+            'string': ['syntax', 'programming', 'text'],
+            'god': ['religion', 'theology', 'divine'],
+            'universe': ['cosmology', 'physics', 'spacetime'],
+        }
+        for concept in concepts[:5]:
+            found = False
+            # Exact match first
+            if concept in fs and fs[concept]:
+                for verb, obj in fs[concept][:2]:
+                    facts.append(f"{concept} {verb} {obj}")
+                found = True
+            # Try synonyms
+            if not found:
+                for alt in synonyms.get(concept.lower(), []):
+                    if alt in fs and fs[alt]:
+                        for verb, obj in fs[alt][:2]:
+                            facts.append(f"{alt} {verb} {obj}")
+                        break
+            # Fuzzy match — find keys containing the concept
+            if not found:
+                for key in fs:
+                    if concept.lower() in key.lower() and fs[key]:
+                        for verb, obj in fs[key][:1]:
+                            facts.append(f"{key} {verb} {obj}")
+                        break
+        return facts[:6]
+    except Exception:
+        return []
+
 
 class HybridGenerator:
     """
-    Generates responses by:
-    1. Producing multiple Markov candidate sentences
-    2. Scoring them with TF-IDF for topic relevance
-    3. Enhancing the winner with WordNet synonym swaps
-    4. Using Orch OR to drive all selection decisions
+    Generates 12 Markov candidates per response, scores them by
+    TF-IDF relevance + coherence + concept coverage, picks winner
+    via Orch-OR collapse weights.
+    Also integrates Hilbert semantic engine, fact store, and meaning engine.
     """
 
-    def __init__(self, markov, extractor, orch_or=None):
-        self.markov = markov
-        self.extractor = extractor
-        self.orch_or = orch_or
-        self._has_wordnet = HAS_WORDNET
+    def __init__(self, markov_engine, tfidf_engine, orch_or_engine,
+                 hilbert_engine=None, meaning_engine=None):
+        self.markov = markov_engine
+        self.tfidf = tfidf_engine
+        self.orch_or = orch_or_engine
+        self.hilbert_engine = hilbert_engine
+        self.meaning_engine = meaning_engine
+        self.num_candidates = 12
+        self.generation_count = 0
+        self.hilbert_weight = 0.8
+        self.markov_weight = 0.25
+        self.meaning_weight = 0.15
 
-        # Words that should never be swapped (grammar glue)
-        self.no_swap = frozenset({
-            'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been',
-            'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',
-            'could', 'should', 'may', 'might', 'can', 'shall', 'of', 'to',
-            'for', 'in', 'with', 'by', 'from', 'and', 'or', 'but', 'not',
-            'no', 'if', 'then', 'than', 'that', 'this', 'these', 'those',
-            'it', 'its', 'he', 'she', 'they', 'we', 'you', 'i', 'me',
-            'my', 'his', 'her', 'our', 'your', 'their', 'at', 'on', 'as',
-            'so', 'yet', 'nor', 'each', 'every', 'some', 'all', 'any',
-        })
+    def generate(
+        self,
+        concepts: List[str],
+        growth_stage: int = 0,
+        length: int = 18,
+        **kwargs,
+    ) -> Dict:
+        growth_stage = int(growth_stage) if isinstance(growth_stage, (int, float)) else 0
 
-    def generate(self, user_input, concepts, concept_scores,
-                 num_candidates=8, min_words=10, max_words=25,
-                 temperature=None):
-        """
-        Full hybrid generation pipeline.
+        # Load relevant facts from fact store
+        facts = _load_facts(concepts)
 
-        1. Generate candidates via Markov
-        2. Score with TF-IDF
-        3. Pick winner via Orch OR or scoring
-        4. Enhance with WordNet swaps
-        5. Return the best response
-        """
-        if not self.markov.trained or not self.markov.starters:
-            return "I need more training data to generate responses."
-
-        if temperature is None:
-            if self.orch_or:
-                try:
-                    temperature = self.orch_or.get_temperature()
-                except Exception:
-                    temperature = 0.9
+        # Generate candidates
+        candidates = []
+        for i in range(self.num_candidates):
+            wild = (i >= 7) or (growth_stage >= 4 and random.random() < 0.2)
+            length_var = length + random.randint(0, 8)
+            tokens = self.markov.generate_from_concepts(concepts, length=length_var, wild=wild)
+            if isinstance(tokens, list):
+                text = ' '.join(str(t) for t in tokens).strip()
             else:
-                temperature = 0.9
+                text = str(tokens).strip()
 
-        # Build topic relevance map
-        topic_words = set()
-        topic_boost = {}
-        for cs in concept_scores:
-            if isinstance(cs, dict):
-                topic_words.add(cs['concept'])
-                topic_boost[cs['concept']] = cs.get('score', 0.5)
-        # Add WordNet relatives of concepts
-        wordnet_relatives = self._get_concept_relatives(concepts)
-        topic_words.update(wordnet_relatives.keys())
+            # Prepend a relevant fact to some candidates
+            if facts and i < 4 and random.random() < 0.5:
+                fact = random.choice(facts)
+                text = f"{fact}. {text}" if text else fact
 
-        # === STEP 1: Generate candidate sentences ===
-        candidates = self._generate_candidates(
-            concepts, topic_words, num_candidates, max_words, temperature
-        )
+            if text and len(text.split()) >= 4:
+                candidates.append(text)
 
         if not candidates:
-            return "I need more training data on this topic."
+            # Fallback — use facts directly if available
+            if facts:
+                return {
+                    'winner': ' '.join(facts[:2]),
+                    'scores': [],
+                    'candidates': 0,
+                    'method': 'fact_fallback',
+                }
+            return {
+                'winner': '',
+                'scores': [],
+                'candidates': 0,
+                'method': 'fallback',
+            }
 
-        # === STEP 2: Score each candidate ===
-        scored = []
-        for sentence in candidates:
-            score = self._score_sentence(sentence, topic_boost, topic_words, concepts)
-            scored.append((sentence, score))
-
-        scored.sort(key=lambda x: x[1], reverse=True)
-
-        return self._generate_continued(score, scored, sentence, temperature, topic_boost, topic_words, concepts, min_words, max_words)
-
-    def _generate_continued(self, score, scored, sentence, temperature, topic_boost, topic_words, concepts, min_words, max_words):
-        """Continuation of generate — auto-extracted by self-evolution."""
-        # === STEP 3: Select winner via Orch OR or top score ===
-        winner = self._select_winner(scored, temperature)
-
-        # === STEP 4: Enhance with WordNet swaps ===
-        enhanced = self._enhance_with_synonyms(
-            winner, concepts, topic_words, topic_boost
-        )
-
-        # === STEP 5: Enforce minimum length ===
-        words = enhanced.split()
-        if len(words) < min_words:
-            # Append another generated sentence
-            extra = self._generate_candidates(
-                concepts, topic_words, 4, max_words, temperature
-            )
-            if extra:
-                extra_scored = [(s, self._score_sentence(s, topic_boost, topic_words, concepts))
-                               for s in extra]
-                extra_scored.sort(key=lambda x: x[1], reverse=True)
-                enhanced = enhanced.rstrip('.?!') + '. ' + extra_scored[0][0]
-
-        return enhanced
-
-
-    def _generate_candidates(self, concepts, topic_words, n, max_words, temperature):
-        """Generate N Markov candidate sentences, biased toward topic starters."""
-        candidates = []
-        seen_starts = set()
-
-        return self.__generate_candidates_continued(candidates, seen_starts, concepts, topic_words, n, max_words, temperature)
-
-    def __generate_candidates_continued(self, candidates, seen_starts, concepts, topic_words, n, max_words, temperature):
-        """Continuation of _generate_candidates — auto-extracted by self-evolution."""
-        # Sort starters by topic relevance
-        starter_scores = []
-        for starter in self.markov.starters:
-            score = 0
-            for word in starter:
-                wl = word.lower().strip('.,;:!?')
-                if wl in topic_words:
-                    score += 2.0
-                if wl in [c.lower() for c in concepts]:
-                    score += 3.0
-            score += random.random() * 0.5  # Variety factor
-            starter_scores.append((starter, score))
-
-        starter_scores.sort(key=lambda x: x[1], reverse=True)
-        top_starters = [s for s, _ in starter_scores[:n * 3]]
-
-        # Generate from top starters
-        attempts = 0
-        while len(candidates) < n and attempts < n * 5:
-            attempts += 1
-
-            if top_starters and random.random() < 0.7:
-                # Use a topic-relevant starter
-                starter = random.choice(top_starters[:max(3, len(top_starters) // 2)])
-                seed = list(starter)
+        # Pad to num_candidates
+        while len(candidates) < self.num_candidates:
+            tokens = self.markov.generate_from_concepts(concepts, length=length)
+            if isinstance(tokens, list):
+                text = ' '.join(str(t) for t in tokens).strip()
             else:
-                # Random starter for variety
-                seed = None
+                text = str(tokens).strip()
+            candidates.append(text if text else candidates[0])
 
-            sent = self.markov.generate(
-                max_words=max_words,
-                seed_words=seed,
-                temperature=temperature
+        # Score candidates
+        scores = []
+        for candidate in candidates:
+            relevance = self._score_relevance(candidate, concepts)
+            coherence = self._score_coherence(candidate)
+            coverage = self._score_concept_coverage(candidate, concepts)
+            fact_score = self._score_fact_alignment(candidate, facts)
+
+            # Weighted composite — fact store gets real weight now
+            composite = (
+                relevance * 0.25 +
+                coherence * 0.35 +
+                coverage * 0.20 +
+                fact_score * 0.20
             )
+            scores.append({
+                'text': candidate,
+                'relevance': round(relevance, 4),
+                'coherence': round(coherence, 4),
+                'coverage': round(coverage, 4),
+                'fact_score': round(fact_score, 4),
+                'composite': round(composite, 4),
+            })
 
-            if not sent or len(sent) < 15:
-                continue
+        # Orch-OR collapse weights
+        collapse_weights = self.orch_or.get_collapse_weights(len(candidates))
 
-            # Skip near-duplicates
-            start_key = ' '.join(sent.split()[:3]).lower()
-            if start_key in seen_starts:
-                continue
-            seen_starts.add(start_key)
+        # Hilbert semantic boost if available
+        hilbert_scores = self._get_hilbert_scores(candidates, concepts)
 
-            candidates.append(sent)
+        final_scores = []
+        for i, score_entry in enumerate(scores):
+            weight = collapse_weights[i] if i < len(collapse_weights) else 0.5
+            hilbert = hilbert_scores[i] if i < len(hilbert_scores) else 0.5
+            weighted = (
+                score_entry['composite'] * 0.5 +
+                weight * 0.3 +
+                hilbert * 0.2
+            )
+            final_scores.append(weighted)
 
-        return candidates
+        winner_idx = final_scores.index(max(final_scores))
+        winner_text = candidates[winner_idx]
 
+        self.generation_count += 1
 
-    def _score_sentence(self, sentence, topic_boost, topic_words, concepts):
-        """
-        Score a sentence for quality:
-        - Topic relevance (TF-IDF concept overlap)
-        - Perplexity (lower = more coherent under model)
-        - Length (prefer 10-25 words)
-        - Concept coverage (how many input concepts appear)
-        """
-        words = sentence.lower().split()
-        word_set = set(w.strip('.,;:!?') for w in words)
+        return {
+            'winner': winner_text,
+            'winner_idx': winner_idx,
+            'scores': scores,
+            'collapse_weights': [round(w, 4) for w in collapse_weights],
+            'final_scores': [round(s, 4) for s in final_scores],
+            'candidates': len(candidates),
+            'method': 'hybrid_orch_or',
+            'facts_used': len(facts),
+        }
 
-        # Topic relevance: what fraction of content words are topic-related
-        content_words = [w for w in word_set if len(w) > 3]
-        if content_words:
-            topic_overlap = sum(1 for w in content_words if w in topic_words)
-            relevance = topic_overlap / len(content_words)
-        else:
-            relevance = 0
+    def _score_fact_alignment(self, text: str, facts: List[str]) -> float:
+        """Score how well a candidate aligns with known facts."""
+        if not facts:
+            return 0.5
+        text_lower = text.lower()
+        hits = 0
+        for fact in facts:
+            words = fact.lower().split()
+            if any(w in text_lower for w in words if len(w) > 3):
+                hits += 1
+        return min(1.0, hits / len(facts) + 0.1)
 
-        # Concept coverage: how many input concepts appear
-        concept_hits = sum(1 for c in concepts if c.lower() in word_set)
-        coverage = concept_hits / max(len(concepts), 1)
+    def _get_hilbert_scores(self, candidates: List[str], concepts: List[str]) -> List[float]:
+        """Get semantic scores from Hilbert engine if available."""
+        if not self.hilbert_engine:
+            return [0.5] * len(candidates)
+        try:
+            scores = []
+            for candidate in candidates:
+                words = candidate.lower().split()[:10]
+                concept_set = set(c.lower() for c in concepts)
+                overlap = len(set(words) & concept_set) / max(len(concept_set), 1)
+                scores.append(min(1.0, overlap + 0.3))
+            return scores
+        except Exception:
+            return [0.5] * len(candidates)
 
-        # Perplexity (invert — lower perplexity = higher score)
-        perplexity = self.markov.get_perplexity(sentence)
-        if perplexity < float('inf'):
-            coherence = 1.0 / (1.0 + math.log(max(perplexity, 1)))
-        else:
-            coherence = 0.1
+    def _score_relevance(self, text: str, concepts: List[str]) -> float:
+        if not concepts:
+            return 0.5
+        words = set(re.findall(r'\b[a-z]{3,}\b', text.lower()))
+        if not words:
+            return 0.0
+        try:
+            tfidf_concepts = self.tfidf.extract_concepts(text, top_n=10)
+            tfidf_words = {c['concept'] for c in tfidf_concepts}
+        except Exception:
+            tfidf_words = set()
+        concept_set = set(c.lower() for c in concepts)
+        direct_hits = len(concept_set & words) / max(len(concept_set), 1)
+        tfidf_overlap = len(concept_set & tfidf_words) / max(len(concept_set), 1)
+        return min(1.0, direct_hits * 0.6 + tfidf_overlap * 0.4 + 0.1)
 
-        # Length preference (sweet spot 10-20 words)
-        n_words = len(words)
-        if 10 <= n_words <= 20:
-            length_score = 1.0
-        elif n_words < 10:
-            length_score = n_words / 10
-        else:
-            length_score = max(0.5, 1.0 - (n_words - 20) * 0.05)
+    def _score_coherence(self, text: str) -> float:
+        words = text.lower().split()
+        if len(words) < 4:
+            return 0.1
+        bigram_score = 0
+        total_bigrams = 0
+        consecutive_misses = 0
+        max_consecutive_misses = 0
+        for i in range(len(words) - 2):
+            prefix = (words[i], words[i + 1])
+            if prefix in self.markov.chain:
+                next_options = self.markov.chain[prefix]
+                next_word = words[i + 2]
+                if next_word in next_options:
+                    total_count = sum(next_options.values())
+                    bigram_score += next_options[next_word] / total_count
+                    consecutive_misses = 0
+                else:
+                    consecutive_misses += 1
+                total_bigrams += 1
+            else:
+                consecutive_misses += 1
+            max_consecutive_misses = max(max_consecutive_misses, consecutive_misses)
 
-        # Combined score
-        score = (relevance * 0.35 +
-                 coverage * 0.25 +
-                 coherence * 0.25 +
-                 length_score * 0.15)
+        if total_bigrams == 0:
+            return 0.1
 
-        return score
-
-    def _select_winner(self, scored_candidates, temperature):
-        """
-        Select winning sentence using Orch OR or temperature-weighted selection.
-        """
-        if not scored_candidates:
-            return ""
-
-        sentences = [s for s, _ in scored_candidates]
-        scores = [sc for _, sc in scored_candidates]
-
-        # Use Orch OR collapse weights if available
-        if self.orch_or and getattr(self.orch_or, "last_collapse", None):
-            lang_weights = getattr(self.orch_or, "last_collapse", None).get(
-                'language', {}
-            ).get('weights', [])
-            if lang_weights:
-                for i in range(len(scores)):
-                    idx = i % len(lang_weights)
-                    scores[i] *= (0.5 + lang_weights[idx])
-
-        # Temperature-weighted selection
-        if temperature > 0:
-            scores = [max(s, 1e-10) ** (1.0 / temperature) for s in scores]
-
-        total = sum(scores)
-        if total <= 0:
-            return sentences[0]
-
-        probs = [s / total for s in scores]
-
-        if np is not None:
-            try:
-                idx = np.random.choice(len(sentences), p=probs)
-                return sentences[idx]
-            except ValueError:
-                return sentences[0]
-        else:
-            r = random.random()
-            cumulative = 0
-            for sent, prob in zip(sentences, probs):
-                cumulative += prob
-                if r <= cumulative:
-                    return sent
-            return sentences[0]
-
-    def _get_concept_relatives(self, concepts, max_per=8):
-        """Get WordNet relatives for input concepts."""
-        relatives = {}
-        if not self._has_wordnet:
-            return relatives
-
-        for concept in concepts[:4]:
-            try:
-                for syn in wn.synsets(concept)[:2]:
-                    for lemma in syn.lemmas():
-                        w = lemma.name().replace('_', ' ').lower()
-                        if ' ' not in w and len(w) > 2 and w != concept:
-                            relatives[w] = max(relatives.get(w, 0), 0.7)
-                    for hyper in syn.hypernyms()[:2]:
-                        for lemma in hyper.lemmas():
-                            w = lemma.name().replace('_', ' ').lower()
-                            if ' ' not in w and len(w) > 2:
-                                relatives[w] = max(relatives.get(w, 0), 0.5)
-            except Exception:
-                pass
-
-        return dict(sorted(relatives.items(), key=lambda x: x[1], reverse=True)[:max_per * len(concepts)])
-
-    def _enhance_with_synonyms(self, sentence, concepts, topic_words, topic_boost):
-        """
-        Replace 1-2 content words with better synonyms from WordNet.
-        Only swaps if the synonym is more topic-relevant AND Markov knows it.
-        """
-        if not self._has_wordnet:
-            return sentence
-
-        words = sentence.split()
+        raw = bigram_score / total_bigrams
+        length_penalty = 1.0
         if len(words) < 5:
-            return sentence
+            length_penalty = 0.5
+        elif len(words) > 30:
+            length_penalty = 0.85
+        unique_ratio = len(set(words)) / len(words)
+        repetition_bonus = min(1.0, unique_ratio * 1.2)
+        has_sentence_end = any(w.endswith(('.', '!', '?')) for w in words[3:])
+        sentence_bonus = 0.15 if has_sentence_end else 0.0
+        gap_penalty = 0.2 if max_consecutive_misses >= 4 else 0.0
+        score = raw * 0.4 + length_penalty * 0.15 + repetition_bonus * 0.2 + sentence_bonus - gap_penalty
+        return max(0.0, min(1.0, score))
 
-        # Find swappable positions (content words, not grammar glue)
-        swappable = []
-        for i, word in enumerate(words):
-            clean = word.lower().strip('.,;:!?')
-            if (len(clean) > 3 and
-                clean not in self.no_swap and
-                clean not in [c.lower() for c in concepts]):  # Don't swap the actual concepts
-                swappable.append(i)
+    def _score_concept_coverage(self, text: str, concepts: List[str]) -> float:
+        if not concepts:
+            return 0.5
+        text_lower = text.lower()
+        hits = sum(1 for c in concepts if c.lower() in text_lower)
+        return min(1.0, hits / len(concepts) + 0.1)
 
-        if not swappable:
-            return sentence
+    def has_sufficient_states(self) -> bool:
+        return len(self.markov.chain) >= 30
 
-        # Try swapping 1-2 words
-        swaps_made = 0
-        random.shuffle(swappable)
-
-        return self.__enhance_with_synonyms_continued(clean, swappable, swaps_made, words, topic_words, topic_boost)
-
-    def __enhance_with_synonyms_continued(self, clean, swappable, swaps_made, words, topic_words, topic_boost):
-        """Continuation of _enhance_with_synonyms — auto-extracted by self-evolution."""
-        for pos in swappable[:3]:  # Try up to 3 positions
-            if swaps_made >= 2:
-                break
-
-            original = words[pos]
-            clean = original.lower().strip('.,;:!?')
-            punct = original[len(clean):] if len(original) > len(clean) else ''
-
-            # Get synonyms
-            try:
-                synonyms = set()
-                for syn in wn.synsets(clean)[:2]:
-                    for lemma in syn.lemmas():
-                        s = lemma.name().replace('_', ' ').lower()
-                        if ' ' not in s and s != clean and len(s) > 2:
-                            synonyms.add(s)
-            except Exception:
-                continue
-
-            if not synonyms:
-                continue
-
-            # Score each synonym
-            best_syn = None
-            best_score = 0
-
-            for syn in synonyms:
-                score = 0
-                # Must be in Markov vocabulary
-                markov_vocab = set()
-                for prefix in self.markov.chain.keys():
-                    for w in prefix:
-                        markov_vocab.add(w.lower().strip('.,;:!?'))
-                for suffixes in self.markov.chain.values():
-                    for w in suffixes:
-                        markov_vocab.add(w.lower().strip('.,;:!?'))
-
-                if syn not in markov_vocab:
-                    continue
-
-                # Topic relevance boost
-                if syn in topic_words:
-                    score += 2.0
-                if syn in topic_boost:
-                    score += topic_boost[syn]
-
-                # Prefer words the original doesn't already cover
-                if score > best_score:
-                    best_score = score
-                    best_syn = syn
-
-            # Only swap if the synonym is actually better
-            original_topic = 1.0 if clean in topic_words else 0.0
-            if best_syn and best_score > original_topic + 0.5:
-                # Preserve capitalization
-                if original[0].isupper():
-                    best_syn = best_syn.capitalize()
-                words[pos] = best_syn + punct
-                swaps_made += 1
-
-        return ' '.join(words)
+    def get_status(self) -> Dict:
+        return {
+            'generations': self.generation_count,
+            'num_candidates': self.num_candidates,
+            'sufficient_states': self.has_sufficient_states(),
+            'markov_states': len(self.markov.chain),
+            'hilbert_active': self.hilbert_engine is not None,
+            'meaning_active': self.meaning_engine is not None,
+        }
 
 
-    def generate_multi(self, user_input, concepts, concept_scores,
-                       num_sentences=2, min_words=10, max_words=20,
-                       temperature=None):
-        """Generate multiple sentences with cross-sentence coherence."""
-        sentences = []
-
-        for i in range(num_sentences):
-            # Add previous output concepts as additional context
-            if sentences:
-                prev_words = sentences[-1].lower().split()
-                extra_concepts = [w.strip('.,;:!?') for w in prev_words
-                                 if len(w) > 4 and w.strip('.,;:!?') not in self.extractor.STOPWORDS][:2]
-                round_concepts = concepts + extra_concepts
-            else:
-                round_concepts = concepts
-
-            sent = self.generate(
-                user_input, round_concepts, concept_scores,
-                num_candidates=8, min_words=min_words, max_words=max_words,
-                temperature=temperature
-            )
-
-            if sent and len(sent) > 15:
-                # Avoid starting consecutive sentences the same way
-                if sentences:
-                    prev_start = ' '.join(sentences[-1].split()[:2]).lower()
-                    new_start = ' '.join(sent.split()[:2]).lower()
-                    if new_start == prev_start:
-                        # Regenerate with higher temperature
-                        sent = self.generate(
-                            user_input, round_concepts, concept_scores,
-                            num_candidates=6, min_words=min_words, max_words=max_words,
-                            temperature=(temperature or 0.9) + 0.3
-                        )
-
-                sentences.append(sent)
-
-        return ' '.join(sentences)
-
-
+# ── Compatibility factory ───────────────────────────────────────────────────
 def create_hybrid_generator(engine):
-    """Factory: create HybridGenerator from existing engine."""
-    orch_or = getattr(engine, "orch_or", None) if getattr(engine, "_has_orch_or", False) else None
-    return HybridGenerator(engine.markov, engine.extractor, orch_or)
+    """Build a HybridGenerator from a language/cognitive engine exposing
+    .markov, .tfidf and .orch_or. Returns None if those are unavailable."""
+    markov = getattr(engine, "markov", None)
+    tfidf = getattr(engine, "tfidf", None)
+    orch_or = getattr(engine, "orch_or", None)
+    if markov is None or tfidf is None or orch_or is None:
+        return None
+    return HybridGenerator(
+        markov, tfidf, orch_or,
+        hilbert_engine=getattr(engine, "hilbert_engine", None),
+        meaning_engine=getattr(engine, "meaning_engine", None),
+    )
