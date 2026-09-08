@@ -2,7 +2,7 @@
 # ==========================================
 # Only packages directly imported by backend Python modules.
 # Transitive deps resolved automatically by pip.
-# PennyLane: pip install --no-deps PennyLane (pennylane-lightning needs scipy-openblas32, no Termux wheel)
+# PennyLane: installed via termux_setup.sh (--no-deps for Termux; pennylane-lightning has no Android wheel)
 
 beautifulsoup4>=4.12
 duckduckgo_search>=5.0
@@ -25,3 +25,5 @@ scipy>=1.11
 uvicorn>=0.25
 wolframalpha>=5.0
 wolframclient>=1.2
+pennylane>=0.39
+pennylane-lightning>=0.39

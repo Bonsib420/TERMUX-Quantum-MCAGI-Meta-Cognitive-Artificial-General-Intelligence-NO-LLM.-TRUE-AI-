@@ -30,7 +30,7 @@
 # What this script does:
 #   1. Installs system packages (python, git, clang, etc.)
 #   2. Clones or updates the repository
-#   3. Installs Python dependencies (21 direct deps)
+#   3. Installs Python dependencies (23 direct deps)
 #   4. Installs PennyLane separately (--no-deps for Termux)
 #   5. Downloads NLTK data
 #   6. Sets up MongoDB (optional)
@@ -133,7 +133,7 @@ echo -e "${GREEN}  ✓ Repository ready at $INSTALL_DIR${NC}"
 # ============================================================================
 # STEP 3: Python dependencies
 # ============================================================================
-echo -e "${CYAN}[3/8] Installing Python dependencies (21 packages)...${NC}"
+echo -e "${CYAN}[3/8] Installing Python dependencies (23 packages)...${NC}"
 
 cd "$BACKEND_DIR"
 
@@ -143,12 +143,13 @@ pip install -r requirements.txt 2>&1 | tail -5
 echo -e "${GREEN}  ✓ Core dependencies installed${NC}"
 
 # ============================================================================
-# STEP 4: PennyLane (special handling for Termux)
+# STEP 4: PennyLane + Lightning (special handling for Termux)
 # ============================================================================
 echo -e "${CYAN}[4/8] Installing PennyLane (quantum computing)...${NC}"
 
 # PennyLane has a hard dep on pennylane-lightning which requires
-# scipy-openblas32 (no Android wheel). Install with --no-deps.
+# scipy-openblas32 (no Android wheel). Install with --no-deps first,
+# then attempt pennylane-lightning separately (succeeds on non-Termux).
 pip install --no-deps PennyLane 2>&1 | tail -3 || {
     echo -e "${YELLOW}  PennyLane install failed — quantum features will use fallback${NC}"
     echo -e "${YELLOW}  (All PennyLane imports are guarded with try/except)${NC}"
@@ -156,6 +157,14 @@ pip install --no-deps PennyLane 2>&1 | tail -3 || {
 
 # Install autoray (PennyLane needs it at runtime)
 pip install autoray 2>/dev/null || true
+
+# Attempt pennylane-lightning (high-performance CPU simulator).
+# Requires scipy-openblas32 — no Android wheel, so this is a no-op on Termux.
+if pip install pennylane-lightning 2>/dev/null; then
+    echo -e "${GREEN}  ✓ pennylane-lightning installed (fast CPU simulator active)${NC}"
+else
+    echo -e "${YELLOW}  pennylane-lightning unavailable on this platform — using default.qubit fallback${NC}"
+fi
 
 echo -e "${GREEN}  ✓ PennyLane setup complete${NC}"
 
@@ -287,6 +296,13 @@ try:
     ok += 1
 except ImportError:
     print(f'  ○ PennyLane — not installed (classical fallback)')
+
+# Test pennylane-lightning (optional, not available on Android)
+try:
+    import pennylane_lightning
+    print(f'  ✓ pennylane-lightning {pennylane_lightning.__version__} (fast CPU simulator)')
+except ImportError:
+    print(f'  ○ pennylane-lightning — not available on this platform (default.qubit fallback)')
 
 # Test core backend modules
 sys.path.insert(0, '.')
